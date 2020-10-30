@@ -46,6 +46,7 @@ fun load(paths : List<Path>) : Pair<Model,Repository> {
 
     //initialization: first read the types, then the function definitions and then the specifications
     FunctionRepos.init(model, repos)
+    ADTRepos.init(model)
     repos.populateClassReqs(model)
     repos.populateMethodReqs(model)
     return Pair(model, repos)

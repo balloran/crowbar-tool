@@ -51,8 +51,9 @@ fun generateSMT(ante : Formula, succ: Formula) : String {
     val funcs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("f_") }
     var header = smtHeader
     header += FunctionRepos
+    header += ADTRepos
     header = fields.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Field)"})
-    header = vars.fold(header, {acc, nx-> acc+"\n(declare-const ${nx.name} Int)"}) //hack: dtype goes here
+    header = vars.fold(header, {acc, nx-> acc+"\n(declare-const ${nx.name} ${ADTRepos.libPrefix(nx.dType)})"})
     header = heaps.fold(header, {acc, nx-> "$acc\n(declare-fun $nx (${"Int ".repeat(nx.split("_")[1].toInt())}) Int)" })
     header = futs.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Int)"})
     header = funcs.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Int)"})
