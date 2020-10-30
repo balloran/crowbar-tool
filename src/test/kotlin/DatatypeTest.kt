@@ -16,14 +16,14 @@ class DatatypeTest : StringSpec({
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
             val classDecl = model.extractClassDecl("DTypes", "C", repos)
 
-            val trivialSuccess = classDecl.extractMethodNode(postInv,"caseSimpleSuccess", repos)
-            executeNode(trivialSuccess, repos, postInv) shouldBe true
+            val caseSimpleSuccess = classDecl.extractMethodNode(postInv,"caseSimpleSuccess", repos)
+            executeNode(caseSimpleSuccess, repos, postInv) shouldBe true
 
-            val incrSuccess = classDecl.extractMethodNode(postInv,"caseSimpleFail", repos)
-            executeNode(incrSuccess, repos, postInv) shouldBe false
+            val caseSimpleFail = classDecl.extractMethodNode(postInv,"caseSimpleFail", repos)
+            executeNode(caseSimpleFail, repos, postInv) shouldBe false
 
-            val trivialFail = classDecl.extractMethodNode(postInv,"caseFail", repos)
-            executeNode(trivialFail, repos, postInv) shouldBe false
+            val caseFail = classDecl.extractMethodNode(postInv,"caseFail", repos)
+            executeNode(caseFail, repos, postInv) shouldBe false
         }
     }
 })
