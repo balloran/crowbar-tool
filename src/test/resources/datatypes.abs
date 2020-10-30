@@ -1,0 +1,45 @@
+module DTypes;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+data ComplexType = ComplexA | ComplexB;
+data DataType = Default | DataA | DataB;
+
+class C{
+    [Spec : Requires( p != ComplexB )]
+    [Spec : Ensures( result == DataA )]
+    DataType caseSimpleSuccess(ComplexType p){
+        DataType res = Default;
+        case p{
+            ComplexA => res = DataA;
+            ComplexB => res = DataB;
+            _        => skip;
+        }
+        return res;
+    }
+
+    [Spec : Requires( p != ComplexB )]
+    [Spec : Ensures( result == DataB )]
+    DataType caseSimpleFail(ComplexType p){
+        DataType res = Default;
+        case p{
+            ComplexA => res = DataA;
+            ComplexB => res = DataB;
+            _        => skip;
+        }
+        return res;
+    }
+
+    [Spec : Ensures( result == Default )]
+    DataType caseFail(ComplexType p){
+        DataType res = Default;
+        case p{
+            ComplexA => res = DataA;
+            ComplexB => res = DataB;
+            _        => skip;
+        }
+        return res;
+    }
+
+}
+
+{}

@@ -1,19 +1,66 @@
 package org.abs_models.crowbar.main
 
 import org.abs_models.crowbar.data.DeductType
+import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.crowbar.data.exprToTerm
 import org.abs_models.crowbar.interfaces.translateABSExpToSymExpr
 import org.abs_models.crowbar.tree.SymbolicNode
-import org.abs_models.frontend.ast.DataTypeDecl
-import org.abs_models.frontend.ast.ExpFunctionDef
-import org.abs_models.frontend.ast.FunctionDecl
-import org.abs_models.frontend.ast.Model
+import org.abs_models.frontend.ast.*
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 
 
 object ADTRepos {
-	private val known: MutableMap<String, DataTypeDecl> = mutableMapOf()
+	private val dtypeMap: MutableMap<String,  Set<String>> = mutableMapOf()
+//	private val heapsMap: MutableMap<String, ProgVar> = mutableMapOf()
+//
+//	fun getHeap(dType : String) : ProgVar = heapsMap[libPrefix(dType)]!!
+
+	override fun toString() : String {
+		var dtypeValues = ""
+//		var heapTypes = ""
+//		var heaps = ""
+		for (dtype in dtypeMap){
+			dtypeValues += "(declare-datatypes () ((${dtype.key}"
+			for(value in dtype.value){
+				dtypeValues += " $value"
+			}
+			dtypeValues += ")))\n"
+		}
+//		for (heap in heapsMap){
+//			heapTypes += "\n(define-sort ${heap.value.dType} () (Array ${heap.key}))"
+//			heaps += "\n(declare-const ${heap.value.name} ${heap.value.dType})"
+//		}
+//		return "\n$dtypeValues$heapTypes$heaps"
+		return "\n$dtypeValues"
+	}
+
+	fun init(model: Model){
+		dtypeMap.clear()
+//		heapsMap.clear()
+//		var heapName = ""
+//		heapsMap["Int"] = ProgVar("heap_int", "Heap_Int")
+		for(moduleDecl in model.moduleDecls){
+			if(moduleDecl.name.startsWith("ABS.")) continue
+			for(decl in moduleDecl.decls){
+				if(decl is DataTypeDecl && decl.name != "Spec"){
+//					heapName = decl.type.toString().replace(".", "_")
+//					heapsMap[decl.type.toString()] = ProgVar("heap_$heapName", "Heap_$heapName")
+					val datatypesConstSet = mutableSetOf<String>()
+
+					for(constructor in decl.dataConstructorList){
+						datatypesConstSet.add(constructor.qualifiedName)
+					}
+					dtypeMap[decl.qualifiedName] = datatypesConstSet
+				}
+			}
+		}
+	}
+	fun libPrefix(type : String) : String {
+		if(type == "<UNKNOWN>" || type=="ABS.StdLib.Fut" || type=="ABS.StdLib.Bool")
+			return "Int"
+		return type.removePrefix("ABS.StdLib.")
+	}
 
 }
 

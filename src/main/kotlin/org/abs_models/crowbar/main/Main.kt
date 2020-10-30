@@ -27,7 +27,7 @@ enum class Verbosity { SILENT, NORMAL, V, VV, VVV }
 var tmpPath = "/tmp/"
 var smtPath  = "z3"
 //var timeoutS  = 100
-var verbosity = Verbosity.NORMAL
+var verbosity = Verbosity.VVV
 
 //todo: once allowedTypes is not needed anymore, the repository needs to be passed to fewer places
 data class Repository(private val model : Model?,
@@ -97,10 +97,8 @@ data class Repository(private val model : Model?,
         for(moduleDecl in model.moduleDecls){
             if(moduleDecl.name.startsWith("ABS.")) continue
             for(decl in moduleDecl.decls){
-                if(decl is InterfaceDecl){
-                    allowedTypes += decl.qualifiedName
-                    allowedTypes += decl.name
-                }
+                allowedTypes += decl.qualifiedName
+                allowedTypes += decl.name
             }
         }
     }

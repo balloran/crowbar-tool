@@ -216,7 +216,7 @@ class PITAllocAssign(repos: Repository) : PITAssign(repos, Modality(
         val targetDecl = repos.classReqs[classNameExpr.name]!!.second
         val substMap = mutableMapOf<LogicElement,LogicElement>()
         for(i in 0 until targetDecl.numParam){
-            val pName = select(Field(targetDecl.getParam(i).name+"_f", targetDecl.getParam(i).type.simpleName))
+            val pName = select(Field(targetDecl.getParam(i).name+"_f", targetDecl.getParam(i).type.qualifiedName))
             val pValue = nextRhs.params[i]
             substMap[pName] = pValue
         }
@@ -262,7 +262,7 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val targetDecl = repos.methodReqs.getValue(call.met).second
         val substMap = mutableMapOf<LogicElement,LogicElement>()
         for(i in 0 until targetDecl.numParam){
-            val pName = ProgVar(targetDecl.getParam(i).name,targetDecl.getParam(i).type.simpleName)
+            val pName = ProgVar(targetDecl.getParam(i).name,targetDecl.getParam(i).type.qualifiedName)
             val pValue = exprToTerm(call.e[i])
             substMap[pName] = pValue
         }
@@ -279,7 +279,7 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val targetPostDecl = read!!.second
         val substPostMap = mutableMapOf<LogicElement,LogicElement>()
         for(i in 0 until targetDecl.numParam){
-            val pName = ProgVar(targetPostDecl.getParam(i).name,targetPostDecl.getParam(i).type.simpleName)
+            val pName = ProgVar(targetPostDecl.getParam(i).name,targetPostDecl.getParam(i).type.qualifiedName)
             val pValue = exprToTerm(call.e[i])
             substPostMap[pName] = pValue
         }
@@ -354,7 +354,7 @@ fun mapSubstPar(callExpr: SyncCallExpr, targetDecl: MethodSig): MutableMap<Logic
     val substMap = mutableMapOf<LogicElement, LogicElement>()
 
     for (i in 0 until targetDecl.numParam) {
-        val pName = ProgVar(targetDecl.getParam(i).name, targetDecl.getParam(i).type.simpleName)
+        val pName = ProgVar(targetDecl.getParam(i).name, targetDecl.getParam(i).type.qualifiedName)
         val pValue = exprToTerm(callExpr.e[i])
         substMap[pName] = pValue
 

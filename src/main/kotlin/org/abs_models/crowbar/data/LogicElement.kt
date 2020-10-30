@@ -1,5 +1,8 @@
 package org.abs_models.crowbar.data
 
+import org.abs_models.crowbar.main.ADTRepos
+import org.abs_models.frontend.ast.DataConstructorExp
+
 
 interface LogicElement: Anything {
     fun toSMT(isInForm : Boolean) : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
@@ -33,6 +36,25 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
         return "($back $list)"
     }
 }
+
+data class DataTypeConst(val name : String, val dType : String)  : Term {
+    override fun prettyPrint(): String {
+        return "$name:$dType"
+    }
+//    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
+
+    override fun toSMT(isInForm : Boolean) : String {
+//        val back = getSMT(name, isInForm)
+//        if(params.isEmpty()) {
+//            if(name.startsWith("-")) return "(- ${name.substring(1)})" //CVC4 requires -1 to be passed as (- 1)
+        return name
+//        }
+//        val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT(isInForm)}"})
+//        return "($back $list)"
+    }
+
+}
+
 data class UpdateOnTerm(val update : UpdateElement, val target : Term) : Term {
     override fun prettyPrint(): String {
         return "{"+update.prettyPrint()+"}"+target.prettyPrint()
@@ -136,6 +158,7 @@ fun exprToTerm(input : Expr, old : Boolean=false) : Term {
                     throw Exception("Special keyword old must have one argument, actual arguments size:" + input.e.size)
             Function(input.op, input.e.map { ex -> exprToTerm(ex, old) })
         }
+        is DataTypeConstExp -> DataTypeConst(input.name, input.dType)
         else -> throw Exception("Expression cannot be converted to term: "+input.prettyPrint())
     }
 }

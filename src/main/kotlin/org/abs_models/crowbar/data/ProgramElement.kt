@@ -206,6 +206,12 @@ data class Const(val name : String)  : Expr {
     }
 }
 
+data class DataTypeConstExp(val name : String, val dType : String)  : Expr {
+    override fun prettyPrint(): String {
+        return "$name:$dType"
+    }
+}
+
 interface Location : Expr
 data class LocationAbstractVar(val name : String) : Location, AbstractVar{
     override fun prettyPrint(): String {
