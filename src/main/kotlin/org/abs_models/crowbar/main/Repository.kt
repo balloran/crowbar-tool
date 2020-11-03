@@ -1,7 +1,6 @@
 package org.abs_models.crowbar.main
 
 import org.abs_models.crowbar.data.DeductType
-import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.crowbar.data.exprToTerm
 import org.abs_models.crowbar.interfaces.translateABSExpToSymExpr
 import org.abs_models.crowbar.tree.SymbolicNode
@@ -9,55 +8,82 @@ import org.abs_models.frontend.ast.*
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 
+data class SMTDType(val dtype : String, val  values : List<String>){
+	fun name(str: String) = "${str}_${this.dtype.replace(".", "_")}"
+	val anon :String = name("anon")
+	val old :String  = name("old")
+	val last :String = name("last")
+	val heap :String = name("heap")
+	val heapType :String = name("Heap")
+	val field :String = name("Field")
+//	val select :String = name("select")
+//	val store :String = name("store")
+	fun values() :List<String> = values
+
+	override fun toString(): String {
+		var dTypeSpec  = ""
+		var heapSpec = ""
+
+		if(dtype != "Int" && dtype != "Bool"){
+			dTypeSpec  += "\n(declare-datatypes ((${dtype} 0)) (("
+			for (value in values){
+				dTypeSpec += " (${value})"
+			}
+			dTypeSpec += " )))"
+		}
+
+		heapSpec += "\n(define-sort $field () ${dtype})"
+		heapSpec += "\n(define-sort $heapType () (Array $field $dtype))"
+		heapSpec += "\n(declare-const $heap $heapType)"
+		heapSpec += "\n(declare-const $old $heapType)"
+		heapSpec += "\n(declare-const $last $heapType)"
+		heapSpec += "\n(declare-fun $anon ($heapType) $heapType)\n"
+//		heapSpec += "\n(declare-fun $select ($heapType $field) $dtype)\n"
+//		heapSpec += "\n(declare-fun $store ($heapType $field $dtype) $heapType)\n"
+		return "$dTypeSpec$heapSpec"
+	}
+}
 
 object ADTRepos {
-	private val dtypeMap: MutableMap<String,  Set<String>> = mutableMapOf()
-//	private val heapsMap: MutableMap<String, ProgVar> = mutableMapOf()
-//
-//	fun getHeap(dType : String) : ProgVar = heapsMap[libPrefix(dType)]!!
+	private val dtypeMap: MutableMap<String,  SMTDType> = mutableMapOf()
+
+	fun getSMTDType(dType : String) : SMTDType = dtypeMap[libPrefix(dType)]!!
 
 	override fun toString() : String {
-		var dtypeValues = ""
-//		var heapTypes = ""
-//		var heaps = ""
+		var ret = ""
 		for (dtype in dtypeMap){
-			dtypeValues += "(declare-datatypes () ((${dtype.key}"
-			for(value in dtype.value){
-				dtypeValues += " $value"
-			}
-			dtypeValues += ")))\n"
+			ret += dtype.value.toString()
 		}
-//		for (heap in heapsMap){
-//			heapTypes += "\n(define-sort ${heap.value.dType} () (Array ${heap.key}))"
-//			heaps += "\n(declare-const ${heap.value.name} ${heap.value.dType})"
-//		}
-//		return "\n$dtypeValues$heapTypes$heaps"
-		return "\n$dtypeValues"
+		return ret
 	}
 
-	fun init(model: Model){
+	fun init(){
 		dtypeMap.clear()
-//		heapsMap.clear()
-//		var heapName = ""
-//		heapsMap["Int"] = ProgVar("heap_int", "Heap_Int")
+		dtypeMap["Int"] = SMTDType("Int", emptyList())
+//		dtypeMap["Bool"] = SMTDType("Bool", emptyList())
+
+	}
+	fun init(model: Model){
+		init()
 		for(moduleDecl in model.moduleDecls){
 			if(moduleDecl.name.startsWith("ABS.")) continue
 			for(decl in moduleDecl.decls){
 				if(decl is DataTypeDecl && decl.name != "Spec"){
-//					heapName = decl.type.toString().replace(".", "_")
-//					heapsMap[decl.type.toString()] = ProgVar("heap_$heapName", "Heap_$heapName")
-					val datatypesConstSet = mutableSetOf<String>()
-
+					val datatypesConstList = mutableListOf<String>()
 					for(constructor in decl.dataConstructorList){
-						datatypesConstSet.add(constructor.qualifiedName)
+						datatypesConstList.add(constructor.qualifiedName)
 					}
-					dtypeMap[decl.qualifiedName] = datatypesConstSet
+					dtypeMap[decl.qualifiedName] = SMTDType(decl.qualifiedName, datatypesConstList)
 				}
 			}
 		}
 	}
 	fun libPrefix(type : String) : String {
-		if(type == "<UNKNOWN>" || type=="ABS.StdLib.Fut" || type=="ABS.StdLib.Bool")
+		if(type == "<UNKNOWN>"
+				|| type=="ABS.StdLib.Fut"
+				|| type=="ABS.StdLib.Bool"
+				|| type.startsWith("Reference.")
+				|| !dtypeMap.containsKey(type))
 			return "Int"
 		return type.removePrefix("ABS.StdLib.")
 	}

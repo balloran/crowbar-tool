@@ -219,7 +219,7 @@ data class LocationAbstractVar(val name : String) : Location, AbstractVar{
     }
 }
 //name must end with _f when using automatic translation
-open class Field(val name : String, private val dType : String = "Int") : Location, Term {
+open class Field(val name : String, val dType : String = "Int") : Location, Term {
     override fun prettyPrint(): String {
         return "this.$name : $dType"
     }

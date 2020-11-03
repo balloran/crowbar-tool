@@ -3,6 +3,7 @@ import io.kotlintest.shouldBe
 import io.kotlintest.specs.StringSpec
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
+import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.Repository
 import org.abs_models.crowbar.rule.MatchCondition
 import org.abs_models.crowbar.rule.containsAbstractVar
@@ -21,6 +22,7 @@ class BasicTest : StringSpec() {
     private val pattern3 = addExpr(ExprAbstractVar("A"), Const("1"))
 
     init {
+        ADTRepos.init()
         "collect"{
             val stmt = WhileStmt(SExpr(">=", listOf(Field("f"), Const("0"))),
                                  SeqStmt(AssignStmt(Field("g"), ProgVar("v")), SkipStmt),

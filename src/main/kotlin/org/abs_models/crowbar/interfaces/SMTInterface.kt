@@ -3,18 +3,13 @@ package org.abs_models.crowbar.interfaces
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.*
+import org.abs_models.crowbar.main.ADTRepos.libPrefix
 import java.io.File
 import java.util.concurrent.TimeUnit
 
 //(set-option :timeout ${timeoutS*1000})
 val smtHeader = """
-    (set-logic ALL)
-    (define-sort Field () Int)
-    (define-sort MHeap () (Array Field Int))
-    (declare-const heap MHeap)
-    (declare-const ${OldHeap.name} MHeap)
-    (declare-const ${LastHeap.name} MHeap)
-    (declare-fun   anon (MHeap) MHeap)
+    
     (declare-fun   valueOf (Int) Int)
     (define-fun iOr((x Int) (y Int)) Int
         (ite (or (= x 1) (= y 1)) 1 0))
@@ -41,6 +36,9 @@ val smtHeader = """
 
 @Suppress("UNCHECKED_CAST")
 fun generateSMT(ante : Formula, succ: Formula) : String {
+
+    var header = "\n(set-logic ALL)"
+
     val pre = deupdatify(ante)
     val post = deupdatify(Not(succ))
 
@@ -49,15 +47,15 @@ fun generateSMT(ante : Formula, succ: Formula) : String {
     val heaps =  ((pre.iterate { it is Function } + post.iterate{ it is Function }) as Set<Function>).map { it.name }.filter { it.startsWith("NEW") }
     val futs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("fut_") }
     val funcs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("f_") }
-    var header = smtHeader
-    header += FunctionRepos
     header += ADTRepos
-    header = fields.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Field)"})
-    header = vars.fold(header, {acc, nx-> acc+"\n(declare-const ${nx.name} ${ADTRepos.libPrefix(nx.dType)})"})
+    header += smtHeader
+    header += FunctionRepos
+    header = fields.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Field_${libPrefix(nx.dType).replace(".","_")})"})
+    header = vars.fold(header, {acc, nx-> acc+"\n(declare-const ${nx.name} ${libPrefix(nx.dType)})"})
     header = heaps.fold(header, {acc, nx-> "$acc\n(declare-fun $nx (${"Int ".repeat(nx.split("_")[1].toInt())}) Int)" })
     header = futs.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Int)"})
     header = funcs.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Int)"})
-    fields.forEach { f1 -> fields.minus(f1).forEach{ f2 -> header += "\n (assert (not (= ${f1.name} ${f2.name})))" } }
+    fields.forEach { f1 -> fields.minus(f1).forEach{ f2 -> if(libPrefix(f1.dType) == libPrefix(f2.dType)) header += "\n (assert (not (= ${f1.name} ${f2.name})))" } } //??
 
     return """
     $header 
