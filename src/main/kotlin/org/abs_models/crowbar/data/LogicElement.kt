@@ -26,8 +26,43 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
+    fun removeIrrilevantHeaps(term : Term, dtype: String) : String{
+        val smtdType = ADTRepos.getSMTDType(dtype)
+        if (term is Function ) {
+            if(term.name == "store") {
+                if (ADTRepos.libPrefix((term.params[1] as Field).dType) == dtype)
+                    return "(store " +
+                            "${removeIrrilevantHeaps(term.params[0], dtype)} " +
+                            "${term.params[1].toSMT(false)} " +
+                            "${term.params[2].toSMT(false)})"
+                else
+                    return removeIrrilevantHeaps(term.params[0], dtype)
+            }else if (term.name == "anon")
+                return "(${smtdType.anon} ${removeIrrilevantHeaps(term.params[0], dtype)})"
+            else
+                throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
+        }else if(term is ProgVar && term.dType == "Heap"){
+            if(term is OldHeap)
+                return smtdType.old
+            else if(term is LastHeap)
+                return smtdType.last
+            else if(term is Heap)
+                return smtdType.heap
+            else
+                return term.name
+        }else
+            throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
+
+    }
+
     override fun toSMT(isInForm : Boolean) : String {
         val back = getSMT(name, isInForm)
+
+        if(name == "select")
+            return "($name " +
+                    "${removeIrrilevantHeaps(params[0], ADTRepos.libPrefix((params[1] as Field).dType))} " +
+                    "${params[1].toSMT(false)})"
+
         if(params.isEmpty()) {
             if(name.startsWith("-")) return "(- ${name.substring(1)})" //CVC4 requires -1 to be passed as (- 1)
             return name

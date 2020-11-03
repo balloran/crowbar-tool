@@ -70,7 +70,7 @@ interface PostInvType : DeductType{
         var body = getNormalizedStatement(classDecl.initBlock)
         for (fieldDecl in classDecl.fields){
             if(fieldDecl.hasInitExp()){
-                val nextBody = AssignStmt(Field(fieldDecl.name+"_f", fieldDecl.type.simpleName), translateABSExpToSymExpr(fieldDecl.initExp))
+                val nextBody = AssignStmt(Field(fieldDecl.name+"_f", fieldDecl.type.qualifiedName), translateABSExpToSymExpr(fieldDecl.initExp))
                 body = SeqStmt(nextBody,body)
             }
         }

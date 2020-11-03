@@ -27,7 +27,7 @@ enum class Verbosity { SILENT, NORMAL, V, VV, VVV }
 var tmpPath = "/tmp/"
 var smtPath  = "z3"
 //var timeoutS  = 100
-var verbosity = Verbosity.VVV
+var verbosity = Verbosity.NORMAL
 
 //todo: once allowedTypes is not needed anymore, the repository needs to be passed to fewer places
 data class Repository(private val model : Model?,

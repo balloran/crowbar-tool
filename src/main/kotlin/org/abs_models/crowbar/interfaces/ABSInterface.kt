@@ -18,8 +18,8 @@ import org.abs_models.frontend.typechecker.Type
 fun translateABSExpToSymExpr(input : Exp) : Expr {
 
     return when(input){
-        is FieldUse        -> Field(input.name+"_f",input.type.qualifiedName)
-        is IntLiteral      -> Const(input.content)
+        is FieldUse -> Field(input.name + "_f", input.type.qualifiedName)
+        is IntLiteral -> Const(input.content)
         is GetExp          -> readFut(translateABSExpToSymExpr(input.pureExp))
         is NewExp          -> FreshGenerator.getFreshObjectId(input.className, input.paramList.map { translateABSExpToSymExpr(it) })
         is NullExp         -> Const("0")
@@ -30,20 +30,20 @@ fun translateABSExpToSymExpr(input : Exp) : Expr {
             else
                 ProgVar(input.name, input.type.qualifiedName)
         is Binary -> {
-            val op = when(input){
-                is GTEQExp      -> ">="
-                is LTEQExp      -> "<="
-                is GTExp        -> ">"
-                is LTExp        -> "<"
-                is EqExp        -> "="
-                is NotEqExp     -> "!="
-                is AddAddExp    -> "+"
-                is SubAddExp    -> "-"
-                is MultMultExp  -> "*"
-                is DivMultExp   -> "/"
-                is AndBoolExp   -> "&&"
-                is OrBoolExp    -> "||"
-                else            -> throw Exception("Translation of data ${input::class} not supported, term is $input" )
+            val op = when (input) {
+                is GTEQExp -> ">="
+                is LTEQExp -> "<="
+                is GTExp -> ">"
+                is LTExp -> "<"
+                is EqExp -> "="
+                is NotEqExp -> "!="
+                is AddAddExp -> "+"
+                is SubAddExp -> "-"
+                is MultMultExp -> "*"
+                is DivMultExp -> "/"
+                is AndBoolExp -> "&&"
+                is OrBoolExp -> "||"
+                else -> throw Exception("Translation of data ${input::class} not supported, term is $input")
             }
             SExpr(op, listOf(translateABSExpToSymExpr(input.left), translateABSExpToSymExpr(input.right)))
         }
