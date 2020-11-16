@@ -529,6 +529,9 @@ fun getReturnType(term: Term) : String{
     if(term is ProgVar){
         return term.dType
     }
+    else if(term is DataTypeConst){
+        return term.dType
+    }
     else if (term is Function) {booleanFunction
         if ( term.name in intFunction || term.name.toIntOrNull() != null || term.name == "valueOf") //todo: hack for futures that are not Int
             return "ABS.StdLib.Int"
