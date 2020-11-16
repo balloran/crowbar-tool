@@ -24,14 +24,26 @@ class DatatypeTest : StringSpec({
 
             val caseFail = classDecl.extractMethodNode(postInv, "caseFail", repos)
             executeNode(caseFail, repos, postInv) shouldBe false
+
+            val trivialSuccess = classDecl.extractMethodNode(postInv, "trivialSuccess", repos)
+            executeNode(trivialSuccess, repos, postInv) shouldBe true
+
+            val whileSuccess = classDecl.extractMethodNode(postInv, "whileSuccess", repos)
+            executeNode(whileSuccess, repos, postInv) shouldBe true
         }
 
         "$smt mixedHeapsTest"{
-            val (model, repos) = load(listOf(Paths.get("src/test/resources/mixedheaps.abs")))
-            val classDecl = model.extractClassDecl("MHeaps", "C", repos)
+            val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
+            val classDecl = model.extractClassDecl("DTypes", "D", repos)
 
-            val simpleSuccess = classDecl.extractMethodNode(postInv, "simpleSuccess", repos)
-            executeNode(simpleSuccess, repos, postInv) shouldBe true
+            val mixedHeapSuccess = classDecl.extractMethodNode(postInv, "mixedHeapSuccess", repos)
+            executeNode(mixedHeapSuccess, repos, postInv) shouldBe true
+
+            val awaitSuccess = classDecl.extractMethodNode(postInv, "awaitSuccess", repos)
+            executeNode(awaitSuccess, repos, postInv) shouldBe true
+
+            val awaitWhileSuccess = classDecl.extractMethodNode(postInv, "awaitWhileSuccess", repos)
+            executeNode(awaitWhileSuccess, repos, postInv) shouldBe true
 
         }
     }

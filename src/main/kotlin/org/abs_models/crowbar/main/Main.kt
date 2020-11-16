@@ -53,7 +53,7 @@ data class Repository(private val model : Model?,
             if(moduleDecl.name.startsWith("ABS.")) continue
             for (decl in moduleDecl.decls) {
                 if (decl is ClassDecl) {
-                    val spec = extractSpec(decl,"Requires")
+                    val spec = extractSpec(decl,"Requires", "<UNKNOWN>")
                     classReqs[decl.name] = Pair(spec,decl) //todo: use fully qualified name here
                 }
             }
@@ -65,8 +65,8 @@ data class Repository(private val model : Model?,
             for (decl in moduleDecl.decls) {
                 if (decl is InterfaceDecl) {
                     for (mDecl in decl.allMethodSigs) {
-                        val spec = extractSpec(mDecl, "Requires")
-                        val spec2 = extractSpec(mDecl, "Ensures")
+                        val spec = extractSpec(mDecl, "Requires", mDecl.type.qualifiedName)
+                        val spec2 = extractSpec(mDecl, "Ensures", mDecl.type.qualifiedName)
                         methodReqs[decl.qualifiedName+"."+mDecl.name] = Pair(spec, mDecl)
                         methodEnss[decl.qualifiedName+"."+mDecl.name] = Pair(spec2, mDecl)
                     }
@@ -74,17 +74,19 @@ data class Repository(private val model : Model?,
                 if(decl is ClassDecl){
                     for(mImpl in decl.methods){
                         val iUse = getDeclaration(mImpl.methodSig,mImpl.contextDecl as ClassDecl)
-                        val syncSpecReq = extractSpec(mImpl, "Requires")
-                        val syncSpecEns = extractSpec(mImpl, "Ensures")
+                        val syncSpecReq = extractSpec(mImpl, "Requires", mImpl.type.qualifiedName)
+                        val syncSpecEns = extractSpec(mImpl, "Ensures", mImpl.type.qualifiedName)
                         syncMethodReqs[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(syncSpecReq, mImpl.methodSig)
                         syncMethodEnss[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(syncSpecEns, mImpl.methodSig)
                         if(iUse == null){
                             methodReqs[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(True, mImpl.methodSig)
                             methodEnss[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(True, mImpl.methodSig)
                         } else {
-                            val spec = extractSpec(iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }, "Requires")
+                            val spec = extractSpec(iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }, "Requires",
+                                    iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }.type.qualifiedName)
                             methodReqs[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(spec, mImpl.methodSig)
-                            val spec2 = extractSpec(iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }, "Ensures")
+                            val spec2 = extractSpec(iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }, "Ensures",
+                                    iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }.type.qualifiedName)
                             methodEnss[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(spec2, mImpl.methodSig)
                         }
                     }

@@ -3,8 +3,7 @@ module Last;
 data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 interface LastI{
-    [Spec : Ensures(this.i == old(this.i) + 1)]
-    Unit incr();
+    Int incr();
 }
 
 class LastC(Int i) implements LastI{
@@ -30,14 +29,16 @@ class LastC(Int i) implements LastI{
       }
     }
 
-    Unit incr(){
-        this.i = this.i + 1;
+    Int incr(){
+        return  1;
     }
 
-    [Spec : Ensures(last(this.i) == old(this.i) + 1)]
-    Unit oldWithUpdateSuccess(Int i){
-       Fut<Unit> f = this!incr();
-       await f?;
+    [Ensures(this.i == last(this.i) + 1)]
+    Unit oldWithUpdateSuccess(){
+        this.i = 3;
+        Fut<Int> fut = this!incr();
+        await fut?;
+        this.i = this.i + 1;
     }
 }
 
