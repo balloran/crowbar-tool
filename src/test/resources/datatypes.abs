@@ -2,7 +2,8 @@ module DTypes;
 
 data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 data ComplexType = ComplexA | ComplexB;
-data DataType = Default | DataA | DataB;
+data DataType = Default | DataA | DataB | DataC;
+data TrivialType = Trivial;
 
 class C{
     [Spec : Requires( p != ComplexB )]
@@ -40,6 +41,61 @@ class C{
         return res;
     }
 
+
+    [Spec : Ensures( result == Trivial )]
+    TrivialType trivialSuccess(TrivialType p){
+        return p;
+    }
+
+    [Spec : Ensures( result != DataB )]
+    DataType whileSuccess(ComplexType p, Int i){
+        DataType res = Default;
+        Int j = i;
+
+        [Spec : WhileInv( res != DataB )]
+        while( j >= 0 ){
+            res = DataA;
+        }
+        return res;
+    }
+
+}
+
+[Spec : ObjInv( this.f != Default )]
+class D (Int fi, Int i){
+	DataType f = DataA;
+	DataType res = DataC;
+
+    [Spec : Ensure( i >= 0 && this.res != DataC )]
+	DataType mixedHeapSuccess(ComplexType p){
+        case (p){
+            ComplexA => { i = 1; res = DataA; }
+            ComplexB => { i = 2; res = DataB; }
+            _        => skip;
+        }
+        return res;
+    }
+
+   [Spec : Ensures( result != Default )]
+    DataType awaitSuccess(ComplexType p, Int i){
+        DataType res = DataB;
+        await this.fi >= 0;
+    	this.f = res;
+        return res;
+    }
+
+
+   [Spec : Ensures( result != Default )]
+    DataType awaitWhileSuccess(ComplexType p, Int i){
+        DataType res = DataB;
+        Int j = i;
+  		[Spec : WhileInv( res != Default && this.f != Default )]
+        while( j >= 0 ){
+				await this.fi >= 0;
+				res = this.f;
+    	}
+        return res;
+    }
 }
 
 {}

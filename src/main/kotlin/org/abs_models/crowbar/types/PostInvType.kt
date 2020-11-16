@@ -22,6 +22,9 @@ import org.abs_models.frontend.ast.*
 import kotlin.system.exitProcess
 
 
+val intFunction = setOf("+","-","*","/")
+val booleanFunction = setOf(">=","<=","<",">","=","!=",">=","<=","<",">","&&","||")
+
 //Declaration
 interface PostInvType : DeductType{
     companion object : PostInvType
@@ -43,8 +46,8 @@ interface PostInvType : DeductType{
         val metpre: Formula?
         val body: Stmt?
         try {
-            objInv = extractSpec(classDecl, "ObjInv")
-            metpost = extractSpec(mDecl, "Ensures")
+            objInv = extractSpec(classDecl, "ObjInv", "<UNKNOWN>")
+            metpost = extractSpec(mDecl, "Ensures", mDecl.type.qualifiedName)
             metpre = extractInheritedSpec(mDecl.methodSig, "Requires")
             body = getNormalizedStatement(mDecl.block)
         } catch (e: Exception) {
@@ -70,7 +73,8 @@ interface PostInvType : DeductType{
         var body = getNormalizedStatement(classDecl.initBlock)
         for (fieldDecl in classDecl.fields){
             if(fieldDecl.hasInitExp()){
-                val nextBody = AssignStmt(Field(fieldDecl.name+"_f", fieldDecl.type.qualifiedName), translateABSExpToSymExpr(fieldDecl.initExp))
+                val nextBody = AssignStmt(Field(fieldDecl.name+"_f", fieldDecl.type.qualifiedName),
+                        translateABSExpToSymExpr(fieldDecl.initExp,"<UNKNOWN>"))
                 body = SeqStmt(nextBody,body)
             }
         }
@@ -79,8 +83,8 @@ interface PostInvType : DeductType{
         val objInv: Formula?
         val objPre: Formula?
         try {
-            objInv = extractSpec(classDecl, "ObjInv")
-            objPre = extractSpec(classDecl, "Requires")
+            objInv = extractSpec(classDecl, "ObjInv", "<UNKNOWN>")
+            objPre = extractSpec(classDecl, "Requires","<UNKNOWN>")
         } catch (e: Exception) {
             e.printStackTrace()
             System.err.println("error during translation, aborting")
@@ -115,13 +119,13 @@ interface PostInvType : DeductType{
         val funpre: Formula?
         var body: Stmt? = null
         try {
-            funpre = extractSpec(fDecl, "Requires")
-            funpost = extractSpec(fDecl, "Ensures")
+            funpre = extractSpec(fDecl, "Requires", fDecl.type.qualifiedName)
+            funpost = extractSpec(fDecl, "Ensures", fDecl.type.qualifiedName)
             val fDef = fDecl.functionDef
             if(fDef is BuiltinFunctionDef){
                 throw Exception("error during translation, cannot handle builtin yet")
             }else if(fDef is ExpFunctionDef){
-                body = ReturnStmt(translateABSExpToSymExpr(fDef.rhs))
+                body = ReturnStmt(translateABSExpToSymExpr(fDef.rhs, fDecl.type.qualifiedName))
             }
         }catch (e: Exception) {
             e.printStackTrace()
@@ -284,7 +288,7 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
             substPostMap[pName] = pValue
         }
 
-        val updateNew = ElementaryUpdate(ReturnVar("<UNKNOWN>"),valueOfFunc(freshFut))
+        val updateNew = ElementaryUpdate(ReturnVar(targetDecl.type.qualifiedName),valueOfFunc(freshFut))
 
         val next = symbolicNext(lhs,
                                             freshFut,
@@ -314,7 +318,7 @@ class PITSyncCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val precond = repos.syncMethodReqs.getValue(call.met).first
         val targetPreDecl = repos.syncMethodReqs.getValue(call.met).second
 
-        val updateNew = ElementaryUpdate(ReturnVar("<UNKNOWN>"), freshVar)
+        val updateNew = ElementaryUpdate(ReturnVar(targetPreDecl.type.qualifiedName), freshVar)
 
         val substPreMap = mapSubstPar(call, targetPreDecl)
 
@@ -396,11 +400,12 @@ object PITReturn : Rule(Modality(
         val target = cond.map[FormulaAbstractVar("OBJ")] as Formula
         val targetPost = cond.map[FormulaAbstractVar("POST")] as Formula
         val retExpr = exprToTerm(cond.map[ExprAbstractVar("RET")] as Expr)
+        val typeReturn = getReturnType(retExpr)
         val res = LogicNode(
             input.condition,
             And(
                     UpdateOnFormula(ChainUpdate(input.update,
-                        ElementaryUpdate(ReturnVar("<UNKNOWN>"), retExpr)), targetPost), //todo:hack
+                        ElementaryUpdate(ReturnVar(typeReturn), retExpr)), targetPost),
                     UpdateOnFormula(input.update, target)
             )
         )
@@ -518,4 +523,24 @@ object PITBranch : Rule(Modality(
         }
         return ress
     }
+}
+
+fun getReturnType(term: Term) : String{
+    if(term is ProgVar){
+        return term.dType
+    }
+    else if (term is Function) {booleanFunction
+        if ( term.name in intFunction || term.name.toIntOrNull() != null || term.name == "valueOf") //todo: hack for futures that are not Int
+            return "ABS.StdLib.Int"
+        if (term.name in booleanFunction)
+            return "ABS.StdLib.Bool"
+        return when (term.name) {
+            "Unit" -> "ABS.StdLib.Unit"
+            "iite" -> getReturnType(term.params[1])
+            "select" -> (term.params[1] as Field).dType
+            else -> return "ABS.StdLib.Int" // todo: function can only return Int, allow different return types
+        }
+    }
+    else
+        throw java.lang.Exception("Term $term not allowed as return ")
 }

@@ -25,7 +25,7 @@ class OldTest : StringSpec({
             val trivialFail = classDecl.extractMethodNode(postInv,"trivialFail", repos)
             executeNode(trivialFail, repos, postInv) shouldBe false
         }
-
+//
         "$smt simpleOld"{
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
@@ -36,17 +36,6 @@ class OldTest : StringSpec({
             val simpleFail = classDecl.extractMethodNode(postInv,"simpleFail", repos)
             executeNode(simpleFail, repos, postInv) shouldBe false
 
-        }
-
-        "$smt inheritedOld"{
-            val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
-            val classDecl = model.extractClassDecl("Old", "OldC", repos)
-
-            val inheritedSimpleSuccess = classDecl.extractMethodNode(postInv,"inheritedSimpleSuccess", repos)
-            executeNode(inheritedSimpleSuccess, repos, postInv) shouldBe true
-
-            val inheritedSimpleFail = classDecl.extractMethodNode(postInv,"inheritedSimpleFail", repos)
-            executeNode(inheritedSimpleFail, repos, postInv) shouldBe false
         }
 
         "$smt booleanOld"{
@@ -96,6 +85,9 @@ class OldTest : StringSpec({
 
             val awaitSuccess = classDecl.extractMethodNode(postInv,"awaitSuccess", repos)
             executeNode(awaitSuccess, repos, postInv) shouldBe true
+
+            val awaitFail = classDecl.extractMethodNode(postInv,"awaitFail", repos)
+            executeNode(awaitFail, repos, postInv) shouldBe false
 
         }
 

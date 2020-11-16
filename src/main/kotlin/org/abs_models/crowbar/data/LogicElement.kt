@@ -1,7 +1,6 @@
 package org.abs_models.crowbar.data
 
 import org.abs_models.crowbar.main.ADTRepos
-import org.abs_models.frontend.ast.DataConstructorExp
 
 
 interface LogicElement: Anything {

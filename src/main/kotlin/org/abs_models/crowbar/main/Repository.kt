@@ -16,8 +16,6 @@ data class SMTDType(val dtype : String, val  values : List<String>){
 	val heap :String = name("heap")
 	val heapType :String = name("Heap")
 	val field :String = name("Field")
-//	val select :String = name("select")
-//	val store :String = name("store")
 	fun values() :List<String> = values
 
 	override fun toString(): String {
@@ -38,8 +36,6 @@ data class SMTDType(val dtype : String, val  values : List<String>){
 		heapSpec += "\n(declare-const $old $heapType)"
 		heapSpec += "\n(declare-const $last $heapType)"
 		heapSpec += "\n(declare-fun $anon ($heapType) $heapType)\n"
-//		heapSpec += "\n(declare-fun $select ($heapType $field) $dtype)\n"
-//		heapSpec += "\n(declare-fun $store ($heapType $field $dtype) $heapType)\n"
 		return "$dTypeSpec$heapSpec"
 	}
 }
@@ -79,8 +75,7 @@ object ADTRepos {
 		}
 	}
 	fun libPrefix(type : String) : String {
-		if(type == "<UNKNOWN>"
-				|| type=="ABS.StdLib.Fut"
+		if(type=="ABS.StdLib.Fut"
 				|| type=="ABS.StdLib.Bool"
 				|| type.startsWith("Reference.")
 				|| !dtypeMap.containsKey(type))
@@ -111,8 +106,8 @@ object FunctionRepos{
 
 			    val callParams = params.joinToString(" ") { it.name }
 
-			    val funpre = extractSpec(pair.value, "Requires")
-			    val funpost = extractSpec(pair.value, "Ensures")
+			    val funpre = extractSpec(pair.value, "Requires", pair.value.type.qualifiedName)
+			    val funpost = extractSpec(pair.value, "Ensures", pair.value.type.qualifiedName)
 			    val transpost = funpost.toSMT(true).replace("result","($name $callParams)")
 			    val paramsTyped = params.joinToString(" ") { "(${it.name} Int)" }
 			    val nextDef = "\n(assert (forall ($paramsTyped) (=> ${funpre.toSMT(true)} $transpost)))"
@@ -128,7 +123,7 @@ object FunctionRepos{
 				    val eDef: ExpFunctionDef = pair.value.functionDef as ExpFunctionDef
 				    val def = eDef.rhs
 				    sigs += "\t(${pair.key.replace(".", "-")} (${params.fold("", { acc, nx -> "$acc (${nx.name} Int)" })}) Int)\n"
-				    defs += "\t${exprToTerm(translateABSExpToSymExpr(def)).toSMT(false)}\n"
+				    defs += "\t${exprToTerm(translateABSExpToSymExpr(def, "<UNKNOWN>")).toSMT(false)}\n"
 			    }
 			    ret += "\n(define-funs-rec(\n$sigs)(\n$defs))"
 		    }
