@@ -41,6 +41,11 @@ class C{
         return res;
     }
 
+    [Spec : Ensures( result == Trivial )]
+    TrivialType constReturnSuccess(){
+        return Trivial;
+    }
+
 
     [Spec : Ensures( result == Trivial )]
     TrivialType trivialSuccess(TrivialType p){

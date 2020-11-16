@@ -25,6 +25,9 @@ class DatatypeTest : StringSpec({
             val caseFail = classDecl.extractMethodNode(postInv, "caseFail", repos)
             executeNode(caseFail, repos, postInv) shouldBe false
 
+            val constReturnSuccess = classDecl.extractMethodNode(postInv, "constReturnSuccess", repos)
+            executeNode(constReturnSuccess, repos, postInv) shouldBe true
+
             val trivialSuccess = classDecl.extractMethodNode(postInv, "trivialSuccess", repos)
             executeNode(trivialSuccess, repos, postInv) shouldBe true
 
