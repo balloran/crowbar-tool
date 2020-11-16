@@ -541,7 +541,13 @@ fun getReturnType(term: Term) : String{
             "Unit" -> "ABS.StdLib.Unit"
             "iite" -> getReturnType(term.params[1])
             "select" -> (term.params[1] as Field).dType
-            else -> return "ABS.StdLib.Int" // todo: function can only return Int, allow different return types
+            else -> {
+                val fName = term.name.replace("-",".")
+                if(FunctionRepos.isKnown(fName))
+                    return FunctionRepos.get(fName).type.qualifiedName
+                else
+                    throw Exception("Function $fName not defined")
+            }
         }
     }
     else

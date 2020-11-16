@@ -5,6 +5,15 @@ data ComplexType = ComplexA | ComplexB;
 data DataType = Default | DataA | DataB | DataC;
 data TrivialType = Trivial;
 
+[Spec : Ensures( result == Trivial )]
+def TrivialType trivialFunc(Int i) = Trivial;
+
+[Spec : Ensures( result == ComplexA )]
+def ComplexType complexA(Int i) = ComplexA;
+
+[Spec : Ensures( result == ComplexB )]
+def ComplexType complexB(Int i) = ComplexB;
+
 class C{
     [Spec : Requires( p != ComplexB )]
     [Spec : Ensures( result == DataA )]
@@ -99,6 +108,22 @@ class D (Int fi, Int i){
 				await this.fi >= 0;
 				res = this.f;
     	}
+        return res;
+    }
+
+    [Spec : Ensures( result == Trivial )]
+    TrivialType trivialFuncSuccess(){
+        return trivialFunc(1);
+    }
+
+    [Spec : Requires( p != Default )]
+    [Spec : Ensures( result == ComplexB )]
+    ComplexType caseReturnFunc(DataType p){
+        ComplexType res = ComplexA;
+        case p{
+            Default => res = complexA(0);
+            _ => res = complexB(0);
+        }
         return res;
     }
 }

@@ -101,7 +101,7 @@ object FunctionRepos{
 			    val name = pair.key.replace(".", "-")
 			    val params = pair.value.params
 			    val zParams = "Int ".repeat(params.count())
-			    val nextsig =  "\n(declare-fun $name ($zParams) Int)"
+			    val nextsig =  "\n(declare-fun $name ($zParams) ${ADTRepos.libPrefix(pair.value.type.qualifiedName)})"
 			    sigs += nextsig
 
 			    val callParams = params.joinToString(" ") { it.name }

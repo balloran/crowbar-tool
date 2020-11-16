@@ -49,5 +49,17 @@ class DatatypeTest : StringSpec({
             executeNode(awaitWhileSuccess, repos, postInv) shouldBe true
 
         }
+
+        "$smt dTypeFuncTest"{
+            val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
+            val classDecl = model.extractClassDecl("DTypes", "D", repos)
+
+            val trivialFuncSuccess = classDecl.extractMethodNode(postInv, "trivialFuncSuccess", repos)
+            executeNode(trivialFuncSuccess, repos, postInv) shouldBe true
+
+            val caseReturnFunc = classDecl.extractMethodNode(postInv, "caseReturnFunc", repos)
+            executeNode(caseReturnFunc, repos, postInv) shouldBe true
+
+        }
     }
 })
