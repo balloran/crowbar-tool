@@ -60,6 +60,9 @@ class DatatypeTest : StringSpec({
             val caseReturnFunc = classDecl.extractMethodNode(postInv, "caseReturnFunc", repos)
             executeNode(caseReturnFunc, repos, postInv) shouldBe true
 
+            val nonIntParamsSuccess = classDecl.extractMethodNode(postInv, "nonIntParamsSuccess", repos)
+            executeNode(nonIntParamsSuccess, repos, postInv) shouldBe true
+
         }
     }
 })

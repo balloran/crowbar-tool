@@ -100,7 +100,8 @@ object FunctionRepos{
 		    for (pair in contracts) {
 			    val name = pair.key.replace(".", "-")
 			    val params = pair.value.params
-			    val zParams = "Int ".repeat(params.count())
+			    val zParams = params.joinToString(" ") { ADTRepos.libPrefix(it.type.qualifiedName) }
+
 			    val nextsig =  "\n(declare-fun $name ($zParams) ${ADTRepos.libPrefix(pair.value.type.qualifiedName)})"
 			    sigs += nextsig
 
@@ -109,7 +110,7 @@ object FunctionRepos{
 			    val funpre = extractSpec(pair.value, "Requires", pair.value.type.qualifiedName)
 			    val funpost = extractSpec(pair.value, "Ensures", pair.value.type.qualifiedName)
 
-				val paramsTyped = params.joinToString(" ") { "(${it.name} Int)" }
+				val paramsTyped = params.joinToString(" ") { "(${it.name} ${ADTRepos.libPrefix(it.type.qualifiedName)})" }
 				if(params.count() > 0) {
 					val transpost = funpost.toSMT(true).replace("result","($name $callParams)")
 					val nextDef = "\n(assert (forall ($paramsTyped) (=> ${funpre.toSMT(true)} $transpost)))"

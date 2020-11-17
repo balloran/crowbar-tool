@@ -5,6 +5,11 @@ data ComplexType = ComplexA | ComplexB;
 data DataType = Default | DataA | DataB | DataC;
 data TrivialType = Trivial;
 
+
+[Spec : Requires( c != ComplexB )]
+[Spec : Ensures( result != ComplexB )]
+def ComplexType nonIntParams(ComplexType c) = c;
+
 [Spec : Ensures( result == Trivial )]
 def TrivialType trivialFunc() = Trivial;
 
@@ -125,6 +130,12 @@ class D (Int fi, Int i){
             _ => res = complexB();
         }
         return res;
+    }
+
+    [Spec : Requires( p != ComplexB )]
+    [Spec : Ensures( result != ComplexB )]
+    ComplexType nonIntParamsSuccess(ComplexType p){
+        return nonIntParams(p);
     }
 }
 
