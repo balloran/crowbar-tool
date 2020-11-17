@@ -185,11 +185,15 @@ fun exprToTerm(input : Expr, old : Boolean=false) : Term {
         is PollExpr -> poll(exprToTerm(input.e1))
         is Const -> Function(input.name)
         is SExpr -> {
-            if(specialHeapKeywords.containsKey(input.op))
-                if(input.e.size == 1)
-                    Function(input.op, input.e.map { ex -> exprToTerm(ex, true) })
+            if (specialHeapKeywords.containsKey(input.op)) {
+                if (input.e.size == 1)
+                    if(input.op != "old" && input.e[0] !is Field)
+                        throw Exception("Complex argument ${input.e[0].prettyPrint()} not supported for keyword ${input.op}" )
+                    else
+                        Function(input.op, input.e.map { ex -> exprToTerm(ex, input.op == "old") })
                 else
-                    throw Exception("Special keyword old must have one argument, actual arguments size:" + input.e.size)
+                    throw Exception("Special keyword ${input.op} must have one argument, actual arguments size:" + input.e.size)
+            }
             Function(input.op, input.e.map { ex -> exprToTerm(ex, old) })
         }
         is DataTypeConstExp -> DataTypeConst(input.name, input.dType)
