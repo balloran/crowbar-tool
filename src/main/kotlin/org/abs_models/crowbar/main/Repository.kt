@@ -108,10 +108,18 @@ object FunctionRepos{
 
 			    val funpre = extractSpec(pair.value, "Requires", pair.value.type.qualifiedName)
 			    val funpost = extractSpec(pair.value, "Ensures", pair.value.type.qualifiedName)
-			    val transpost = funpost.toSMT(true).replace("result","($name $callParams)")
-			    val paramsTyped = params.joinToString(" ") { "(${it.name} Int)" }
-			    val nextDef = "\n(assert (forall ($paramsTyped) (=> ${funpre.toSMT(true)} $transpost)))"
-			    defs += nextDef
+
+				val paramsTyped = params.joinToString(" ") { "(${it.name} Int)" }
+				if(params.count() > 0) {
+					val transpost = funpost.toSMT(true).replace("result","($name $callParams)")
+					val nextDef = "\n(assert (forall ($paramsTyped) (=> ${funpre.toSMT(true)} $transpost)))"
+					defs += nextDef
+				}else{
+					val transpost = funpost.toSMT(true).replace("result","$name ")
+					val nextDef = "\n(assert  (=> ${funpre.toSMT(true)} $transpost))"
+					defs += nextDef
+				}
+
 		    }
 		    ret += (sigs+defs)
 	    }
