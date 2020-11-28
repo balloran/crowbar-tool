@@ -35,10 +35,8 @@ val smtHeader = """
     """.trimIndent()
 
 @Suppress("UNCHECKED_CAST")
-fun generateSMT(ante : Formula, succ: Formula) : String {
-
+fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     var header = "\n(set-logic ALL)"
-
     val pre = deupdatify(ante)
     val post = deupdatify(Not(succ))
 
@@ -62,6 +60,7 @@ fun generateSMT(ante : Formula, succ: Formula) : String {
     (assert ${pre.toSMT(true)} ) 
     (assert ${post.toSMT(true)}) 
     (check-sat)
+    $modelCmd
     (exit)
     """.trimIndent()
 }
@@ -83,10 +82,14 @@ fun String.runCommand(
     null
 }
 
-fun evaluateSMT(smtRep : String) : Boolean {
+fun plainSMTCommand(smtRep: String) : String? {
     val path = "${tmpPath}out.smt2"
     File(path).writeText(smtRep)
-    val res = "$smtPath $path".runCommand()
+    return "$smtPath $path".runCommand()
+}
+
+fun evaluateSMT(smtRep : String) : Boolean {
+    val res = plainSMTCommand(smtRep)
     return res != null && res.trim() == "unsat"
 }
 

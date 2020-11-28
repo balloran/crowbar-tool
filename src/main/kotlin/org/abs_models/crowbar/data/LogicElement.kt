@@ -160,9 +160,6 @@ object False : Formula {
     override fun toSMT(isInForm : Boolean) : String = if(isInForm) "false" else "0"
 }
 
-
-
-
 val specialHeapKeywords = mapOf(OldHeap.name to OldHeap, LastHeap.name to LastHeap)
 
 object Heap : ProgVar("heap","Heap")
@@ -233,7 +230,7 @@ fun deupdatify(input: LogicElement) : LogicElement {
         is And -> And(deupdatify(input.left) as Formula, deupdatify(input.right) as Formula)
         is Or -> Or(deupdatify(input.left) as Formula, deupdatify(input.right) as Formula)
         is Not -> Not(deupdatify(input.left) as Formula)
-        else                -> input
+        else -> input
     }
 }
 
@@ -242,7 +239,7 @@ fun apply(update: UpdateElement, input: LogicElement) : LogicElement {
         is EmptyUpdate -> input
         is ElementaryUpdate -> subst(input, update.lhs, update.rhs)
         is ChainUpdate -> apply(update.left, apply(update.right, input))
-        else                -> input
+        else -> input
     }
 }
 

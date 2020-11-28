@@ -28,6 +28,7 @@ var tmpPath = "/tmp/"
 var smtPath  = "z3"
 //var timeoutS  = 100
 var verbosity = Verbosity.NORMAL
+var investigate = false
 
 //todo: once allowedTypes is not needed anymore, the repository needs to be passed to fewer places
 data class Repository(private val model : Model?,
@@ -144,17 +145,20 @@ class Main : CliktCommand() {
     ).single().required()
 
    // private val timeout     by   option("--timeout","-to",help="timeout for a single SMT prover invocation in seconds").int().default(timeoutS)
-    private val tmp        by   option("--tmp","-t",help="path to a directory used to store the .smt files").path().default(Paths.get(tmpPath))
-    private val smtCmd     by   option("--smt","-s",help="command to start SMT solver").default(smtPath)
-    private val verbose    by   option("--verbose", "-v",help="verbosity output level").int().restrictTo(Verbosity.values().indices).default(Verbosity.NORMAL.ordinal)
-    private val deductType by   option("--deduct","-d",help="Used Deductive Type").choice("PostInv","RegAcc").convert { when(it){"PostInv" -> PostInvType::class; "RegAcc" -> RegAccType::class; else -> throw Exception(); } }.default(PostInvType::class)
-    private val freedom    by   option("--freedom","-fr",help="Performs a simple check for potentially deadlocking methods").flag()
+    private val tmp        by   option("--tmp", "-t", help="path to a directory used to store .smt and counterexample files").path().default(Paths.get(tmpPath))
+    private val smtCmd     by   option("--smt", "-s", help="command to start SMT solver").default(smtPath)
+    private val verbose    by   option("--verbose", "-v", help="verbosity output level").int().restrictTo(Verbosity.values().indices).default(Verbosity.NORMAL.ordinal)
+    private val deductType by   option("--deduct", "-d", help="Used Deductive Type").choice("PostInv","RegAcc").convert { when(it){"PostInv" -> PostInvType::class; "RegAcc" -> RegAccType::class; else -> throw Exception(); } }.default(PostInvType::class)
+    private val freedom    by   option("--freedom", "-fr", help="Performs a simple check for potentially deadlocking methods").flag()
+    private val invFlag    by  option("--investigate", "-inv", help="Generate counterexamples for uncloseable branches").flag()
+
     override fun run() {
 
         tmpPath = "$tmp/"
         smtPath = smtCmd
         verbosity = Verbosity.values()[verbose]
-    //    timeoutS = timeout
+        // timeoutS = timeout
+        investigate = invFlag
 
         val (model, repos) = load(filePath)
         //todo: check all VarDecls and Field Decls here

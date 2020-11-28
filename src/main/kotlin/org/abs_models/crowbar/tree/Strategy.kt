@@ -41,4 +41,4 @@ fun getStrategy(clazz: KClass<out DeductType>, repos: Repository) : Strategy{
 
 
 fun nextRAStrategy(): Strategy = DefaultStrategy(listOf(RAReturn, RAFieldAssign, RAVarAssign, RASkip, RASkipSkip))
-fun nextPITStrategy(repos: Repository) : Strategy = DefaultStrategy(listOf(PITBranch, PITSyncAssign(repos), PITLocAssign(repos), PITAllocAssign(repos), PITCallAssign(repos),PITSyncCallAssign(repos), PITReturn, PITSkip, PITIf, PITAwait, PITSkipSkip, PITWhile))
+fun nextPITStrategy(repos: Repository) : Strategy = DefaultStrategy(listOf(PITBranch, PITSyncAssign(repos), PITLocAssign(repos), PITAllocAssign(repos), PITCallAssign(repos), PITSyncCallAssign(repos), PITReturn, PITSkip, PITIf, PITAwait, PITSkipSkip, PITWhile, PITScopeSkip))
