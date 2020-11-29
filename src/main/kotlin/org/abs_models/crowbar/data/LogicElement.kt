@@ -19,54 +19,66 @@ data class FormulaAbstractVar(val name : String) : Formula, AbstractVar {
     override fun toSMT(isInForm : Boolean) : String = name
 }
 
+// Crowbar uses type-agnostic heaps internally that can store any data type
+// For SMT translation, we have to use separate heaps for different types
+// Therefore, we have to translate the generic heap expressions to properly
+// typed ones 
+fun filterHeapTypes(term : Term, dtype: String) : String{
+    val smtdType = ADTRepos.getSMTDType(dtype)
+    if (term is Function ) {
+        // Remove stores that do not change the sub-heap for type dType
+        if(term.name == "store") {
+            if (ADTRepos.libPrefix((term.params[1] as Field).dType) == dtype)
+                return "(store " +
+                        "${filterHeapTypes(term.params[0], dtype)} " +
+                        "${term.params[1].toSMT(false)} " +
+                        "${term.params[2].toSMT(false)})"
+            else
+                return filterHeapTypes(term.params[0], dtype)
+        // Rewrite generic anon to correctly typed anon function
+        }
+        else if (term.name == "anon")
+            return "(${smtdType.anon} ${filterHeapTypes(term.params[0], dtype)})"
+        else
+            throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
+
+    }
+    // Rewrite generic heap variables to correctly typed sub-heap variables
+    else if(term is ProgVar && term.dType == "Heap"){
+        if(term is OldHeap)
+            return smtdType.old
+        else if(term is LastHeap)
+            return smtdType.last
+        else if(term is Heap)
+            return smtdType.heap
+        else
+            return term.name
+    }
+    else
+        throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
+
+}
+
 data class Function(val name : String, val params : List<Term> = emptyList()) : Term {
     override fun prettyPrint(): String {
         return prettyPrintFunction(params, name)
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
-    fun removeIrrilevantHeaps(term : Term, dtype: String) : String{
-        val smtdType = ADTRepos.getSMTDType(dtype)
-        if (term is Function ) {
-            if(term.name == "store") {
-                if (ADTRepos.libPrefix((term.params[1] as Field).dType) == dtype)
-                    return "(store " +
-                            "${removeIrrilevantHeaps(term.params[0], dtype)} " +
-                            "${term.params[1].toSMT(false)} " +
-                            "${term.params[2].toSMT(false)})"
-                else
-                    return removeIrrilevantHeaps(term.params[0], dtype)
-            }else if (term.name == "anon")
-                return "(${smtdType.anon} ${removeIrrilevantHeaps(term.params[0], dtype)})"
-            else
-                throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
-        }else if(term is ProgVar && term.dType == "Heap"){
-            if(term is OldHeap)
-                return smtdType.old
-            else if(term is LastHeap)
-                return smtdType.last
-            else if(term is Heap)
-                return smtdType.heap
-            else
-                return term.name
-        }else
-            throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
-
-    }
-
     override fun toSMT(isInForm : Boolean) : String {
         val back = getSMT(name, isInForm)
 
-        if(name == "select")
-            return "($name " +
-                    "${removeIrrilevantHeaps(params[0], ADTRepos.libPrefix((params[1] as Field).dType))} " +
-                    "${params[1].toSMT(false)})"
+        if(name == "select") {
+            val heapType = ADTRepos.libPrefix((params[1] as Field).dType)
+            val fieldName = params[1].toSMT(false)
+            return "(select ${filterHeapTypes(params[0], heapType)} $fieldName)"
+        }
 
         if(params.isEmpty()) {
             if(name.startsWith("-")) return "(- ${name.substring(1)})" //CVC4 requires -1 to be passed as (- 1)
             return name
         }
-        val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT(isInForm)}"})
+        val list = params.fold("",{acc,nx -> acc + " ${nx.toSMT(isInForm)}"})
         return "($back $list)"
     }
 }

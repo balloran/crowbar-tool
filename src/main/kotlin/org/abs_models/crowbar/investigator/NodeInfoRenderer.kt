@@ -173,7 +173,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
 
     override fun visit(info: InfoSyncCallAssign): String {
         // Detect a stand-alone method call with no lhs
-        val unitCall = if (info.lhs is ProgVar) info.lhs.dType == "Unit" else (info.lhs as Field).dType == "Unit"
+        val unitCall = if (info.lhs is ProgVar) info.lhs.dType == "ABS.StdLib.Unit" else (info.lhs as Field).dType == "ABS.StdLib.Unit"
 
         val location = renderDeclLocation(info.lhs, type2str = false, declare = false)
         val origCallExp = "${renderExp(info.callee)}.${renderExp(info.call)}"
@@ -240,7 +240,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
 
         // Get the evaluation of the whole expression
         val evalValue = model.smtExprs[info.retExpr.toSMT(false)]
-        val eval = if (evalValue == null) "Irrelevant or unavailable value" else renderModelValue(evalValue, info.expression.absExp!!.type.simpleName)
+        val eval = if (evalValue == null) "Irrelevant or unavailable value" else renderModelValue(evalValue, info.expression.absExp!!.type.qualifiedName)
 
         // Get evaluations of all used definitions (progVars and fields)
         val componentValues = info.retExprComponentMap.mapValues {
@@ -250,7 +250,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         // Render value and location for each component
         val renderedComponents = componentValues.map {
             val loc = if (it.key is Location) renderLocation(it.key as Location) else it.key.prettyPrint()
-            val value = renderModelValue(it.value!!, it.key.absExp!!.type.simpleName)
+            val value = renderModelValue(it.value!!, it.key.absExp!!.type.qualifiedName)
             "// $loc: $value"
         }
 
@@ -281,7 +281,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
 
         // Futures and object types are replaced by placeholder strings
         // in executable code but kept in comments for context
-        val tpe = if (type2str) complexTypeToString(loc.dType) else loc.dType
+        val tpe = if (type2str) complexTypeToString(loc.dType) else renderType(loc.dType)
 
         // Variables have to be declared on first use
         if (varDefs.none { it.first == location }) {
@@ -351,9 +351,9 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
 
     private fun renderModelValue(value: Int, dType: String): String {
         return when (dType) {
-            "Int" -> value.toString()
-            "Fut" -> "\"${model.futNameById(value)}\""
-            "Bool" -> if (value == 0) "False" else "True"
+            "ABS.StdLib.Int" -> value.toString()
+            "ABS.StdLib.Fut" -> "\"${model.futNameById(value)}\""
+            "ABS.StdLib.Bool" -> if (value == 0) "False" else "True"
             "<UNKNOWN>" -> "\"unknownType($value)\""
             else -> if (value == 0) "null" else "\"${getObjectById(value)}\""
         }
@@ -376,6 +376,8 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         return getObjectBySMT(smtRep)
     }
 
+    private fun renderType(type: String) = type.removePrefix("ABS.StdLib.")
+
     private fun renderExp(e: Expr): String {
         // Keep track of fields referenced in expressions for field declarations
         usedFields.addAll(collectBaseExpressions(e).filter { it is Field }.map { it as Field })
@@ -388,7 +390,12 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
     private fun indent(text: String) = indent(text, scopeLevel)
 }
 
-fun complexTypeToString(type: String) = if (type == "Int" || type == "Bool") type else "String"
+fun complexTypeToString(type: String): String {
+    return if (type == "ABS.StdLib.Int" || type == "ABS.StdLib.Bool")
+        type.removePrefix("ABS.StdLib.")
+    else
+        "String"
+}
 
 fun indent(text: String, level: Int, indentString: String = "\t"): String {
     val lines = text.split("\n")

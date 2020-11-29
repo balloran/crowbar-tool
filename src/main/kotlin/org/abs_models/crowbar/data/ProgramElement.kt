@@ -229,6 +229,7 @@ data class Const(val name : String)  : Expr {
 }
 
 data class DataTypeConstExp(val name : String, val dType : String)  : Expr {
+    override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
         return "$name:$dType"
     }

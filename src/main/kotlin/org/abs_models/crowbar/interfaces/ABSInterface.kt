@@ -72,7 +72,7 @@ fun translateABSExpToSymExpr(input: Exp, returnType: String) : Expr {
                 "Unit" -> unitExpr()
                 "True" -> Const("1")
                 "False" -> Const("0")
-                else -> DataTypeConstExp (input.dataConstructor!!.qualifiedName, input.type.qualifiedName)
+                else -> DataTypeConstExp(input.dataConstructor!!.qualifiedName, input.type.qualifiedName)
             }
         }
         is FnApp ->

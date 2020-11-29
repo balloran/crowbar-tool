@@ -9,9 +9,11 @@ import org.abs_models.crowbar.data.OldHeap
 import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.crowbar.data.Term
 import org.abs_models.crowbar.data.deupdatify
+import org.abs_models.crowbar.data.filterHeapTypes
 import org.abs_models.crowbar.data.specialHeapKeywords
 import org.abs_models.crowbar.interfaces.generateSMT
 import org.abs_models.crowbar.interfaces.plainSMTCommand
+import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.Verbosity
 import org.abs_models.crowbar.main.output
 import org.abs_models.crowbar.main.tmpPath
@@ -71,7 +73,7 @@ object CounterexampleGenerator {
 
         output("Investigator: collecting anonymized heap expressions....", Verbosity.V)
         val heapExpressionTerms = infoNodes.map { it.heapExpressions }.flatten()
-        val heapExpressions = (heapExpressionTerms.filter { collectUsedDefinitions(it).minus(availableDefs).isEmpty() } + Heap + OldHeap).map { it.toSMT(false) }
+        val heapExpressions = (heapExpressionTerms.filter { collectUsedDefinitions(it).minus(availableDefs).isEmpty() } + Heap + OldHeap)
 
         output("Investigator: collecting other smt expressions....", Verbosity.V)
         val miscExpressionTerms = infoNodes.map { it.smtExpressions }.flatten()
@@ -126,13 +128,15 @@ object CounterexampleGenerator {
 
     private fun getModel(
         leaf: LogicNode,
-        heapExpressions: List<String>,
+        heapExpressions: List<Term>,
         newExpressions: List<String>,
         miscExpressions: List<String>
     ): Model {
 
         // "heap", "old", "last", etc do not reference program vars
-        val reservedVarNames = listOf("heap", "Unit") + specialHeapKeywords.values.map { it.name }
+        val usedTypes = ADTRepos.getAllTypePrefixes()
+        val reservedVarNameStems = listOf("heap") + specialHeapKeywords.values.map { it.name }
+        val reservedVarNames = usedTypes.map { tpe -> reservedVarNameStems.map { stem -> "${stem}_$tpe" } }.flatten() + listOf("Unit")
 
         // Collect types of fields and variables from leaf node
         val fieldTypes = ((leaf.ante.iterate { it is Field } + leaf.succ.iterate { it is Field }) as Set<Field>).associate { Pair(it.name, it.dType) }
@@ -143,15 +147,29 @@ object CounterexampleGenerator {
         val subObligations = subObligationMap.keys.toList()
 
         // Build model command
-        var baseModel = "(get-model)"
-        if (heapExpressions.size > 0)
-            baseModel += "(get-value (${heapExpressions.joinToString(" ")}))"
-        if (newExpressions.size > 0)
-            baseModel += "(get-value (${newExpressions.joinToString(" ")}))"
-        if (miscExpressions.size > 0)
-            baseModel += "(get-value (${miscExpressions.joinToString(" ")}))"
-        if (subObligationMap.keys.size > 0)
-            baseModel += "(get-value (${subObligations.joinToString(" ")}))"
+        var baseModel = "(get-model)\n"
+
+        if (heapExpressions.size > 0) {
+            // We have to multiplex heap expressions here to get expressions for all types used in the SMT input
+            // The result is a map of generic heap expressions to maps of types to corresponding types heap expressions
+            usedTypes.forEach { dtype ->
+                val typedHeapExpressions = heapExpressions.map { exp -> filterHeapTypes(exp, dtype) }
+                baseModel += "; Heap expressions for sub-heap of type ${dtype}\n"
+                baseModel += "(get-value (${typedHeapExpressions.joinToString(" ")}))\n"
+            }
+        }
+        if (newExpressions.size > 0) {
+            baseModel += "; Object creation expressions\n"
+            baseModel += "(get-value (${newExpressions.joinToString(" ")}))\n"
+        }
+        if (miscExpressions.size > 0) {
+            baseModel += "; Future & return expression evaluation, misc expressions\n"
+            baseModel += "(get-value (${miscExpressions.joinToString(" ")}))\n"
+        }
+        if (subObligationMap.keys.size > 0) {
+            baseModel += "; Proof sub-obligations\n"
+            baseModel += "(get-value (${subObligations.joinToString(" ")}))\n"
+        }
 
         // Get evaluations of all collected expressions (heap states after anon, new objects, future values, etc)
         val smtRep = generateSMT(leaf.ante, leaf.succ, modelCmd = baseModel)
@@ -197,19 +215,28 @@ object CounterexampleGenerator {
         return Model(initialAssignments, heapAssignments, futLookup, objLookup, smtExprs, subObligationValues)
     }
 
-    private fun getHeapMap(heapExpressions: List<String>, fields: List<Function>, fieldTypes: Map<String, String>): Map<String, List<Pair<Field, Int>>> {
+    private fun getHeapMap(heapExpressions: List<Term>, fields: List<Function>, fieldTypes: Map<String, String>): Map<String, List<Pair<Field, Int>>> {
         if (heapExpressions.size == 0)
             return mapOf()
 
-        val parsedHeaps = ModelParser.parseArrayValues()
-        val rawMap = heapExpressions.zip(parsedHeaps).associate { it }
-        val heapMap = rawMap.mapValues { (_, heap) ->
-            fields.map {
-                val initValue = heap.getValue((it.value as Integer).value)
-                val field = Field(it.name, fieldTypes[it.name]!!)
-                Pair(field, initValue)
+        // This got a bit tricky with the introduction of multiple sub-heaps
+        // We first parse the typed versions of all heap expressions for all used types
+        val usedTypes = ADTRepos.getAllTypePrefixes()
+        val parsedHeaps = usedTypes.map { Pair(it, ModelParser.parseArrayValues()) }.toMap()
+
+        // And then find the correct value for every field in every heap state
+        val heapMap = heapExpressions.mapIndexed { index, exp ->
+            val heapContents = fields.map { field ->
+                val fieldType = fieldTypes[field.name]!!
+                // By looking up the value in the sub-heap of the right type
+                // (ADTRepos.libPrefix maps ABS types to SMT types)
+                val subheapID = ADTRepos.libPrefix(fieldType)
+                val value = parsedHeaps[subheapID]!![index].getValue((field.value as Integer).value)
+                Pair(Field(field.name, fieldType), value)
             }
-        }
+
+            Pair(exp.toSMT(false), heapContents)
+        }.toMap()
 
         return heapMap
     }

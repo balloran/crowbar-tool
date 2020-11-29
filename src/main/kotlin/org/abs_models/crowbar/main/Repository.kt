@@ -45,6 +45,8 @@ object ADTRepos {
 
 	fun getSMTDType(dType : String) : SMTDType = dtypeMap[libPrefix(dType)]!!
 
+	fun getAllTypePrefixes() : Set<String> = dtypeMap.keys
+
 	override fun toString() : String {
 		var ret = ""
 		for (dtype in dtypeMap){

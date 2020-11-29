@@ -57,7 +57,9 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
 
     return """
     $header 
-    (assert ${pre.toSMT(true)} ) 
+    ; Precondition
+    (assert ${pre.toSMT(true)} )
+    ; Negated postcondition
     (assert ${post.toSMT(true)}) 
     (check-sat)
     $modelCmd
