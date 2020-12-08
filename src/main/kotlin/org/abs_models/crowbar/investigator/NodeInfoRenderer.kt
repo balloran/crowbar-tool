@@ -129,12 +129,12 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
     }
 
     override fun visit(info: InfoBranch): String {
-        var res = indent("switch(${renderExp(info.matchExpr)}){\n")
+        var res = indent("switch(${renderExp(info.matchExpr)}){") + "\n"
         scopeLevel += 1
-        res = res + "${renderExp(info.pattern)} => {\n"
+        res = res + indent("${renderExp(info.pattern)} => {") + "\n"
         scopeLevel += 1
-        res = res + "// Known from previous negated patterns:\n" +
-                    "// ${renderFormula(info.previousConditions)}\n"
+        res = res + indent("// Known from previous negated patterns:\n" +
+                    "// ${renderFormula(info.previousConditions)}")
 
         return res
     }
