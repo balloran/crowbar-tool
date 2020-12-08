@@ -2,6 +2,8 @@ package org.abs_models.crowbar.investigator
 
 import org.abs_models.crowbar.data.CallExpr
 import org.abs_models.crowbar.data.Const
+import org.abs_models.crowbar.data.DataTypeConst
+import org.abs_models.crowbar.data.DataTypeConstExp
 import org.abs_models.crowbar.data.Expr
 import org.abs_models.crowbar.data.Field
 import org.abs_models.crowbar.data.Function
@@ -16,7 +18,8 @@ fun collectUsedDefinitions(elem: Term): Set<String> {
         is Function -> collectFromFunction(elem)
         is ProgVar -> setOf(elem.name)
         is Field -> setOf(elem.name)
-        else -> throw Exception("Cannot collect used definitions from term: ${elem.prettyPrint()}")
+        is DataTypeConst -> setOf(elem.name)
+        else -> throw Exception("Cannot collect used definitions from term: ${elem::class.simpleName} ${elem.prettyPrint()}")
     }
 }
 
@@ -31,6 +34,7 @@ fun collectBaseExpressions(exp: Expr, old: Boolean = false): Set<Expr> {
         is Field -> if (old) setOf(SExpr("old", listOf(exp))) else setOf(exp)
         is PollExpr -> collectBaseExpressions(exp.e1, old)
         is Const -> setOf()
+        is DataTypeConstExp -> setOf()
         is CallExpr -> {
             exp.e.map { collectBaseExpressions(it, old) }.flatten().toSet()
         }

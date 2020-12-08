@@ -7,6 +7,7 @@ import org.abs_models.crowbar.data.Location
 import org.abs_models.crowbar.data.OldHeap
 import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.crowbar.data.SExpr
+import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.tree.InfoAwaitUse
 import org.abs_models.crowbar.tree.InfoBranch
 import org.abs_models.crowbar.tree.InfoCallAssign
@@ -68,7 +69,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         // The state in which the actual counterexample begins is initialized in the method-internal initial assignments
         val fields = model.heapMap[OldHeap.toSMT(false)]!!
         // Find fields not included in the model but included in the counterexample and initialize them with default value
-        val missingFields = (usedFields - fields.map { it.first }.toSet()).map { Pair(it, 0) }
+        val missingFields = (usedFields - fields.map { it.first }.toSet()).map { Pair(it, Integer(0)) }
 
         val defs = (fields + missingFields).map {
             val field = it.first
@@ -152,7 +153,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         var getReplacement = ""
         if (futureValue == null) {
             getReplacement = "// Future value irrelevant or unavailable, using default:\n"
-            futureValue = 0
+            futureValue = Integer(0)
         }
 
         getReplacement += renderModelAssignment(info.lhs, futureValue)
@@ -186,7 +187,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         var callReplacement = ""
         if (methodReturnVal == null) {
             callReplacement = "// Return value irrelevant or unavailable, using default:\n"
-            methodReturnVal = 0
+            methodReturnVal = Integer(0)
         }
         callReplacement += renderModelAssignment(info.lhs, methodReturnVal)
 
@@ -326,7 +327,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         }
     }
 
-    private fun renderHeapAssignmentBlock(postHeap: List<Pair<Field, Int>>?): String {
+    private fun renderHeapAssignmentBlock(postHeap: List<Pair<Field, Value>>?): String {
         return if (postHeap == null)
             "// No heap modification info available at this point"
         else if (postHeap.size == 0)
@@ -337,7 +338,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         }
     }
 
-    private fun renderModelAssignment(loc: Location, value: Int): String {
+    private fun renderModelAssignment(loc: Location, value: Value): String {
         val location = renderDeclLocation(loc, type2str = true)
 
         val type = when (loc) {
@@ -349,13 +350,15 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         return "$location = ${renderModelValue(value, type)};"
     }
 
-    private fun renderModelValue(value: Int, dType: String): String {
-        return when (dType) {
-            "ABS.StdLib.Int" -> value.toString()
-            "ABS.StdLib.Fut" -> "\"${model.futNameById(value)}\""
-            "ABS.StdLib.Bool" -> if (value == 0) "False" else "True"
-            "<UNKNOWN>" -> "\"unknownType($value)\""
-            else -> if (value == 0) "null" else "\"${getObjectById(value)}\""
+    private fun renderModelValue(value: Value, dType: String): String {
+        return when {
+            dType == "ABS.StdLib.Int" -> (value as Integer).value.toString()
+            dType == "ABS.StdLib.Fut" -> "\"${model.futNameById((value as Integer).value)}\""
+            dType == "ABS.StdLib.Bool" -> if ((value as Integer).value == 0) "False" else "True"
+            dType == "<UNKNOWN>" -> "\"unknownType($value)\""
+            isDataType(dType) -> (value as DataType).value.removePrefix("DTypes.")
+            value is Integer -> if (value.value == 0) "null" else "\"${getObjectById(value.value)}\""
+            else -> throw Exception("Cannot render model value of unknown type $dType")
         }
     }
 
@@ -393,8 +396,15 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
 fun complexTypeToString(type: String): String {
     return if (type == "ABS.StdLib.Int" || type == "ABS.StdLib.Bool")
         type.removePrefix("ABS.StdLib.")
+    else if (isDataType(type))
+        type.removePrefix("DTypes.")
     else
         "String"
+}
+
+fun isDataType(dType: String): Boolean {
+    val prefix = ADTRepos.libPrefix(dType)
+    return ADTRepos.getAllTypePrefixes().contains(prefix)
 }
 
 fun indent(text: String, level: Int, indentString: String = "\t"): String {

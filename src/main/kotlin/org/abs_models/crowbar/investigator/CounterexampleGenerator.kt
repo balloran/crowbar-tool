@@ -136,7 +136,7 @@ object CounterexampleGenerator {
         // "heap", "old", "last", etc do not reference program vars
         val usedTypes = ADTRepos.getAllTypePrefixes()
         val reservedVarNameStems = listOf("heap") + specialHeapKeywords.values.map { it.name }
-        val reservedVarNames = usedTypes.map { tpe -> reservedVarNameStems.map { stem -> "${stem}_$tpe" } }.flatten() + listOf("Unit")
+        val reservedVarNames = usedTypes.map { tpe -> reservedVarNameStems.map { stem -> "${stem}_${tpe.replace(".","_")}" } }.flatten() + listOf("Unit")
 
         // Collect types of fields and variables from leaf node
         val fieldTypes = ((leaf.ante.iterate { it is Field } + leaf.succ.iterate { it is Field }) as Set<Field>).associate { Pair(it.name, it.dType) }
@@ -185,16 +185,15 @@ object CounterexampleGenerator {
 
         val parsed = ModelParser.parseModel()
         val constants = parsed.filter { it is Constant }
-        val vars = constants.filter { !(it.name matches Regex("(.*_f|fut_.*|NEW\\d.*|f_(\\d)+)") || reservedVarNames.contains(it.name)) }
+        val vars = constants.filter { !(it.name matches Regex("(.*_f|fut_.*|NEW\\d.*|f_(\\d)+|DTypes\\-.*)") || reservedVarNames.contains(it.name)) }
         val fields = constants.filter { it.name matches Regex(".*_f") }
         val futLookup = constants.filter { it.name.startsWith("fut_") }.associate { Pair((it.value as Integer).value, it.name) }
 
-        val initialAssignments = mutableListOf<Pair<Location, Int>>()
+        val initialAssignments = mutableListOf<Pair<Location, Value>>()
 
         vars.forEach {
-            val initValue = (it.value as Integer).value
             val variable = ProgVar(it.name, varTypes[it.name]!!)
-            initialAssignments.add(Pair(variable, initValue))
+            initialAssignments.add(Pair(variable, it.value))
         }
 
         // Get heap-states at heap anonymization points
@@ -210,12 +209,12 @@ object CounterexampleGenerator {
         val smtExprs = getExpressionMap(miscExpressions)
 
         // Get evaluations of sub-obligations and create usable mapping by formula
-        val subObligationValues = getExpressionMap(subObligations).mapKeys { subObligationMap[it.key]!! }.mapValues { it.value == 1 }
+        val subObligationValues = getExpressionMap(subObligations).mapKeys { subObligationMap[it.key]!! }.mapValues { (it.value as Integer).value == 1 }
 
         return Model(initialAssignments, heapAssignments, futLookup, objLookup, smtExprs, subObligationValues)
     }
 
-    private fun getHeapMap(heapExpressions: List<Term>, fields: List<Function>, fieldTypes: Map<String, String>): Map<String, List<Pair<Field, Int>>> {
+    private fun getHeapMap(heapExpressions: List<Term>, fields: List<Function>, fieldTypes: Map<String, String>): Map<String, List<Pair<Field, Value>>> {
         if (heapExpressions.size == 0)
             return mapOf()
 
@@ -241,11 +240,11 @@ object CounterexampleGenerator {
         return heapMap
     }
 
-    private fun getExpressionMap(expressions: List<String>): Map<String, Int> {
+    private fun getExpressionMap(expressions: List<String>): Map<String, Value> {
         if (expressions.size == 0)
             return mapOf()
 
-        val parsed = ModelParser.parseIntegerValues()
+        val parsed = ModelParser.parseScalarValues()
         val expMap = expressions.zip(parsed).associate { it }
 
         return expMap
@@ -255,7 +254,7 @@ object CounterexampleGenerator {
         if (newExpressions.size == 0)
             return mapOf()
 
-        val parsed = ModelParser.parseIntegerValues()
+        val parsed = ModelParser.parseScalarValues().map { (it as Integer).value }
         val objMap = parsed.zip(newExpressions).associate { it }
 
         return objMap
@@ -321,11 +320,11 @@ object CounterexampleGenerator {
 }
 
 class Model(
-    val initState: List<Pair<Location, Int>>,
-    val heapMap: Map<String, List<Pair<Field, Int>>>,
+    val initState: List<Pair<Location, Value>>,
+    val heapMap: Map<String, List<Pair<Field, Value>>>,
     val futLookup: Map<Int, String>,
     val objLookup: Map<Int, String>,
-    val smtExprs: Map<String, Int>,
+    val smtExprs: Map<String, Value>,
     val subObligations: Map<Formula, Boolean>
 ) {
     // The SMT solver may reference futures that were not defined in the program

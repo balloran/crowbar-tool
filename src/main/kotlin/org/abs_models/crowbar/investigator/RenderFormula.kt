@@ -1,6 +1,7 @@
 package org.abs_models.crowbar.investigator
 
 import org.abs_models.crowbar.data.And
+import org.abs_models.crowbar.data.DataTypeConst
 import org.abs_models.crowbar.data.False
 import org.abs_models.crowbar.data.Field
 import org.abs_models.crowbar.data.Formula
@@ -34,10 +35,11 @@ fun renderFormula(f: Formula, m: Map<String, String>): String {
 
 fun renderTerm(t: Term, m: Map<String, String>): String {
     return when (t) {
-        is Function     -> renderFunction(t, m)
-        is Field        -> "this.${t.name.substring(0, t.name.length - 2)}" // Strip _f suffix
-        is ProgVar      -> if (m.containsKey(t.name)) m[t.name]!! else t.name
-        else            -> throw Exception("Cannot render term: ${t.prettyPrint()}")
+        is Function         -> renderFunction(t, m)
+        is Field            -> "this.${t.name.substring(0, t.name.length - 2)}" // Strip _f suffix
+        is ProgVar          -> if (m.containsKey(t.name)) m[t.name]!! else t.name
+        is DataTypeConst    -> t.name.removePrefix("DTypes.")
+        else                -> throw Exception("Cannot render term: ${t.prettyPrint()}")
     }
 }
 

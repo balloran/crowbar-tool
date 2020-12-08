@@ -46,18 +46,18 @@ object ModelParser {
         return model
     }
 
-    fun parseIntegerValues(): List<Int> {
+    fun parseScalarValues(): List<Value> {
         consume(LParen())
 
         if (checkForSMTError())
             return listOf()
 
-        val values = mutableListOf<Int>()
+        val values = mutableListOf<Value>()
 
         while (tokens[0] is LParen) {
             consume()
             ignore()
-            values.add(parseIntExp())
+            values.add(parseScalarValue())
             consume(RParen())
         }
 
@@ -80,9 +80,9 @@ object ModelParser {
 
         // Functions are annoying to parse & evaluate, so we won't
         // Heap definitions of Array type can get complex once counterexamples reach a certain size
-        // So we will only parse simple integer constant definitions here
+        // So we will only parse simple constant definitions here
         // Parsing of heaps and relevant functions is handled elsewhere
-        if (args.size == 0 && type == Type.INT)
+        if (args.size == 0 && (type == Type.INT || type == Type.COMPLEX))
             value = parseValue(type)
         else {
             ignore()
@@ -122,21 +122,36 @@ object ModelParser {
         if (tokens[0] is LParen) {
             consume()
             consume(Identifier("Array"))
-            consume(Identifier("Int"))
-            consume(Identifier("Int"))
+            parseType()
+            parseType()
             consume(RParen())
             return Type.ARRAY
+        } else if (tokens[0] is Identifier) {
+            val typeid = tokens[0].spelling
+            consume()
+            if (typeid == "Int")
+                return Type.INT
+            else
+                return Type.COMPLEX
         } else {
-            consume(Identifier("Int"))
-            return Type.INT
+            throw Exception("Expected scalar or array type but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
         }
     }
 
     private fun parseValue(expectedType: Type): Value {
-        if (expectedType == Type.INT) {
-            return Integer(parseIntExp())
-        } else
-            return parseArrayExp()
+        return if (expectedType == Type.INT)
+            Integer(parseIntExp())
+        else if (expectedType == Type.COMPLEX)
+            DataType(parseComplexTypeExp())
+        else
+            parseArrayExp()
+    }
+
+    private fun parseScalarValue(): Value {
+        return if (tokens[0] is Identifier)
+            parseValue(Type.COMPLEX)
+        else
+            parseValue(Type.INT)
     }
 
     private fun parseIntExp(): Int {
@@ -153,12 +168,12 @@ object ModelParser {
                     consume()
                     value = - parseIntExp()
                 }
-                else -> throw Exception("Expected integer expression function but got '${tokens[0]}'' at ${tokens.joinToString(" ")}")
+                else -> throw Exception("Expected integer expression function but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
             }
             consume(RParen())
             return value
         } else
-            throw Exception("Expected concrete integer value but got '${tokens[0]}'' at ${tokens.joinToString(" ")}")
+            throw Exception("Expected concrete integer value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
     }
 
     private fun parseArrayExp(defs: Map<String, List<Token>> = mapOf()): Array {
@@ -195,8 +210,9 @@ object ModelParser {
         } else if (tokens[0] == Identifier("store")) {
             consume()
             array = parseArrayExp(defs)
+            val elemType = array.elemType
             val index = parseIntExp()
-            val value = parseIntExp()
+            val value = parseValue(elemType)
             array.map.put(index, value)
         } else
             throw Exception("Unexpected token \"${tokens[0]}\" in array expression")
@@ -205,18 +221,27 @@ object ModelParser {
         return array
     }
 
+    private fun parseComplexTypeExp(): String {
+        if (tokens[0] is Identifier) {
+            val value = (tokens[0] as Identifier).spelling
+            consume()
+            return value
+        } else
+            throw Exception("Expected data type value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+    }
+
     private fun parseConstArray(): Array {
         consume(LParen())
         consume(Identifier("as"))
         consume(Identifier("const"))
         consume(LParen())
         consume(Identifier("Array"))
-        consume(Identifier("Int"))
-        consume(Identifier("Int"))
+        val valType = parseType()
+        parseType()
         consume(RParen())
         consume(RParen())
-        val value = parseIntExp()
-        return Array(value)
+        val value = parseValue(valType)
+        return Array(valType, value)
     }
 
     private fun checkForSMTError(): Boolean {
@@ -296,7 +321,7 @@ object UnknownValue : Value {
     override fun toString() = "UNPARSED VALUE"
 }
 
-class Array(val defaultValue: Int, val map: MutableMap<Int, Int> = mutableMapOf()) : Value {
+class Array(val elemType: Type, val defaultValue: Value, val map: MutableMap<Int, Value> = mutableMapOf()) : Value {
     fun getValue(index: Int) = if (map.contains(index)) map[index]!! else defaultValue
 
     override fun toString(): String {
@@ -313,6 +338,10 @@ class Integer(val value: Int) : Value {
     override fun toString() = value.toString()
 }
 
+class DataType(val value: String) : Value {
+    override fun toString() = value.toString()
+}
+
 enum class Type() {
-    INT, ARRAY, UNKNOWN
+    INT, ARRAY, COMPLEX, UNKNOWN
 }
