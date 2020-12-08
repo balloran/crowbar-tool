@@ -143,7 +143,7 @@ object CounterexampleGenerator {
         val varTypes = ((leaf.ante.iterate { it is ProgVar } + leaf.succ.iterate { it is ProgVar }) as Set<ProgVar>).filter { !reservedVarNames.contains(it.name) }.associate { Pair(it.name, it.dType) }
 
         // Collect conjunctively joined sub-obligation parts
-        val subObligationMap = collectSubObligations(deupdatify(leaf.succ) as Formula).associate { Pair(it.toSMT(false), it) }
+        val subObligationMap = collectSubObligations(deupdatify(leaf.succ) as Formula).associate { Pair(it.toSMT(true), it) }
         val subObligations = subObligationMap.keys.toList()
 
         // Build model command
@@ -209,7 +209,7 @@ object CounterexampleGenerator {
         val smtExprs = getExpressionMap(miscExpressions)
 
         // Get evaluations of sub-obligations and create usable mapping by formula
-        val subObligationValues = getExpressionMap(subObligations).mapKeys { subObligationMap[it.key]!! }.mapValues { (it.value as Integer).value == 1 }
+        val subObligationValues = getExpressionMap(subObligations).mapKeys { subObligationMap[it.key]!! }.mapValues { (it.value as DataType).value == "true" }
 
         return Model(initialAssignments, heapAssignments, futLookup, objLookup, smtExprs, subObligationValues)
     }
