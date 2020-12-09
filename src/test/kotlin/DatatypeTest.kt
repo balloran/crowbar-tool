@@ -13,8 +13,6 @@ class DatatypeTest : StringSpec({
 
         "$smt simpleDataTypes"{
             smtPath = smt
-            System.err.println(smt)
-            System.err.println(smtPath)
 
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
             val classDecl = model.extractClassDecl("DTypes", "C", repos)
