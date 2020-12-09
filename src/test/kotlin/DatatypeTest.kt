@@ -10,9 +10,12 @@ class DatatypeTest : StringSpec({
     val z3: String = System.getenv("Z3") ?: "z3"
     for (smt in listOf(z3, cvc)) {
         println("testing with: $smt as backend")
-        smtPath = smt
 
         "$smt simpleDataTypes"{
+            smtPath = smt
+            System.err.println(smt)
+            System.err.println(smtPath)
+
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
             val classDecl = model.extractClassDecl("DTypes", "C", repos)
 
@@ -36,6 +39,7 @@ class DatatypeTest : StringSpec({
         }
 
         "$smt mixedHeapsTest"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
             val classDecl = model.extractClassDecl("DTypes", "D", repos)
 
@@ -51,6 +55,7 @@ class DatatypeTest : StringSpec({
         }
 
         "$smt dTypeFuncTest"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
             val classDecl = model.extractClassDecl("DTypes", "D", repos)
 

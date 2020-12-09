@@ -10,8 +10,9 @@ class PostInvFuncTest : StringSpec({
 	val z3: String = System.getenv("Z3") ?: "z3"
 	for (smt in listOf(z3, cvc)) {
 		println("testing with: $smt as backend")
-		smtPath = smt
+		
 		"$smt basic1"{
+			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/functionsbasic.abs")))
 			var funcDecl = model.extractFunctionDecl("M", "mult", repos)
 			var mNode = funcDecl.exctractFunctionNode(postInv)
