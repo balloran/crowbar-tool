@@ -266,8 +266,10 @@ object CounterexampleGenerator {
         obligations: List<Pair<String, Formula>>,
         snippetID: String
     ): String {
-        val interfaceDef = "interface Ce { Unit ce(); }\n"
-        val classFrameHeader = "module Counterexample;\n$interfaceDef\nclass CeFrame implements Ce {\n"
+        val interfaceDef = "interface Ce { Unit ce(); }"
+        val dataTypeDef = renderDataTypeDefs()
+
+        val classFrameHeader = "module Counterexample;\n$interfaceDef\n$dataTypeDef\n\nclass CeFrame implements Ce {\n"
         val classFrameFooter = "\n}\n\n"
 
         val methodFrameHeader = "Unit ce() {\n"
@@ -308,6 +310,15 @@ object CounterexampleGenerator {
         val classFrame = classFrameHeader + indent(fieldDefs, 1) + "\n\n" + indent(methodFrame, 1) + classFrameFooter + mainBlock
 
         return classFrame
+    }
+
+    private fun renderDataTypeDefs(): String {
+        val usedDataTypes = ADTRepos.getAllTypePrefixes().map { ADTRepos.getSMTDType(it) }
+        val defs = usedDataTypes.filter { it.dtype.startsWith("DTypes.") }.map {
+            val values = it.values.map { it.removePrefix("DTypes.") }
+            "data ${it.dtype.removePrefix("DTypes.")} = ${values.joinToString(" | ")};"
+        }
+        return defs.joinToString("\n")
     }
 
     private fun writeTestcase(content: String, index: Int) {
