@@ -70,7 +70,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         // The state in which the actual counterexample begins is initialized in the method-internal initial assignments
         val fields = model.heapMap[OldHeap.toSMT(false)]!!
         // Find fields not included in the model but included in the counterexample and initialize them with default value
-        val missingFields = (usedFields - fields.map { it.first }.toSet()).map { Pair(it, Integer(0)) }
+        val missingFields = (usedFields - fields.map { it.first }.toSet()).map { Pair(it, MvInteger(0)) }
 
         val defs = (fields + missingFields).map {
             val field = it.first
@@ -159,7 +159,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         var getReplacement = ""
         if (futureValue == null) {
             getReplacement = "// Future value irrelevant or unavailable, using default:\n"
-            futureValue = Integer(0)
+            futureValue = MvInteger(0)
         }
 
         getReplacement += renderModelAssignment(info.lhs, futureValue)
@@ -193,7 +193,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         var callReplacement = ""
         if (methodReturnVal == null) {
             callReplacement = "// Return value irrelevant or unavailable, using default:\n"
-            methodReturnVal = Integer(0)
+            methodReturnVal = MvInteger(0)
         }
         callReplacement += renderModelAssignment(info.lhs, methodReturnVal)
 
@@ -333,7 +333,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         }
     }
 
-    private fun renderHeapAssignmentBlock(postHeap: List<Pair<Field, Value>>?): String {
+    private fun renderHeapAssignmentBlock(postHeap: List<Pair<Field, ModelValue>>?): String {
         return if (postHeap == null)
             "// No heap modification info available at this point"
         else if (postHeap.size == 0)
@@ -344,7 +344,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         }
     }
 
-    private fun renderModelAssignment(loc: Location, value: Value): String {
+    private fun renderModelAssignment(loc: Location, value: ModelValue): String {
         val location = renderDeclLocation(loc, type2str = true)
 
         val type = when (loc) {
@@ -356,14 +356,14 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         return "$location = ${renderModelValue(value, type)};"
     }
 
-    private fun renderModelValue(value: Value, dType: String): String {
+    private fun renderModelValue(value: ModelValue, dType: String): String {
         return when {
-            dType == "ABS.StdLib.Int" -> (value as Integer).value.toString()
-            dType == "ABS.StdLib.Fut" -> "\"${model.futNameById((value as Integer).value)}\""
-            dType == "ABS.StdLib.Bool" -> if ((value as Integer).value == 0) "False" else "True"
+            dType == "ABS.StdLib.Int" -> (value as MvInteger).value.toString()
+            dType == "ABS.StdLib.Fut" -> "\"${model.futNameById((value as MvInteger).value)}\""
+            dType == "ABS.StdLib.Bool" -> if ((value as MvInteger).value == 0) "False" else "True"
             dType == "<UNKNOWN>" -> "\"unknownType($value)\""
-            isDataType(dType) -> (value as DataType).value.removePrefix("DTypes.")
-            value is Integer -> if (value.value == 0) "null" else "\"${getObjectById(value.value)}\""
+            isDataType(dType) -> (value as MvDataType).value.removePrefix("DTypes.")
+            value is MvInteger -> if (value.value == 0) "null" else "\"${getObjectById(value.value)}\""
             else -> throw Exception("Cannot render model value of unknown type $dType")
         }
     }

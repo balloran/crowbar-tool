@@ -12,11 +12,11 @@ object ModelParser {
             tokens.removeAt(0)
     }
 
-    fun parseModel(): List<Function> {
+    fun parseModel(): List<ModelFunction> {
         consume(LParen())
         consume(Identifier("model"))
 
-        val model = mutableListOf<Function>()
+        val model = mutableListOf<ModelFunction>()
 
         while (tokens[0] is LParen)
             model.add(parseDefinition())
@@ -26,13 +26,13 @@ object ModelParser {
         return model
     }
 
-    fun parseArrayValues(): List<Array> {
+    fun parseArrayValues(): List<MvArray> {
         consume(LParen())
 
         if (checkForSMTError())
             return listOf()
 
-        val model = mutableListOf<Array>()
+        val model = mutableListOf<MvArray>()
 
         while (tokens[0] is LParen) {
             consume()
@@ -46,13 +46,13 @@ object ModelParser {
         return model
     }
 
-    fun parseScalarValues(): List<Value> {
+    fun parseScalarValues(): List<ModelValue> {
         consume(LParen())
 
         if (checkForSMTError())
             return listOf()
 
-        val values = mutableListOf<Value>()
+        val values = mutableListOf<ModelValue>()
 
         while (tokens[0] is LParen) {
             consume()
@@ -66,7 +66,7 @@ object ModelParser {
         return values
     }
 
-    private fun parseDefinition(): Function {
+    private fun parseDefinition(): ModelFunction {
         consume(LParen())
         consume(Identifier("define-fun")) // Is this always true?
 
@@ -76,7 +76,7 @@ object ModelParser {
         val args = parseArguments()
         val type = parseType()
 
-        val value: Value
+        val value: ModelValue
 
         // Functions are annoying to parse & evaluate, so we won't
         // Heap definitions of Array type can get complex once counterexamples reach a certain size
@@ -92,13 +92,13 @@ object ModelParser {
         consume(RParen())
 
         return if (args.size == 0)
-            Constant(name, type, value)
+            ModelConstant(name, type, value)
         else
-            Function(name, type, args, value)
+            ModelFunction(name, type, args, value)
     }
 
-    private fun parseArguments(): List<TypedVariable> {
-        val args = mutableListOf<TypedVariable>()
+    private fun parseArguments(): List<ModelTypedVariable> {
+        val args = mutableListOf<ModelTypedVariable>()
         consume(LParen())
 
         while (tokens[0] is LParen)
@@ -108,14 +108,14 @@ object ModelParser {
         return args
     }
 
-    private fun parseTypedVariable(): TypedVariable {
+    private fun parseTypedVariable(): ModelTypedVariable {
         consume(LParen())
         val name = tokens[0].toString()
         consume()
         val type = parseType()
         consume(RParen())
 
-        return TypedVariable(type, name)
+        return ModelTypedVariable(type, name)
     }
 
     private fun parseType(): Type {
@@ -138,16 +138,16 @@ object ModelParser {
         }
     }
 
-    private fun parseValue(expectedType: Type): Value {
+    private fun parseValue(expectedType: Type): ModelValue {
         return if (expectedType == Type.INT)
-            Integer(parseIntExp())
+            MvInteger(parseIntExp())
         else if (expectedType == Type.COMPLEX)
-            DataType(parseComplexTypeExp())
+            MvDataType(parseComplexTypeExp())
         else
             parseArrayExp()
     }
 
-    private fun parseScalarValue(): Value {
+    private fun parseScalarValue(): ModelValue {
         return if (tokens[0] is Identifier)
             parseValue(Type.COMPLEX)
         else
@@ -176,8 +176,8 @@ object ModelParser {
             throw Exception("Expected concrete integer value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
     }
 
-    private fun parseArrayExp(defs: Map<String, List<Token>> = mapOf()): Array {
-        val array: Array
+    private fun parseArrayExp(defs: Map<String, List<Token>> = mapOf()): MvArray {
+        val array: MvArray
 
         // If we find a previously declared identifier, pretend we read the defined
         // replacement token sequence instead. Hacky, I know.
@@ -230,7 +230,7 @@ object ModelParser {
             throw Exception("Expected data type value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
     }
 
-    private fun parseConstArray(): Array {
+    private fun parseConstArray(): MvArray {
         consume(LParen())
         consume(Identifier("as"))
         consume(Identifier("const"))
@@ -241,7 +241,7 @@ object ModelParser {
         consume(RParen())
         consume(RParen())
         val value = parseValue(valType)
-        return Array(valType, value)
+        return MvArray(valType, value)
     }
 
     private fun checkForSMTError(): Boolean {
@@ -303,25 +303,25 @@ object ModelParser {
     }
 }
 
-open class Function(val name: String, val type: Type, val args: List<TypedVariable>, val value: Value) {
+open class ModelFunction(val name: String, val type: Type, val args: List<ModelTypedVariable>, val value: ModelValue) {
     override fun toString() = "Function '$name(${args.joinToString(", ")})' of type '$type' set to '$value'"
 }
 
-class Constant(name: String, type: Type, value: Value) : Function(name, type, listOf(), value) {
+class ModelConstant(name: String, type: Type, value: ModelValue) : ModelFunction(name, type, listOf(), value) {
     override fun toString() = "Constant '$name' of type '$type' set to '$value'"
 }
 
-data class TypedVariable(val type: Type, val name: String) {
+data class ModelTypedVariable(val type: Type, val name: String) {
     override fun toString() = "$name: $type"
 }
 
-interface Value
+interface ModelValue
 
-object UnknownValue : Value {
+object UnknownValue : ModelValue {
     override fun toString() = "UNPARSED VALUE"
 }
 
-class Array(val elemType: Type, val defaultValue: Value, val map: MutableMap<Int, Value> = mutableMapOf()) : Value {
+class MvArray(val elemType: Type, val defaultValue: ModelValue, val map: MutableMap<Int, ModelValue> = mutableMapOf()) : ModelValue {
     fun getValue(index: Int) = if (map.contains(index)) map[index]!! else defaultValue
 
     override fun toString(): String {
@@ -334,12 +334,12 @@ class Array(val elemType: Type, val defaultValue: Value, val map: MutableMap<Int
     }
 }
 
-class Integer(val value: Int) : Value {
+class MvInteger(val value: Int) : ModelValue {
     override fun toString() = value.toString()
 }
 
-class DataType(val value: String) : Value {
-    override fun toString() = value.toString()
+class MvDataType(val value: String) : ModelValue {
+    override fun toString() = value
 }
 
 enum class Type() {

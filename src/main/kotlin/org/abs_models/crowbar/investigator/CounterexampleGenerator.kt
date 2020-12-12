@@ -184,12 +184,12 @@ object CounterexampleGenerator {
         ModelParser.loadSMT(solverResponse)
 
         val parsed = ModelParser.parseModel()
-        val constants = parsed.filter { it is Constant }
+        val constants = parsed.filter { it is ModelConstant }.map{ it as ModelConstant }
         val vars = constants.filter { !(it.name matches Regex("(.*_f|fut_.*|NEW\\d.*|f_(\\d)+|DTypes\\-.*)") || reservedVarNames.contains(it.name)) }
         val fields = constants.filter { it.name matches Regex(".*_f") }
-        val futLookup = constants.filter { it.name.startsWith("fut_") }.associate { Pair((it.value as Integer).value, it.name) }
+        val futLookup = constants.filter { it.name.startsWith("fut_") }.associate { Pair((it.value as MvInteger).value, it.name) }
 
-        val initialAssignments = mutableListOf<Pair<Location, Value>>()
+        val initialAssignments = mutableListOf<Pair<Location, ModelValue>>()
 
         vars.forEach {
             val variable = ProgVar(it.name, varTypes[it.name]!!)
@@ -209,12 +209,12 @@ object CounterexampleGenerator {
         val smtExprs = getExpressionMap(miscExpressions)
 
         // Get evaluations of sub-obligations and create usable mapping by formula
-        val subObligationValues = getExpressionMap(subObligations).mapKeys { subObligationMap[it.key]!! }.mapValues { (it.value as DataType).value == "true" }
+        val subObligationValues = getExpressionMap(subObligations).mapKeys { subObligationMap[it.key]!! }.mapValues { (it.value as MvDataType).value == "true" }
 
         return Model(initialAssignments, heapAssignments, futLookup, objLookup, smtExprs, subObligationValues)
     }
 
-    private fun getHeapMap(heapExpressions: List<Term>, fields: List<Function>, fieldTypes: Map<String, String>): Map<String, List<Pair<Field, Value>>> {
+    private fun getHeapMap(heapExpressions: List<Term>, fields: List<ModelConstant>, fieldTypes: Map<String, String>): Map<String, List<Pair<Field, ModelValue>>> {
         if (heapExpressions.size == 0)
             return mapOf()
 
@@ -230,7 +230,7 @@ object CounterexampleGenerator {
                 // By looking up the value in the sub-heap of the right type
                 // (ADTRepos.libPrefix maps ABS types to SMT types)
                 val subheapID = ADTRepos.libPrefix(fieldType)
-                val value = parsedHeaps[subheapID]!![index].getValue((field.value as Integer).value)
+                val value = parsedHeaps[subheapID]!![index].getValue((field.value as MvInteger).value)
                 Pair(Field(field.name, fieldType), value)
             }
 
@@ -240,7 +240,7 @@ object CounterexampleGenerator {
         return heapMap
     }
 
-    private fun getExpressionMap(expressions: List<String>): Map<String, Value> {
+    private fun getExpressionMap(expressions: List<String>): Map<String, ModelValue> {
         if (expressions.size == 0)
             return mapOf()
 
@@ -254,7 +254,7 @@ object CounterexampleGenerator {
         if (newExpressions.size == 0)
             return mapOf()
 
-        val parsed = ModelParser.parseScalarValues().map { (it as Integer).value }
+        val parsed = ModelParser.parseScalarValues().map { (it as MvInteger).value }
         val objMap = parsed.zip(newExpressions).associate { it }
 
         return objMap
@@ -331,11 +331,11 @@ object CounterexampleGenerator {
 }
 
 class Model(
-    val initState: List<Pair<Location, Value>>,
-    val heapMap: Map<String, List<Pair<Field, Value>>>,
+    val initState: List<Pair<Location, ModelValue>>,
+    val heapMap: Map<String, List<Pair<Field, ModelValue>>>,
     val futLookup: Map<Int, String>,
     val objLookup: Map<Int, String>,
-    val smtExprs: Map<String, Value>,
+    val smtExprs: Map<String, ModelValue>,
     val subObligations: Map<Formula, Boolean>
 ) {
     // The SMT solver may reference futures that were not defined in the program
