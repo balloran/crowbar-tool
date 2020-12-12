@@ -1,5 +1,6 @@
 package org.abs_models.crowbar.investigator
 
+import org.abs_models.crowbar.data.Const
 import org.abs_models.crowbar.data.Expr
 import org.abs_models.crowbar.data.Field
 import org.abs_models.crowbar.data.Formula
@@ -106,6 +107,11 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
     override fun visit(info: InfoAwaitUse): String {
         val postHeap = model.heapMap[info.heapExpr.toSMT(false)]
         val assignmentBlock = renderHeapAssignmentBlock(postHeap)
+
+        // If the guard is a True constant, this was probably a suspend statement before translation
+        // so we'll render it accordingly
+        if (info.guard is Const && info.guard.name == "1")
+            return indent("\n// suspend;\n$assignmentBlock\n")
 
         val isFutureGuard = info.guard.absExp!!.type.simpleName == "Fut"
         val maybeQuestionmark = if (isFutureGuard) "?" else ""

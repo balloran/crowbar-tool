@@ -412,5 +412,16 @@ class PostInvTest : StringSpec ({
 			res = classDecl.extractMethodNode(postInv,"m6", repos)
 			executeNode(res, repos, postInv) shouldBe false
 		}
+
+		"$smt suspend"{
+			smtPath = smt
+			val (model, repos) = load(listOf(Paths.get("src/test/resources/suspend.abs")))
+			val classDecl = model.extractClassDecl("Susp", "C", repos)
+
+			var res = classDecl.extractMethodNode(postInv,"m1", repos)
+			executeNode(res, repos, postInv) shouldBe true
+			res = classDecl.extractMethodNode(postInv,"m2", repos)
+			executeNode(res, repos, postInv) shouldBe false
+		}
 	}
 })

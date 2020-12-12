@@ -160,6 +160,7 @@ fun translateABSStmtToSymStmt(input: Stmt?) : org.abs_models.crowbar.data.Stmt {
                                                          extractSpec(input,"WhileInv", returnType))
         }
         is AwaitStmt -> return org.abs_models.crowbar.data.AwaitStmt(translateABSGuardToSymExpr(input.guard, returnType),FreshGenerator.getFreshPP())
+        is SuspendStmt -> return org.abs_models.crowbar.data.AwaitStmt(Const("1"),FreshGenerator.getFreshPP()) // We should be able to model a suspend; as an await True;
         is ReturnStmt -> return org.abs_models.crowbar.data.ReturnStmt(translateABSExpToSymExpr(input.retExp, returnType))
         is IfStmt -> return org.abs_models.crowbar.data.IfStmt(translateABSExpToSymExpr(input.conditionNoTransform, returnType), translateABSStmtToSymStmt(input.then), translateABSStmtToSymStmt(input.`else`))
         is CaseStmt -> {
