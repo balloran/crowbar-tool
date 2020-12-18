@@ -3,7 +3,7 @@ package org.abs_models.crowbar.investigator
 import org.abs_models.crowbar.data.CallExpr
 import org.abs_models.crowbar.data.Const
 import org.abs_models.crowbar.data.DataTypeConst
-import org.abs_models.crowbar.data.DataTypeConstExp
+import org.abs_models.crowbar.data.DataTypeExpr
 import org.abs_models.crowbar.data.Expr
 import org.abs_models.crowbar.data.Field
 import org.abs_models.crowbar.data.Function
@@ -34,7 +34,7 @@ fun collectBaseExpressions(exp: Expr, old: Boolean = false): Set<Expr> {
         is Field -> if (old) setOf(SExpr("old", listOf(exp))) else setOf(exp)
         is PollExpr -> collectBaseExpressions(exp.e1, old)
         is Const -> setOf()
-        is DataTypeConstExp -> setOf()
+        is DataTypeExpr -> setOf()
         is CallExpr -> {
             exp.e.map { collectBaseExpressions(it, old) }.flatten().toSet()
         }

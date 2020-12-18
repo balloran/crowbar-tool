@@ -83,6 +83,7 @@ class C{
 [Spec : ObjInv( this.f != Default )]
 class D (Int fi, Int i){
 	DataType f = DataA;
+	ComplexType fc = ComplexA;
 	DataType res = DataC;
 
     [Spec : Ensure( i >= 0 && this.res != DataC )]
@@ -137,6 +138,46 @@ class D (Int fi, Int i){
     ComplexType nonIntParamsSuccess(ComplexType p){
         return nonIntParams(p);
     }
+
+
+    [Spec : Requires( this.f == p )]
+    [Spec : Ensures( result == old(this.f) )]
+    DataType simpleOldSuccess(DataType p){
+        return p;
+    }
+
+    [Spec : Requires( this.f != p )]
+    [Spec : Ensures( result == old(this.f) )]
+    DataType simpleOldFail(DataType p){
+        return p;
+    }
+
+    [Spec : Ensures( last(this.fc) == ComplexA )]
+    Unit simpleLastSuccess(DataType p){
+        await this.fc != complexB();
+    }
+
+    [Spec : Ensures( last(this.f) == DataA )]
+    Unit simpleLastFail(DataType p){
+        DataType res = DataA;
+        await this.f != res;
+    }
+
+
+   [Spec : Requires( this.f != Default )]
+   [Spec : Ensures( result != Default && this.f!=Default )]
+    DataType simpleReturnMethod(){
+        await this.f != Default;
+        return this.f;
+    }
+
+   [Spec : Requires( this.f != Default )]
+   [Spec : Ensures( result != Default && this.f!=Default )]
+    DataType syncCallSuccess(){
+        DataType res = this.simpleReturnMethod();
+        return res;
+    }
+
 }
 
 {}

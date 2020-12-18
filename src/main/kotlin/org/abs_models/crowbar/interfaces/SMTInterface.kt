@@ -45,7 +45,7 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     val heaps =  ((pre.iterate { it is Function } + post.iterate{ it is Function }) as Set<Function>).map { it.name }.filter { it.startsWith("NEW") }
     val futs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("fut_") }
     val funcs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("f_") }
-    header += ADTRepos
+    header += "\n" + ADTRepos
     header += smtHeader
     header += FunctionRepos
     header = fields.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Field_${libPrefix(nx.dType).replace(".","_")})"})
@@ -99,4 +99,23 @@ fun evaluateSMT(ante: Formula, succ: Formula) : Boolean {
     val smtRep = generateSMT(ante, succ)
     if(verbosity >= Verbosity.VV) println("crowbar-v: \n$smtRep")
     return evaluateSMT(smtRep)
+}
+
+fun declareFunSMT(name : String, type:String,  params :List<String> = listOf()) : String{
+    return "\n(declare-fun $name (${params.joinToString(" ") {it}}) $type)"
+}
+
+fun declareConstSMT(name : String, type:String) : String{
+    return "\n(declare-const $name $type)"
+}
+fun defineSortSMT(name : String, type:String, params :List<String> = listOf()) : String{
+    return "\n(define-sort $name (${params.joinToString(" ") {it}}) $type)"
+}
+
+fun assertSMT(formula: String) :String{
+    return "\n(assert $formula)"
+}
+
+fun forallSMT(params :List<Pair<String,String>>, formula: String) :String{
+    return "(forall (${params.map { pair -> "${pair.first} ${pair.second}" }.joinToString(" ") { "($it)" }}) $formula)"
 }

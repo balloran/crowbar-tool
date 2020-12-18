@@ -67,7 +67,7 @@ class OldC implements OldI {
         this.f = this.f + 1;
     }
 
-    [Spec : Ensures((!(old(this.f > 0) && old(f == 0)) || (this.f > 1)))]
+    [Spec : Ensures((!(old(this.f > 0) && old(this.f == 0)) || (this.f > 1)))]
     Unit predicateComplexSuccess(){
         this.f = this.f + 1;
     }

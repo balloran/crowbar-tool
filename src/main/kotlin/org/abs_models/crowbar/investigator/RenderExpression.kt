@@ -1,7 +1,7 @@
 package org.abs_models.crowbar.investigator
 
 import org.abs_models.crowbar.data.Const
-import org.abs_models.crowbar.data.DataTypeConstExp
+import org.abs_models.crowbar.data.DataTypeExpr
 import org.abs_models.crowbar.data.Expr
 import org.abs_models.crowbar.data.Field
 import org.abs_models.crowbar.data.ProgVar
@@ -75,7 +75,7 @@ fun renderSimpleCrowbarExpression(e: Expr, m: Map<String, String>): String {
         is Const           -> e.name
         is ProgVar         -> if (m.containsKey(e.name)) m[e.name]!! else e.name
         is Field           -> "this." + e.name.substring(0, e.name.length - 2)
-        is DataTypeConstExp -> e.name
+        is DataTypeExpr -> e.name
         else               -> throw Exception("Cannot render complex crowbar Expression: ${e.prettyPrint()}")
     }
 }

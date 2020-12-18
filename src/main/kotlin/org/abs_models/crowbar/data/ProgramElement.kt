@@ -228,11 +228,12 @@ data class Const(val name : String)  : Expr {
     }
 }
 
-data class DataTypeConstExp(val name : String, val dType : String)  : Expr {
+data class DataTypeExpr(val name : String, val dType : String, val e : List<Expr>)  : Expr {
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
-        return "$name:$dType"
+        return "$name:$dType(${ e.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") })"
     }
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 }
 
 interface Location : Expr

@@ -68,11 +68,16 @@ fun translateABSExpToSymExpr(input: Exp, returnType: String) : Expr {
             SExpr(op, listOf(translateABSExpToSymExpr(input.operand, returnType)))
         }
         is DataConstructorExp -> {
+            if(input.dataConstructor == null){
+                throw Exception("Data constructor ${input.constructor} not defined")
+            }
+            if(input.type.isUnknownType)
+                throw Exception("Wrong use of data constructor ${input.constructor} with parameters ${input.paramList} ")
             when (input.dataConstructor!!.name) {
                 "Unit" -> unitExpr()
                 "True" -> Const("1")
                 "False" -> Const("0")
-                else -> DataTypeConstExp(input.dataConstructor!!.qualifiedName, input.type.qualifiedName)
+                else -> DataTypeExpr(input.dataConstructor!!.qualifiedName, input.type.qualifiedName, input.params.map { translateABSExpToSymExpr(it, returnType) })
             }
         }
         is FnApp ->
@@ -208,9 +213,9 @@ fun translateABSPatternToSymExpr(pattern : Pattern, overrideType : Type, returnT
         is PatternVar -> ProgVar(pattern.`var`.name, pattern.type.qualifiedName)
         is LiteralPattern -> translateABSExpToSymExpr(pattern.literal, returnType)
         is UnderscorePattern ->  FreshGenerator.getFreshProgVar(overrideType.qualifiedName)
-        is ConstructorPattern ->  DataTypeConstExp(typeWithModule(pattern.constructor, pattern.moduleDecl.name), pattern.type.qualifiedName)
-        else -> throw Exception("Translation of complex constructors is not supported")
-    }
+        is ConstructorPattern ->  DataTypeExpr(typeWithModule(pattern.constructor, pattern.moduleDecl.name), pattern.type.qualifiedName, pattern.params.map { translateABSPatternToSymExpr(it, overrideType, returnType) })
+            else -> throw Exception("Translation of complex constructors is not supported")
+        }
 
 fun typeWithModule(type : String, moduleName : String) :String {
     var constructor = type

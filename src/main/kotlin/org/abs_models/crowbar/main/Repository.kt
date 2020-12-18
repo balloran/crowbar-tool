@@ -1,82 +1,56 @@
 package org.abs_models.crowbar.main
 
-import org.abs_models.crowbar.data.DeductType
-import org.abs_models.crowbar.data.exprToTerm
-import org.abs_models.crowbar.interfaces.translateABSExpToSymExpr
+import org.abs_models.crowbar.data.*
+import org.abs_models.crowbar.interfaces.*
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.frontend.ast.*
+import org.abs_models.frontend.typechecker.Type
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 
-data class SMTDType(val dtype : String, val  values : List<String>){
-	fun name(str: String) = "${str}_${this.dtype.replace(".", "_")}"
-	val anon :String = name("anon")
-	val old :String  = name("old")
-	val last :String = name("last")
-	val heap :String = name("heap")
-	val heapType :String = name("Heap")
-	val field :String = name("Field")
-	fun values() :List<String> = values
-
-	override fun toString(): String {
-		var dTypeSpec  = ""
-		var heapSpec = ""
-
-		if(dtype != "Int" && dtype != "Bool"){
-			dTypeSpec  += "\n(declare-datatypes ((${dtype} 0)) (("
-			for (value in values){
-				dTypeSpec += " (${value})"
-			}
-			dTypeSpec += " )))"
-		}
-
-		heapSpec += "\n(define-sort $field () ${dtype})"
-		heapSpec += "\n(define-sort $heapType () (Array $field $dtype))"
-		heapSpec += "\n(declare-const $heap $heapType)"
-		heapSpec += "\n(declare-const $old $heapType)"
-		heapSpec += "\n(declare-const $last $heapType)"
-		heapSpec += "\n(declare-fun $anon ($heapType) $heapType)\n"
-		return "$dTypeSpec$heapSpec"
-	}
-}
 
 object ADTRepos {
-	private val dtypeMap: MutableMap<String,  SMTDType> = mutableMapOf()
 
-	fun getSMTDType(dType : String) : SMTDType = dtypeMap[libPrefix(dType)]!!
+	private val dtypeMap: MutableMap<String,  HeapDecl> = mutableMapOf()
+	private val dTypesDecl = mutableListOf<DataTypeDecl>()
+
+	fun getSMTDType(dType : String) : HeapDecl = dtypeMap[libPrefix(dType)]!!
 
 	fun getAllTypePrefixes() : Set<String> = dtypeMap.keys
 
 	override fun toString() : String {
-		var ret = ""
-		for (dtype in dtypeMap){
-			ret += dtype.value.toString()
-		}
-		return ret
+		var header = DataTypesDecl(dTypesDecl).toSMT(true)
+		for (dtype in dtypeMap)
+			header += dtype.value.toSMT(true)
+		return header
 	}
 
-	fun init(){
+	fun init(types:List<Type>){
 		dtypeMap.clear()
-		dtypeMap["Int"] = SMTDType("Int", emptyList())
-//		dtypeMap["Bool"] = SMTDType("Bool", emptyList())
+		dTypesDecl.clear()
+		for(type in types)
+			dtypeMap[libPrefix(type.qualifiedName)] = HeapDecl(libPrefix(type.qualifiedName), listOf())
 
 	}
 	fun init(model: Model){
-		init()
+		init(listOf(model.intType))
 		for(moduleDecl in model.moduleDecls){
 			if(moduleDecl.name.startsWith("ABS.")) continue
 			for(decl in moduleDecl.decls){
 				if(decl is DataTypeDecl && decl.name != "Spec"){
-					val datatypesConstList = mutableListOf<String>()
+					val datatypesConstList = mutableListOf<DataConstructor>()
+					dTypesDecl.add(decl)
 					for(constructor in decl.dataConstructorList){
-						datatypesConstList.add(constructor.qualifiedName)
+						datatypesConstList.add(constructor)
 					}
-					dtypeMap[decl.qualifiedName] = SMTDType(decl.qualifiedName, datatypesConstList)
+					dtypeMap[decl.qualifiedName] = HeapDecl(decl.type.qualifiedName, datatypesConstList.map { it.qualifiedName })
 				}
 			}
 		}
+
 	}
 	fun libPrefix(type : String) : String {
+
 		if(type=="ABS.StdLib.Fut"
 				|| type=="ABS.StdLib.Bool"
 				|| type.startsWith("Reference.")
@@ -104,7 +78,7 @@ object FunctionRepos{
 			    val params = pair.value.params
 			    val zParams = params.joinToString(" ") { ADTRepos.libPrefix(it.type.qualifiedName) }
 
-			    val nextsig =  "\n(declare-fun $name ($zParams) ${ADTRepos.libPrefix(pair.value.type.qualifiedName)})"
+			    val nextsig =  "\n(declare-fun $name ($zParams) ${ADTRepos.libPrefix(pair.value.type.qualifiedName)})" //todo: use interface to get SMT declaration
 			    sigs += nextsig
 
 			    val callParams = params.joinToString(" ") { it.name }

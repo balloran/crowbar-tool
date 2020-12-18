@@ -11,6 +11,7 @@ import org.abs_models.crowbar.rule.match
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.nextPITStrategy
 import org.abs_models.crowbar.types.PostInvariantPair
+import org.abs_models.frontend.ast.Model
 
 class BasicTest : StringSpec() {
 
@@ -22,7 +23,8 @@ class BasicTest : StringSpec() {
     private val pattern3 = addExpr(ExprAbstractVar("A"), Const("1"))
 
     init {
-        ADTRepos.init()
+        val model = Model()
+        ADTRepos.init(listOf(model.intType))
         "collect"{
             val stmt = WhileStmt(SExpr(">=", listOf(Field("f"), Const("0"))),
                                  SeqStmt(AssignStmt(Field("g"), ProgVar("v")), SkipStmt),

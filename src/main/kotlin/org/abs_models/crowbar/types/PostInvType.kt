@@ -349,10 +349,11 @@ class PITSyncCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val remainder = cond.map[StmtAbstractVar("CONT")] as Stmt
         val target = cond.map[PostInvAbstractVar("TYPE")] as DeductType
 
-        val freshVar = FreshGenerator.getFreshFunction()
 
         val precond = repos.syncMethodReqs.getValue(call.met).first
         val targetPreDecl = repos.syncMethodReqs.getValue(call.met).second
+
+        val freshVar = FreshGenerator.getFreshProgVar(targetPreDecl.type.qualifiedName)//ASK<<
 
         val updateNew = ElementaryUpdate(ReturnVar(targetPreDecl.type.qualifiedName), freshVar)
 
