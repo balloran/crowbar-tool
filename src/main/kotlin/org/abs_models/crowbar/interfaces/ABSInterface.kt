@@ -15,9 +15,9 @@ import org.abs_models.frontend.ast.Stmt
 import org.abs_models.frontend.ast.WhileStmt
 import org.abs_models.frontend.typechecker.Type
 
-fun translateABSExpToSymExpr(input : Exp, returnType:String) : Expr {
+fun translateABSExpToSymExpr(input: Exp, returnType: String) : Expr {
 
-    return when(input){
+    val converted = when(input){
         is FieldUse -> {
             if(input.contextDecl is InterfaceDecl)
                 throw Exception("fields cannot be referred to in the declaration of interfaces: " +
@@ -40,7 +40,6 @@ fun translateABSExpToSymExpr(input : Exp, returnType:String) : Expr {
                 ReturnVar(returnType)
             } else
                 ProgVar(input.name, input.type.qualifiedName)
-
         }
         is Binary -> {
             val op = when (input) {
@@ -69,11 +68,16 @@ fun translateABSExpToSymExpr(input : Exp, returnType:String) : Expr {
             SExpr(op, listOf(translateABSExpToSymExpr(input.operand, returnType)))
         }
         is DataConstructorExp -> {
+            if(input.dataConstructor == null){
+                throw Exception("Data constructor ${input.constructor} not defined")
+            }
+            if(input.type.isUnknownType)
+                throw Exception("Wrong use of data constructor ${input.constructor} with parameters ${input.paramList} ")
             when (input.dataConstructor!!.name) {
                 "Unit" -> unitExpr()
                 "True" -> Const("1")
                 "False" -> Const("0")
-                else -> DataTypeConstExp (input.dataConstructor!!.qualifiedName, input.type.qualifiedName)
+                else -> DataTypeExpr(input.dataConstructor!!.qualifiedName, input.type.qualifiedName, input.params.map { translateABSExpToSymExpr(it, returnType) })
             }
         }
         is FnApp ->
@@ -99,6 +103,10 @@ fun translateABSExpToSymExpr(input : Exp, returnType:String) : Expr {
         }
         else -> throw Exception("Translation of ${input::class} not supported, term is $input" )
     }
+
+    // Save reference to original expression
+    converted.absExp = input
+    return converted
 }
 
 fun translateABSStmtToSymStmt(input: Stmt?) : org.abs_models.crowbar.data.Stmt {
@@ -157,6 +165,7 @@ fun translateABSStmtToSymStmt(input: Stmt?) : org.abs_models.crowbar.data.Stmt {
                                                          extractSpec(input,"WhileInv", returnType))
         }
         is AwaitStmt -> return org.abs_models.crowbar.data.AwaitStmt(translateABSGuardToSymExpr(input.guard, returnType),FreshGenerator.getFreshPP())
+        is SuspendStmt -> return org.abs_models.crowbar.data.AwaitStmt(Const("1"),FreshGenerator.getFreshPP()) // We should be able to model a suspend; as an await True;
         is ReturnStmt -> return org.abs_models.crowbar.data.ReturnStmt(translateABSExpToSymExpr(input.retExp, returnType))
         is IfStmt -> return org.abs_models.crowbar.data.IfStmt(translateABSExpToSymExpr(input.conditionNoTransform, returnType), translateABSStmtToSymStmt(input.then), translateABSStmtToSymStmt(input.`else`))
         is CaseStmt -> {
@@ -186,13 +195,25 @@ fun desugaring(loc: Location, type: Type, syncCall: SyncCall, returnType :String
     return SeqStmt(callStmt, syncStmt)
 }
 
+fun translateABSGuardToSymExpr(input: Guard, returnType: String) : Expr =
+    when(input){
+        is ExpGuard -> translateABSExpToSymExpr(input.pureExp, returnType)
+        is AndGuard -> SExpr("&&",listOf(translateABSGuardToSymExpr(input.left, returnType), translateABSGuardToSymExpr(input.right, returnType)))
+        is ClaimGuard -> {
+            val placeholder = SExpr("=",listOf(Const("1"), Const("1"))) //todo: proper translation
+            placeholder.absExp = input.`var` // Save reference to original guard expression
+            placeholder
+        }
+        else -> throw Exception("Translation of ${input::class} not supported" )
+    }
+
 fun translateABSPatternToSymExpr(pattern : Pattern, overrideType : Type, returnType:String) : Expr =
     when (pattern) {
         is PatternVarUse -> ProgVar(pattern.name, pattern.type.qualifiedName)
         is PatternVar -> ProgVar(pattern.`var`.name, pattern.type.qualifiedName)
         is LiteralPattern -> translateABSExpToSymExpr(pattern.literal, returnType)
         is UnderscorePattern ->  FreshGenerator.getFreshProgVar(overrideType.qualifiedName)
-        is ConstructorPattern ->  DataTypeConstExp(typeWithModule(pattern.constructor, pattern.moduleDecl.name), pattern.type.qualifiedName)
+        is ConstructorPattern ->  DataTypeExpr(typeWithModule(pattern.constructor, pattern.moduleDecl.name), pattern.type.qualifiedName, pattern.params.map { translateABSPatternToSymExpr(it, overrideType, returnType) })
             else -> throw Exception("Translation of complex constructors is not supported")
         }
 
@@ -201,18 +222,7 @@ fun typeWithModule(type : String, moduleName : String) :String {
     if(!constructor.startsWith("$moduleName."))
         constructor =  "$moduleName.$type"
     return constructor
-
 }
-
-fun translateABSGuardToSymExpr(input : Guard, returnType:String) : Expr =
-     when(input){
-        is ExpGuard -> translateABSExpToSymExpr(input.pureExp, returnType)
-        is ClaimGuard -> SExpr("=",listOf(Const("1"), Const("1")))//todo: proper translation
-        is AndGuard -> SExpr("&&",listOf(translateABSGuardToSymExpr(input.left, returnType),translateABSGuardToSymExpr(input.right, returnType)))
-        else -> throw Exception("Translation of ${input::class} not supported" )
-    }
-
-
 
 fun filterAtomic(input: Stmt?, app : (Stmt) -> Boolean) : Set<Stmt> {
     if(input == null) return emptySet()

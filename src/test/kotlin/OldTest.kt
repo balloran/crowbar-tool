@@ -10,9 +10,9 @@ class OldTest : StringSpec({
     val z3: String = System.getenv("Z3") ?: "z3"
     for (smt in listOf(z3, cvc)) {
         println("testing with: $smt as backend")
-        smtPath = smt
 
         "$smt trivialOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -27,6 +27,7 @@ class OldTest : StringSpec({
         }
 //
         "$smt simpleOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -39,6 +40,7 @@ class OldTest : StringSpec({
         }
 
         "$smt booleanOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -50,6 +52,7 @@ class OldTest : StringSpec({
         }
 
         "$smt predicateOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -71,6 +74,7 @@ class OldTest : StringSpec({
         }
 
         "$smt ifOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -80,6 +84,7 @@ class OldTest : StringSpec({
         }
 
         "$smt awaitOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -92,6 +97,7 @@ class OldTest : StringSpec({
         }
 
         "$smt whileOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -100,8 +106,8 @@ class OldTest : StringSpec({
 
         }
 
-
         "$smt propOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/oldprop.abs")))
             val classDecl = model.extractClassDecl("M", "C", repos)
 
@@ -121,10 +127,6 @@ class OldTest : StringSpec({
             executeNode(ss, repos, postInv) shouldBe false
             ss = classDecl.extractMethodNode(postInv,"doNothing", repos)
             executeNode(ss, repos, postInv) shouldBe true
-
-
         }
-
-
     }
 })

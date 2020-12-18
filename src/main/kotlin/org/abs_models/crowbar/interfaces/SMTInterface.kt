@@ -35,10 +35,8 @@ val smtHeader = """
     """.trimIndent()
 
 @Suppress("UNCHECKED_CAST")
-fun generateSMT(ante : Formula, succ: Formula) : String {
-
+fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     var header = "\n(set-logic ALL)"
-
     val pre = deupdatify(ante)
     val post = deupdatify(Not(succ))
 
@@ -47,7 +45,7 @@ fun generateSMT(ante : Formula, succ: Formula) : String {
     val heaps =  ((pre.iterate { it is Function } + post.iterate{ it is Function }) as Set<Function>).map { it.name }.filter { it.startsWith("NEW") }
     val futs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("fut_") }
     val funcs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("f_") }
-    header += ADTRepos
+    header += "\n" + ADTRepos
     header += smtHeader
     header += FunctionRepos
     header = fields.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Field_${libPrefix(nx.dType).replace(".","_")})"})
@@ -59,9 +57,12 @@ fun generateSMT(ante : Formula, succ: Formula) : String {
 
     return """
     $header 
-    (assert ${pre.toSMT(true)} ) 
+    ; Precondition
+    (assert ${pre.toSMT(true)} )
+    ; Negated postcondition
     (assert ${post.toSMT(true)}) 
     (check-sat)
+    $modelCmd
     (exit)
     """.trimIndent()
 }
@@ -83,10 +84,14 @@ fun String.runCommand(
     null
 }
 
-fun evaluateSMT(smtRep : String) : Boolean {
+fun plainSMTCommand(smtRep: String) : String? {
     val path = "${tmpPath}out.smt2"
     File(path).writeText(smtRep)
-    val res = "$smtPath $path".runCommand()
+    return "$smtPath $path".runCommand()
+}
+
+fun evaluateSMT(smtRep : String) : Boolean {
+    val res = plainSMTCommand(smtRep)
     return res != null && res.trim() == "unsat"
 }
 
@@ -94,4 +99,23 @@ fun evaluateSMT(ante: Formula, succ: Formula) : Boolean {
     val smtRep = generateSMT(ante, succ)
     if(verbosity >= Verbosity.VV) println("crowbar-v: \n$smtRep")
     return evaluateSMT(smtRep)
+}
+
+fun declareFunSMT(name : String, type:String,  params :List<String> = listOf()) : String{
+    return "\n(declare-fun $name (${params.joinToString(" ") {it}}) $type)"
+}
+
+fun declareConstSMT(name : String, type:String) : String{
+    return "\n(declare-const $name $type)"
+}
+fun defineSortSMT(name : String, type:String, params :List<String> = listOf()) : String{
+    return "\n(define-sort $name (${params.joinToString(" ") {it}}) $type)"
+}
+
+fun assertSMT(formula: String) :String{
+    return "\n(assert $formula)"
+}
+
+fun forallSMT(params :List<Pair<String,String>>, formula: String) :String{
+    return "(forall (${params.map { pair -> "${pair.first} ${pair.second}" }.joinToString(" ") { "($it)" }}) $formula)"
 }

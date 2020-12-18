@@ -1,7 +1,11 @@
 package org.abs_models.crowbar.data
 
 import org.abs_models.crowbar.main.ADTRepos
+import org.abs_models.frontend.ast.DataTypeDecl
 
+interface ProofElement: Anything {
+    fun toSMT(isInForm : Boolean) : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
+}
 
 interface LogicElement: Anything {
     fun toSMT(isInForm : Boolean) : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
@@ -12,11 +16,167 @@ interface Term : LogicElement
 
 val binaries = listOf(">=","<=","<",">","=","!=","+","-","*","/","&&","||")
 
+data class HeapDecl(val dtype: String, val values:List<String>) : ProofElement{
+
+    fun name(str: String) = "${str}_${(if(dtype == "Int"){"Int"}else{dtype}).replace(".", "_")}"
+    val anon :String = name("anon")
+    val old :String  = name("old")
+    val last :String = name("last")
+    val heap :String = name("heap")
+    val heapType :String = name("Heap")
+    val field :String = name("Field")
+
+    override fun toSMT(isInForm: Boolean): String {
+
+        var ret = ""
+        ret += "\n" +DefineSortSMT(field, ADTRepos.libPrefix(dtype)).toSMT(isInForm)
+        ret += "\n" +DefineSortSMT(heapType, "(Array $field ${ADTRepos.libPrefix(dtype)})").toSMT(isInForm)//todo: refactor hard-code
+        ret += "\n" +ConstDeclSMT(heap, heapType).toSMT(isInForm)
+        ret += "\n" +ConstDeclSMT(old, heapType).toSMT(isInForm)
+        ret += "\n" +ConstDeclSMT(last, heapType).toSMT(isInForm)
+        ret += "\n" +FunctionDeclSMT(anon, heapType, listOf(heapType)).toSMT(isInForm)
+        return ret
+    }
+}
+
+data class DataTypesDecl(val dTypesDecl : List<DataTypeDecl>) : ProofElement{
+    override fun toSMT(isInForm: Boolean): String {
+        if(dTypesDecl.isNotEmpty()) {
+            val dTypeDecl = mutableListOf<ArgsSMT>()
+            val dTypeValsDecl = mutableListOf<Term>()
+            for (dType in dTypesDecl) {
+                dTypeDecl.add(ArgsSMT(dType.qualifiedName, listOf(Function("0"))))
+                var count = 0
+                val dTypeValDecl = mutableListOf<Term>()
+                for (dataConstructor in dType.dataConstructorList) {
+                    dTypeValDecl.add(
+                        ArgsSMT(dataConstructor.qualifiedName,
+                            dataConstructor.constructorArgList.map {
+                                ArgsSMT(
+                                    "${dataConstructor.qualifiedName}_${count++}",
+                                    listOf(Function(it.type.qualifiedName))
+                                )
+                            })
+                    )
+                }
+                dTypeValsDecl.add(ArgSMT(dTypeValDecl))
+            }
+
+            val decl = Function(
+                "declare-datatypes", (
+                        listOf(
+                            ArgSMT(dTypeDecl),
+                            ArgSMT(dTypeValsDecl)
+                        ))
+            )
+
+            return decl.toSMT(isInForm)
+        }
+        return ""
+    }
+}
+
+
+data class ArgsSMT(val name : String, val params : List<Term> = emptyList()) : Term{
+    override fun toSMT(isInForm : Boolean) : String {
+        if(params.isEmpty())
+            return "($name)"
+
+        val list = params.joinToString (" "){it.toSMT(isInForm)}
+        return "($name $list)"
+    }
+}
+data class ArgSMT(val params : List<Term> = emptyList()) : Term{
+    override fun toSMT(isInForm : Boolean) : String {
+        val list = params.joinToString (" "){it.toSMT(isInForm)}
+        return "\n\t($list)"
+    }
+}
+
+data class FunctionDeclSMT(val name : String, val type: String, val params :List<String> = listOf()) :ProofElement{
+    override fun toSMT(isInForm: Boolean): String {
+        return "(declare-fun $name (${params.joinToString(" ") {it}}) $type)"
+    }
+}
+
+
+data class DefineSortSMT(val name :String, val type: String, val params :List<String> = listOf()):ProofElement{
+    override fun toSMT(isInForm: Boolean): String {
+        return "(define-sort $name (${params.joinToString(" ") {it}}) $type)"
+    }
+}
+
+data class ConstDeclSMT(val name :String, val type: String):ProofElement{
+    override fun toSMT(isInForm: Boolean): String {
+        return "(declare-const $name $type)"
+    }
+}
+
+//data class Assert(val formula: Formula) : ProofElement{
+//    override fun toSMT(isInForm: Boolean): String {
+//        return "(assert ${formula.toSMT(isInForm)})"
+//    }
+//}
+//
+//data class Distinct(val params :List<Term>) :Formula {
+//    override fun toSMT(isInForm : Boolean) : String {
+//        return "(distinct ${params.joinToString(" "){it.toSMT(isInForm)}})"
+//    }
+//}
+//
+//data class Forall(val params :List<Pair<Term,Term>>, val formula: Formula) :Formula{
+//    override fun toSMT(isInForm : Boolean) : String {
+//        if(params.isEmpty())
+//            return formula.toSMT(isInForm)
+//        return "(forall (${params.map { pair -> "${pair.first.toSMT(isInForm)} ${pair.second.toSMT(isInForm)}" }.joinToString(" ") { "($it)" }}) ${formula.toSMT(isInForm)})"
+//    }
+//}
+
 data class FormulaAbstractVar(val name : String) : Formula, AbstractVar {
     override fun prettyPrint(): String {
         return name
     }
     override fun toSMT(isInForm : Boolean) : String = name
+}
+
+// Crowbar uses type-agnostic heaps internally that can store any data type
+// For SMT translation, we have to use separate heaps for different types
+// Therefore, we have to translate the generic heap expressions to properly
+// typed ones
+fun filterHeapTypes(term : Term, dtype: String) : String{
+    val smtdType = ADTRepos.getSMTDType(dtype)
+    if (term is Function ) {
+        // Remove stores that do not change the sub-heap for type dType
+        if(term.name == "store") {
+            if (ADTRepos.libPrefix((term.params[1] as Field).dType) == dtype)
+                return "(store " +
+                        "${filterHeapTypes(term.params[0], dtype)} " +
+                        "${term.params[1].toSMT(false)} " +
+                        "${term.params[2].toSMT(false)})"
+            else
+                return filterHeapTypes(term.params[0], dtype)
+        // Rewrite generic anon to correctly typed anon function
+        }
+        else if (term.name == "anon")
+            return "(${smtdType.anon} ${filterHeapTypes(term.params[0], dtype)})"
+        else
+            throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
+
+    }
+    // Rewrite generic heap variables to correctly typed sub-heap variables
+    else if(term is ProgVar && term.dType == "Heap"){
+        if(term is OldHeap)
+            return smtdType.old
+        else if(term is LastHeap)
+            return smtdType.last
+        else if(term is Heap)
+            return smtdType.heap
+        else
+            return term.name
+    }
+    else
+        throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
+
 }
 
 data class Function(val name : String, val params : List<Term> = emptyList()) : Term {
@@ -25,66 +185,36 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
-    fun removeIrrilevantHeaps(term : Term, dtype: String) : String{
-        val smtdType = ADTRepos.getSMTDType(dtype)
-        if (term is Function ) {
-            if(term.name == "store") {
-                if (ADTRepos.libPrefix((term.params[1] as Field).dType) == dtype)
-                    return "(store " +
-                            "${removeIrrilevantHeaps(term.params[0], dtype)} " +
-                            "${term.params[1].toSMT(false)} " +
-                            "${term.params[2].toSMT(false)})"
-                else
-                    return removeIrrilevantHeaps(term.params[0], dtype)
-            }else if (term.name == "anon")
-                return "(${smtdType.anon} ${removeIrrilevantHeaps(term.params[0], dtype)})"
-            else
-                throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
-        }else if(term is ProgVar && term.dType == "Heap"){
-            if(term is OldHeap)
-                return smtdType.old
-            else if(term is LastHeap)
-                return smtdType.last
-            else if(term is Heap)
-                return smtdType.heap
-            else
-                return term.name
-        }else
-            throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
-
-    }
-
     override fun toSMT(isInForm : Boolean) : String {
         val back = getSMT(name, isInForm)
 
-        if(name == "select")
-            return "($name " +
-                    "${removeIrrilevantHeaps(params[0], ADTRepos.libPrefix((params[1] as Field).dType))} " +
-                    "${params[1].toSMT(false)})"
+        if(name == "select") {
+            val heapType = ADTRepos.libPrefix((params[1] as Field).dType)
+            val fieldName = params[1].toSMT(false)
+            return "(select ${filterHeapTypes(params[0], heapType)} $fieldName)"
+        }
 
         if(params.isEmpty()) {
             if(name.startsWith("-")) return "(- ${name.substring(1)})" //CVC4 requires -1 to be passed as (- 1)
             return name
         }
-        val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT(isInForm)}"})
+        val list = params.fold("",{acc,nx -> acc + " ${nx.toSMT(isInForm)}"})
         return "($back $list)"
     }
 }
 
-data class DataTypeConst(val name : String, val dType : String)  : Term {
+data class DataTypeConst(val name : String, val dType : String, val params : List<Term> = emptyList())  : Term {
     override fun prettyPrint(): String {
-        return "$name:$dType"
+        return name + ":" + dType+"("+params.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
     }
 //    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
     override fun toSMT(isInForm : Boolean) : String {
-//        val back = getSMT(name, isInForm)
-//        if(params.isEmpty()) {
-//            if(name.startsWith("-")) return "(- ${name.substring(1)})" //CVC4 requires -1 to be passed as (- 1)
-        return name
-//        }
-//        val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT(isInForm)}"})
-//        return "($back $list)"
+        val back = getSMT(name, isInForm)
+        if(params.isEmpty())
+            return name
+        val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT(isInForm)}"})
+        return "($back $list)"
     }
 
 }
@@ -160,9 +290,6 @@ object False : Formula {
     override fun toSMT(isInForm : Boolean) : String = if(isInForm) "false" else "0"
 }
 
-
-
-
 val specialHeapKeywords = mapOf(OldHeap.name to OldHeap, LastHeap.name to LastHeap)
 
 object Heap : ProgVar("heap","Heap")
@@ -174,7 +301,7 @@ fun select(field : Field) : Function = Function("select", listOf(Heap, field))
 fun anon(heap : Term) : Function = Function("anon", listOf(heap))
 fun poll(term : Term) : Function = Function("poll", listOf(term))
 fun readFut(term : Expr) : Expr = SExpr("valueOf", listOf(term))
-fun exprToTerm(input : Expr, old : Boolean=false) : Term {
+fun exprToTerm(input : Expr, old : Boolean=false) : Term {//todo: add check for non-field reference inside old and last
     return when(input){
         is ProgVar -> input
         is Field -> {
@@ -185,7 +312,7 @@ fun exprToTerm(input : Expr, old : Boolean=false) : Term {
         is PollExpr -> poll(exprToTerm(input.e1))
         is Const -> Function(input.name)
         is SExpr -> {
-            if (specialHeapKeywords.containsKey(input.op)) {
+            if (specialHeapKeywords.containsKey(input.op)) {//todo: fix for last
                 if (input.e.size == 1)
                     if(input.op != "old" && input.e[0] !is Field)
                         throw Exception("Complex argument ${input.e[0].prettyPrint()} not supported for keyword ${input.op}" )
@@ -196,13 +323,15 @@ fun exprToTerm(input : Expr, old : Boolean=false) : Term {
             }
             Function(input.op, input.e.map { ex -> exprToTerm(ex, old) })
         }
-        is DataTypeConstExp -> DataTypeConst(input.name, input.dType)
+        is DataTypeExpr -> {
+            DataTypeConst(input.name, input.dType, input.e.map { ex -> exprToTerm(ex, old) })
+        }
         else -> throw Exception("Expression cannot be converted to term: "+input.prettyPrint())
     }
 }
 
 //todo: the comparisons with 1 should be removed once the Bool data type is split from Int
-fun exprToForm(input : Expr, old : Boolean=false) : Formula {
+fun exprToForm(input : Expr, old : Boolean=false) : Formula {//todo: add check for non-field reference inside old and last
     if(input is SExpr && input.op == "&&" && input.e.size ==2 ) return And(exprToForm(input.e[0], old), exprToForm(input.e[1], old))
     if(input is SExpr && input.op == "||" && input.e.size ==2 ) return Or(exprToForm(input.e[0], old), exprToForm(input.e[1], old))
     if(input is SExpr && input.op == "->" && input.e.size ==2 ) return Impl(exprToForm(input.e[0], old), exprToForm(input.e[1], old))
@@ -210,7 +339,7 @@ fun exprToForm(input : Expr, old : Boolean=false) : Formula {
     if(input is SExpr && input.op == "!=") return Not(exprToForm(SExpr("=",input.e), old))
 
     if(input is SExpr){
-        if(input.op == "old"){
+        if(input.op == "old"){//todo: fix for last
             if(input.e.size == 1) {
                 return exprToForm(input.e[0], true)
             }else
@@ -233,7 +362,7 @@ fun deupdatify(input: LogicElement) : LogicElement {
         is And -> And(deupdatify(input.left) as Formula, deupdatify(input.right) as Formula)
         is Or -> Or(deupdatify(input.left) as Formula, deupdatify(input.right) as Formula)
         is Not -> Not(deupdatify(input.left) as Formula)
-        else                -> input
+        else -> input
     }
 }
 
@@ -242,7 +371,7 @@ fun apply(update: UpdateElement, input: LogicElement) : LogicElement {
         is EmptyUpdate -> input
         is ElementaryUpdate -> subst(input, update.lhs, update.rhs)
         is ChainUpdate -> apply(update.left, apply(update.right, input))
-        else                -> input
+        else -> input
     }
 }
 
@@ -256,6 +385,7 @@ fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicEleme
             if(map.keys.any { it is ProgVar && input.left.assigns(it)}) return ChainUpdate(subst(input.left, map) as UpdateElement, input.right)
             return ChainUpdate(subst(input.left, map) as UpdateElement, subst(input.right, map) as UpdateElement)
         }
+        is DataTypeConst -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
         is Function -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
         is Predicate -> return Predicate(input.name, input.params.map { p -> subst(p, map) as Term })
         is Impl -> return Impl(subst(input.left, map) as Formula, subst(input.right, map) as Formula)

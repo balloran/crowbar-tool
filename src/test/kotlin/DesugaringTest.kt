@@ -10,8 +10,9 @@ class DesugaringTest : StringSpec({
     val z3: String = System.getenv("Z3") ?: "z3"
     for (smt in listOf(z3, cvc)) {
         println("testing with: $smt as backend")
-        smtPath = smt
+
         "$smt desugaring"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/desugaring.abs")))
             val classDecl = model.extractClassDecl("Desugaring", "DesugaringC", repos)
 

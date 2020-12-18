@@ -1,0 +1,199 @@
+module DTypesPar;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+data ComplexType = ComplexA | ComplexB;
+data DataType = Default | DataA | DataB | DataC;
+data ComplexWrapType = ComplexWrap(ComplexType);
+data WrapType = Wrap(DataType);
+data WrapWrapType = WrapWrap(WrapType);
+
+
+data MultiWrapType = MultiWrap(DataType,DataType);
+data TrivialWrapType = TrivialWrap(TrivialType);
+data TrivialType = Trivial;
+
+
+
+
+[Spec : Requires( c != ComplexWrap(ComplexB) )]
+[Spec : Ensures( result != ComplexWrap(ComplexB) )]
+def ComplexWrapType parametricParam(ComplexWrapType c) = c;
+
+[Spec : Ensures( result == Trivial )]
+def TrivialType trivialFunc() = Trivial;
+
+[Spec : Ensures( result == ComplexA )]
+def ComplexType complexA() = ComplexA;
+
+[Spec : Ensures( result == ComplexB )]
+def ComplexType complexB() = ComplexB;
+
+class C {
+
+
+    [Spec : Ensures( result == Wrap(DataA) )]
+    WrapType constReturnSuccess(){
+        return Wrap(DataA);
+    }
+
+    [Spec : Ensures( result == TrivialWrap(Trivial) )]
+    TrivialWrapType trivialSuccess(TrivialWrapType p){
+        return p;
+    }
+
+    [Spec : Ensures( result != Wrap(DataB) )]
+    WrapType trivialNotEqSuccess(){
+        return Wrap(DataA);
+    }
+
+    [Spec : Ensures( result == Wrap(DataA) )]
+    WrapType trivialFail(ComplexType p){
+        DataType res = Default;
+        return Wrap(DataB);
+    }
+
+    [Spec : Requires( p != ComplexB )]
+    [Spec : Ensures( result == Wrap(DataA) )]
+    WrapType caseSimpleSuccess(ComplexType p){
+        DataType res = Default;
+        case p{
+            ComplexA => res = DataA;
+            ComplexB => res = DataB;
+            _        => skip;
+        }
+        return Wrap(res);
+    }
+
+    [Spec : Requires( p != ComplexB )]
+    [Spec : Ensures( result == Wrap(DataB) )]
+    WrapType caseSimpleFail(ComplexType p){
+        DataType res = Default;
+        case p{
+            ComplexA => res = DataA;
+            ComplexB => res = DataB;
+            _        => skip;
+        }
+        return Wrap(res);
+    }
+
+    [Spec : Requires( p != ComplexWrap(ComplexB) )]
+    [Spec : Ensures( result == Wrap(DataA) )]
+    WrapType caseWrappedSuccess(ComplexWrapType p){
+        DataType res = Default;
+        case p{
+            ComplexWrap(ComplexA) => res = DataA;
+            ComplexWrap(ComplexB) => res = DataB;
+            _        => skip;
+        }
+        return Wrap(res);
+    }
+
+    [Spec : Requires( p != ComplexWrap(ComplexB) )]
+    [Spec : Ensures( result == Wrap(DataB) )]
+    WrapType caseWrappedFail(ComplexWrapType p){
+        DataType res = Default;
+        case p{
+            ComplexWrap(ComplexA) => res = DataA;
+            ComplexWrap(ComplexB) => res = DataB;
+            _        => skip;
+        }
+        return Wrap(res);
+    }
+
+    [Spec : Requires( d1 != d2 )]
+    [Spec : Ensures( result != MultiWrap(d1,d1) )]
+    MultiWrapType multiWrapSimpleSuccess(DataType d1, DataType d2){
+        return MultiWrap(d1,d2);
+    }
+
+
+    [Spec : Requires( p == ComplexWrap(ComplexB) )]
+    [Spec : Ensures( result != WrapWrap(Wrap(DataA)) )]
+    WrapWrapType caseWrappedWrappedSuccess(ComplexWrapType p){
+        WrapType res = Wrap(Default);
+        case p{
+            ComplexWrap(ComplexA) => res = Wrap(DataA);
+            ComplexWrap(ComplexB) => res = Wrap(DataB);
+            _        => skip;
+        }
+        return WrapWrap(res);
+    }
+}
+
+
+[Spec : ObjInv( this.f != Wrap(Default) )]
+class D{
+
+    WrapType f = Wrap(DataA);
+    ComplexWrapType fc = ComplexWrap(ComplexA);
+
+    [Spec : Requires( p != Default )]
+    [Spec : Ensures( result == ComplexWrap(ComplexB) )]
+    ComplexWrapType caseReturnWrappedFuncSuccess(DataType p){
+        ComplexWrapType res = ComplexWrap(ComplexA);
+        case p{
+            Default => res = ComplexWrap(complexA());
+            _ => res = ComplexWrap(complexB());
+        }
+       return res;
+    }
+
+    [Spec : Requires( p != ComplexWrap(ComplexB) )]
+    [Spec : Ensures( result != ComplexWrap(ComplexB) )]
+    ComplexWrapType parametricParamSuccess(ComplexWrapType p){
+        return parametricParam(p);
+    }
+
+
+    [Spec : Requires( this.f == Wrap(p) )]
+    [Spec : Ensures( result == old(this.f) )]
+    WrapType simpleOldSuccess(DataType p){
+        return Wrap(p);
+    }
+
+    [Spec : Requires( this.f != Wrap(DataA) && p == DataA )]
+    [Spec : Ensures( result == old(this.f) )]
+    WrapType simpleOldFail(DataType p){
+        return Wrap(p);
+    }
+
+    [Spec : Ensures( last(this.fc) == ComplexWrap(ComplexA) )]
+    Unit simpleLastSuccess(DataType p){
+        await this.fc != ComplexWrap (complexB());
+    }
+
+    [Spec : Ensures( last(this.f) == Wrap(DataA) )]
+    Unit simpleLastFail(DataType p){
+        DataType res = DataA;
+        await this.f != Wrap(res);
+    }
+
+    [Spec : Requires( this.f != Wrap(Default) )]
+   [Spec : Ensures( result != Wrap(Default) && this.f != Wrap(Default) )]
+    WrapType simpleReturnMethod(){
+        await this.f != Wrap(Default);
+        return this.f;
+    }
+
+   [Spec : Requires( this.f != Wrap(Default) )]
+   [Spec : Ensures( result != Wrap(Default) && this.f != Wrap(Default) )]
+    WrapType syncCallSuccess(){
+        WrapType res = this.simpleReturnMethod();
+        return res;
+    }
+
+    [Spec : Ensures( result != Wrap(DataB) )]
+    WrapType whileSuccess(Int i){
+        WrapType res = Wrap(Default);
+        Int j = i;
+
+        [Spec : WhileInv( res != Wrap(DataB) && this.f != Wrap(Default))]
+        while( j >= 0 ){
+            res = Wrap(DataA);
+        }
+        return res;
+    }
+}
+
+
+{}

@@ -1,0 +1,27 @@
+module Susp;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool);
+
+class C{
+    Int f = 0;
+
+    [Spec: Ensures(result == 0)] //success
+    Int m1(){
+        Int k = 0;
+        
+        suspend;
+
+        return k;
+    }
+
+    [Spec: Ensures(result == 0)] //fail
+    Int m2(){
+        this.f = 0;
+        
+        suspend;
+
+        return this.f;
+    }
+}
+
+{}

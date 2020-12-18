@@ -13,6 +13,7 @@ buildscript {
 
 plugins{
     id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id 'org.jmailen.kotlinter' version '2.3.2'
 }
 
 group 'Crowbar'
@@ -40,7 +41,35 @@ dependencies {
     implementation("com.github.ajalt:clikt:2.3.0")
 }
 
+kotlinter {
+    disabledRules = ['no-multi-spaces']
+}
 
+lintKotlinMain {
+    exclude '**/data/**'
+    exclude '**/interfaces/**'
+    exclude '**/rule/**'
+    exclude '**/main/**'
+    exclude '**/tree/**'
+    exclude '**/types/**'
+}
+
+lintKotlinTest {
+    exclude '*'
+}
+
+formatKotlinMain {
+    exclude '**/data/**'
+    exclude '**/interfaces/**'
+    exclude '**/rule/**'
+    exclude '**/main/**'
+    exclude '**/tree/**'
+    exclude '**/types/**'
+}
+
+formatKotlinTest {
+    exclude '*'
+}
 
 compileKotlin {
     kotlinOptions.jvmTarget = "1.8"

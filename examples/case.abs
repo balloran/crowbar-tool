@@ -1,0 +1,17 @@
+module M;
+
+data Spec = Ensures(Bool);
+
+class Testcase {
+  Int dontTouch = 0;
+
+  [Spec: Ensures(this.dontTouch == old(this.dontTouch))]
+  Unit modify() {
+    this.doNothing();
+  }
+
+  [Spec: Ensures(this.dontTouch == old(this.dontTouch))]
+  Unit doNothing() { }
+}
+
+{}
