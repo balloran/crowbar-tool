@@ -72,6 +72,15 @@ class DatatypeTest : StringSpec({
 
         }
 
+        "$smt fieldValuesTest"{
+            smtPath = smt
+            val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
+            val classDecl = model.extractClassDecl("DTypes", "E", repos)
+
+            val moreFieldsThanValuesFail = classDecl.extractMethodNode(postInv, "moreFieldsThanValuesFail", repos)
+            executeNode(moreFieldsThanValuesFail, repos, postInv) shouldBe false
+        }
+
         "$smt dTypeFuncTest"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
@@ -139,7 +148,6 @@ class DatatypeTest : StringSpec({
 
             val simpleOldFail = classDecl.extractMethodNode(postInv, "simpleOldFail", repos)
             executeNode(simpleOldFail, repos, postInv) shouldBe false
-            //simpleLastSuccess simpleLastFail
 
             val simpleLastSuccess = classDecl.extractMethodNode(postInv, "simpleLastSuccess", repos)
             executeNode(simpleLastSuccess, repos, postInv) shouldBe true

@@ -180,4 +180,19 @@ class D (Int fi, Int i){
 
 }
 
+class E{
+    ComplexType fieldA = ComplexA;
+    ComplexType fieldB = ComplexB;
+    ComplexType fieldC = ComplexA;
+
+
+    [Spec : Ensures( this.fieldA == ComplexB)]
+    Unit moreFieldsThanValuesFail(){
+        this.fieldA = ComplexA;
+        this.fieldB = ComplexB;
+        this.fieldC = ComplexA;
+    }
+
+}
+
 {}

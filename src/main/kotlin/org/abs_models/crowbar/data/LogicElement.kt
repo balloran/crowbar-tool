@@ -24,12 +24,12 @@ data class HeapDecl(val dtype: String, val values:List<String>) : ProofElement{
     val last :String = name("last")
     val heap :String = name("heap")
     val heapType :String = name("Heap")
-    val field :String = name("Field")
+    val field :String = "Field"
 
     override fun toSMT(isInForm: Boolean): String {
 
         var ret = ""
-        ret += "\n" +DefineSortSMT(field, ADTRepos.libPrefix(dtype)).toSMT(isInForm)
+//        ret += "\n" +DefineSortSMT(field, ADTRepos.libPrefix(dtype)).toSMT(isInForm)
         ret += "\n" +DefineSortSMT(heapType, "(Array $field ${ADTRepos.libPrefix(dtype)})").toSMT(isInForm)//todo: refactor hard-code
         ret += "\n" +ConstDeclSMT(heap, heapType).toSMT(isInForm)
         ret += "\n" +ConstDeclSMT(old, heapType).toSMT(isInForm)
