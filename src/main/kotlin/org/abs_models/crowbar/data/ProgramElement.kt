@@ -191,7 +191,7 @@ data class SyncCallExprAbstractVar(val name : String) : SyncCallingExpr, Abstrac
 data class CallExpr(val met : String, val e : List<Expr>) : CallingExpr{
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
-        return met+"("+e.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
+        return met+"("+e.map { p -> p.prettyPrint() }.joinToString(",") + ")"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 }
@@ -199,7 +199,7 @@ data class CallExpr(val met : String, val e : List<Expr>) : CallingExpr{
 data class SyncCallExpr(val met : String, val e : List<Expr>) : SyncCallingExpr{
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
-        return met+"("+e.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
+        return met+"("+e.map { p -> p.prettyPrint() }.joinToString(",") + ")"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 }
@@ -216,7 +216,7 @@ data class SExpr(val op : String, val e : List<Expr>) : Expr {
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
         if(e.isEmpty()) return op
-        return op+"("+e.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
+        return op+"("+e.map { p -> p.prettyPrint() }.joinToString(",") + ")"
     }    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
 }
@@ -231,7 +231,7 @@ data class Const(val name : String)  : Expr {
 data class DataTypeExpr(val name : String, val dType : String, val e : List<Expr>)  : Expr {
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
-        return "$name:$dType(${ e.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") })"
+        return "$name:$dType(${ e.map { p -> p.prettyPrint() }.joinToString(",") })"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 }

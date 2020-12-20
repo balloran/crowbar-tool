@@ -203,7 +203,7 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
     }
 }
 
-data class DataTypeConst(val name : String, val dType : String, val params : List<Term> = emptyList())  : Term {
+data class DataTypeConst(val name : String, val dType : String, val params : List<Term> = emptyList()) : Term {
     override fun prettyPrint(): String {
         return name + ":" + dType+"("+params.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
     }
