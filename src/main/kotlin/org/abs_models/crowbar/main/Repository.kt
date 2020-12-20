@@ -12,9 +12,10 @@ import kotlin.system.exitProcess
 object ADTRepos {
 
 	private val dtypeMap: MutableMap<String,  HeapDecl> = mutableMapOf()
-	private val dTypesDecl = mutableListOf<DataTypeDecl>()
+	val dTypesDecl = mutableListOf<DataTypeDecl>()
 
 	fun getSMTDType(dType : String) : HeapDecl = dtypeMap[libPrefix(dType)]!!
+	fun getDeclForType(dType: String) : DataTypeDecl = dTypesDecl.find{ it.qualifiedName == dType }!!
 
 	fun getAllTypePrefixes() : Set<String> = dtypeMap.keys
 
@@ -66,8 +67,9 @@ object FunctionRepos{
     fun isKnown(str: String) = known.containsKey(str)
     fun get(str: String) = known.getValue(str)
 	fun hasContracts() = known.filter { hasContract(it.value) }.any()
+	fun contracts() = known.filter { hasContract(it.value) }
     override fun toString() : String {
-	    val contracts = known.filter { hasContract(it.value) }
+	    val contracts = contracts()
 	    val direct = known.filter { !hasContract(it.value) }
 	    var ret = ""
 	    if(contracts.isNotEmpty()) {

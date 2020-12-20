@@ -29,7 +29,7 @@ fun renderFormula(f: Formula, m: Map<String, String>): String {
         is Impl         -> "(${renderFormula(f.left, m)}) -> (${renderFormula(f.right, m)})"
         is Predicate    -> renderPredicate(f, m)
         is FormulaAbstractVar -> f.name
-        else               -> throw Exception("Cannot render formula: ${f.prettyPrint()}")
+        else            -> throw Exception("Cannot render formula: ${f.prettyPrint()}")
     }
 }
 
@@ -38,7 +38,7 @@ fun renderTerm(t: Term, m: Map<String, String>): String {
         is Function         -> renderFunction(t, m)
         is Field            -> "this.${t.name.substring(0, t.name.length - 2)}" // Strip _f suffix
         is ProgVar          -> if (m.containsKey(t.name)) m[t.name]!! else t.name
-        is DataTypeConst    -> t.name.removePrefix("DTypes.")
+        is DataTypeConst    -> if (t.params.isEmpty()) t.name else "${t.name}(${t.params.map{ renderTerm(it, m) }.joinToString(", ")})"
         else                -> throw Exception("Cannot render term: ${t.prettyPrint()}")
     }
 }

@@ -14,6 +14,7 @@ import org.abs_models.crowbar.data.specialHeapKeywords
 import org.abs_models.crowbar.interfaces.generateSMT
 import org.abs_models.crowbar.interfaces.plainSMTCommand
 import org.abs_models.crowbar.main.ADTRepos
+import org.abs_models.crowbar.main.FunctionRepos
 import org.abs_models.crowbar.main.Verbosity
 import org.abs_models.crowbar.main.output
 import org.abs_models.crowbar.main.tmpPath
@@ -133,10 +134,11 @@ object CounterexampleGenerator {
         miscExpressions: List<String>
     ): Model {
 
-        // "heap", "old", "last", etc do not reference program vars
+        // "heap", "old", "last", function names etc do not reference program vars
+        val functionNames = FunctionRepos.contracts().map { it.key.replace(".", "-") }
         val usedTypes = ADTRepos.getAllTypePrefixes()
         val reservedVarNameStems = listOf("heap") + specialHeapKeywords.values.map { it.name }
-        val reservedVarNames = usedTypes.map { tpe -> reservedVarNameStems.map { stem -> "${stem}_${tpe.replace(".","_")}" } }.flatten() + listOf("Unit")
+        val reservedVarNames = usedTypes.map { tpe -> reservedVarNameStems.map { stem -> "${stem}_${tpe.replace(".","_")}" } }.flatten() + functionNames + listOf("Unit")
 
         // Collect types of fields and variables from leaf node
         val fieldTypes = ((leaf.ante.iterate { it is Field } + leaf.succ.iterate { it is Field }) as Set<Field>).associate { Pair(it.name, it.dType) }
@@ -184,8 +186,8 @@ object CounterexampleGenerator {
         ModelParser.loadSMT(solverResponse)
 
         val parsed = ModelParser.parseModel()
-        val constants = parsed.filter { it is ModelConstant }.map{ it as ModelConstant }
-        val vars = constants.filter { !(it.name matches Regex("(.*_f|fut_.*|NEW\\d.*|f_(\\d)+|DTypes\\-.*)") || reservedVarNames.contains(it.name)) }
+        val constants = parsed.filter { it is ModelConstant }.map { it as ModelConstant }
+        val vars = constants.filter { !(it.name matches Regex("(.*_f|fut_.*|NEW\\d.*|f_(\\d)+)") || reservedVarNames.contains(it.name)) }
         val fields = constants.filter { it.name matches Regex(".*_f") }
         val futLookup = constants.filter { it.name.startsWith("fut_") }.associate { Pair((it.value as MvInteger).value, it.name) }
 
@@ -313,11 +315,19 @@ object CounterexampleGenerator {
     }
 
     private fun renderDataTypeDefs(): String {
-        val usedDataTypes = ADTRepos.getAllTypePrefixes().map { ADTRepos.getSMTDType(it) }
-        val defs = usedDataTypes.filter { it.dtype.startsWith("DTypes.") }.map {
-            val values = it.values.map { it.removePrefix("DTypes.") }
-            "data ${it.dtype.removePrefix("DTypes.")} = ${values.joinToString(" | ")};"
+        val definedDataTypes = ADTRepos.dTypesDecl
+        // TODO: Filter unused but defined data types
+        val defs = definedDataTypes.map {
+            val constructors = it.dataConstructorList.map {
+                val args = it.constructorArgList.toList()
+                if (args.isEmpty())
+                    it.name
+                else
+                    "${it.name}(${args.map{it.type.simpleName}.joinToString(", ")})"
+            }
+            "data ${it.name} = ${constructors.joinToString(" | ")};"
         }
+
         return defs.joinToString("\n")
     }
 

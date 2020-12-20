@@ -65,7 +65,12 @@ fun renderAbsExpression(e: Exp, m: Map<String, String>): String {
         is Call            -> "${e.methodSig.name}(${e.params.map{ renderAbsExpression(it, m) }.joinToString(", ")})"
         is IfExp           -> "(if ${renderAbsExpression(e.condExp, m)} then ${renderAbsExpression(e.thenExp, m)} else ${renderAbsExpression(e.elseExp, m)})"
         is FnApp           -> "${e.name}(${e.params.map{ renderAbsExpression(it, m) }.joinToString(", ")})"
-        is DataConstructorExp -> e.dataConstructor!!.name
+        is DataConstructorExp -> {
+            if (e.params.toList().isEmpty())
+                e.dataConstructor!!.name
+            else
+                "${e.dataConstructor!!.name}(${e.params.map{ renderAbsExpression(it, m) }.joinToString(", ")})"
+        }
         else               -> throw Exception("Cannot render ABS Expression: $e")
     }
 }
@@ -75,7 +80,7 @@ fun renderSimpleCrowbarExpression(e: Expr, m: Map<String, String>): String {
         is Const           -> e.name
         is ProgVar         -> if (m.containsKey(e.name)) m[e.name]!! else e.name
         is Field           -> "this." + e.name.substring(0, e.name.length - 2)
-        is DataTypeExpr -> e.name
+        is DataTypeExpr    -> if (e.e.isEmpty()) e.name else "${e.name}({${e.e.map{renderExpression(it, m)}.joinToString(", ")})"
         else               -> throw Exception("Cannot render complex crowbar Expression: ${e.prettyPrint()}")
     }
 }

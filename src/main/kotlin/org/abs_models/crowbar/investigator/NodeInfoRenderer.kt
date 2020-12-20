@@ -70,7 +70,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         // The state in which the actual counterexample begins is initialized in the method-internal initial assignments
         val fields = model.heapMap[OldHeap.toSMT(false)]!!
         // Find fields not included in the model but included in the counterexample and initialize them with default value
-        val missingFields = (usedFields - fields.map { it.first }.toSet()).map { Pair(it, MvInteger(0)) }
+        val missingFields = (usedFields - fields.map { it.first }.toSet()).map { Pair(it, getDefaultValueForType(it.dType)) }
 
         val defs = (fields + missingFields).map {
             val field = it.first
@@ -159,7 +159,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         var getReplacement = ""
         if (futureValue == null) {
             getReplacement = "// Future value irrelevant or unavailable, using default:\n"
-            futureValue = MvInteger(0)
+            futureValue = getDefaultValueForLocation(info.lhs)
         }
 
         getReplacement += renderModelAssignment(info.lhs, futureValue)
@@ -193,7 +193,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         var callReplacement = ""
         if (methodReturnVal == null) {
             callReplacement = "// Return value irrelevant or unavailable, using default:\n"
-            methodReturnVal = MvInteger(0)
+            methodReturnVal = getDefaultValueForLocation(info.lhs)
         }
         callReplacement += renderModelAssignment(info.lhs, methodReturnVal)
 
@@ -362,10 +362,38 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
             dType == "ABS.StdLib.Fut" -> "\"${model.futNameById((value as MvInteger).value)}\""
             dType == "ABS.StdLib.Bool" -> if ((value as MvInteger).value == 0) "False" else "True"
             dType == "<UNKNOWN>" -> "\"unknownType($value)\""
-            isDataType(dType) -> (value as MvDataType).value.removePrefix("DTypes.")
+            isDataType(dType) -> (value as MvDataType).toString()
             value is MvInteger -> if (value.value == 0) "null" else "\"${getObjectById(value.value)}\""
             else -> throw Exception("Cannot render model value of unknown type $dType")
         }
+    }
+
+    private fun getDefaultValueForType(dType: String): ModelValue {
+        return when {
+            isDataType(dType) -> {
+                // Data types are tricky
+                // We'll try to generate a short-as-possible default value by choosing the type constructor with the fewest parameters
+                // If we can't find one with no parameters, we recursively generate default values for the required parameters
+                val typeDecl = ADTRepos.getDeclForType(dType)
+                val preferredConstructor = typeDecl.dataConstructorList.minBy { it.constructorArgList.toList().size }!!
+                if (preferredConstructor.constructorArgList.toList().isEmpty())
+                    MvDataType(preferredConstructor.qualifiedName)
+                else {
+                    val params = preferredConstructor.constructorArgList.map { getDefaultValueForType(it.type.qualifiedName) }
+                    MvDataType(preferredConstructor.qualifiedName, params)
+                }
+            }
+            else -> MvInteger(0)
+        }
+    }
+
+    private fun getDefaultValueForLocation(loc: Location): ModelValue {
+        val type = when (loc) {
+            is Field -> loc.dType
+            is ProgVar -> loc.dType
+            else -> throw Exception("Cannot get default value for unknown location: ${loc.prettyPrint()}")
+        }
+        return getDefaultValueForType(type)
     }
 
     private fun getObjectBySMT(smtRep: String): String {
@@ -385,7 +413,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         return getObjectBySMT(smtRep)
     }
 
-    private fun renderType(type: String) = type.removePrefix("ABS.StdLib.")
+    private fun renderType(type: String) = stripModulePrefix(type)
 
     private fun renderExp(e: Expr): String {
         // Keep track of fields referenced in expressions for field declarations
@@ -400,12 +428,15 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
 }
 
 fun complexTypeToString(type: String): String {
-    return if (type == "ABS.StdLib.Int" || type == "ABS.StdLib.Bool")
-        type.removePrefix("ABS.StdLib.")
-    else if (isDataType(type))
-        type.removePrefix("DTypes.")
+    return if (type == "ABS.StdLib.Int" || type == "ABS.StdLib.Bool" || isDataType(type))
+        stripModulePrefix(type)
     else
         "String"
+}
+
+fun stripModulePrefix(type: String): String {
+    // Delete everything up to and including the last dot
+    return type.replace(Regex("^.*\\."), "")
 }
 
 fun isDataType(dType: String): Boolean {

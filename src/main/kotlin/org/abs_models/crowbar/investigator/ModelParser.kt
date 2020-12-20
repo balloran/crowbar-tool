@@ -139,26 +139,33 @@ object ModelParser {
     }
 
     private fun parseValue(expectedType: Type): ModelValue {
-        return if (expectedType == Type.INT)
-            MvInteger(parseIntExp())
-        else if (expectedType == Type.COMPLEX)
-            MvDataType(parseComplexTypeExp())
-        else
-            parseArrayExp()
+        return when (expectedType) {
+            Type.INT -> parseIntExp()
+            Type.COMPLEX -> parseComplexTypeExp()
+            Type.ARRAY -> parseArrayExp()
+            Type.UNKNOWN -> throw Exception("Can't parse value of unknown type")
+        }
     }
 
     private fun parseScalarValue(): ModelValue {
-        return if (tokens[0] is Identifier)
-            parseValue(Type.COMPLEX)
-        else
-            parseValue(Type.INT)
+        return when (tokens[0]) {
+            is ConcreteValue -> parseValue(Type.INT)
+            is Identifier -> parseValue(Type.COMPLEX)
+            is LParen -> {
+                if (tokens[1].toString() == "-")
+                    parseValue(Type.INT)
+                else
+                    parseValue(Type.COMPLEX)
+            }
+            else -> throw Exception("Cannot guess type of value at ${tokens.joinToString(" ")}")
+        }
     }
 
-    private fun parseIntExp(): Int {
+    private fun parseIntExp(): MvInteger {
         if (tokens[0] is ConcreteValue) {
             val value = (tokens[0] as ConcreteValue).value
             consume()
-            return value
+            return MvInteger(value)
         } else if (tokens[0] is LParen) {
             consume()
             val value: Int
@@ -166,12 +173,12 @@ object ModelParser {
             when (tokens[0].toString()) {
                 "-" -> {
                     consume()
-                    value = - parseIntExp()
+                    value = - parseIntExp().value
                 }
                 else -> throw Exception("Expected integer expression function but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
             }
             consume(RParen())
-            return value
+            return MvInteger(value)
         } else
             throw Exception("Expected concrete integer value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
     }
@@ -211,7 +218,7 @@ object ModelParser {
             consume()
             array = parseArrayExp(defs)
             val elemType = array.elemType
-            val index = parseIntExp()
+            val index = parseIntExp().value
             val value = parseValue(elemType)
             array.map.put(index, value)
         } else
@@ -221,11 +228,29 @@ object ModelParser {
         return array
     }
 
-    private fun parseComplexTypeExp(): String {
+    private fun parseComplexTypeExp(): MvDataType {
+        // Simple types without parameters
         if (tokens[0] is Identifier) {
             val value = (tokens[0] as Identifier).spelling
             consume()
-            return value
+            return MvDataType(value)
+        }
+        // Types with parameters
+        else if (tokens[0] is LParen) {
+            consume()
+
+            if (tokens[0] !is Identifier)
+                throw Exception("Expected data type constructor but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+            val typeConstructor = (tokens[0] as Identifier).spelling
+            consume()
+
+            val params = mutableListOf<ModelValue>()
+            while (tokens[0] !is RParen) {
+                params.add(parseScalarValue())
+            }
+            consume(RParen())
+
+            return MvDataType(typeConstructor, params)
         } else
             throw Exception("Expected data type value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
     }
@@ -236,8 +261,8 @@ object ModelParser {
         consume(Identifier("const"))
         consume(LParen())
         consume(Identifier("Array"))
-        val valType = parseType()
         parseType()
+        val valType = parseType()
         consume(RParen())
         consume(RParen())
         val value = parseValue(valType)
@@ -321,7 +346,7 @@ object UnknownValue : ModelValue {
     override fun toString() = "UNPARSED VALUE"
 }
 
-class MvArray(val elemType: Type, val defaultValue: ModelValue, val map: MutableMap<Int, ModelValue> = mutableMapOf()) : ModelValue {
+data class MvArray(val elemType: Type, val defaultValue: ModelValue, val map: MutableMap<Int, ModelValue> = mutableMapOf()) : ModelValue {
     fun getValue(index: Int) = if (map.contains(index)) map[index]!! else defaultValue
 
     override fun toString(): String {
@@ -334,12 +359,17 @@ class MvArray(val elemType: Type, val defaultValue: ModelValue, val map: Mutable
     }
 }
 
-class MvInteger(val value: Int) : ModelValue {
+data class MvInteger(val value: Int) : ModelValue {
     override fun toString() = value.toString()
 }
 
-class MvDataType(val value: String) : ModelValue {
-    override fun toString() = value
+data class MvDataType(val value: String, val params: List<ModelValue> = listOf()) : ModelValue {
+    override fun toString(): String {
+        return if (params.size == 0)
+            stripModulePrefix(value)
+        else
+            "${stripModulePrefix(value)}(${params.joinToString(", ")})"
+    }
 }
 
 enum class Type() {
