@@ -50,23 +50,19 @@ class DatatypeTest : StringSpec({
 
             val awaitWhileSuccess = classDecl.extractMethodNode(postInv, "awaitWhileSuccess", repos)
             executeNode(awaitWhileSuccess, repos, postInv) shouldBe true
-//simpleLastSuccess
+
             val simpleOldSuccess = classDecl.extractMethodNode(postInv, "simpleOldSuccess", repos)
             executeNode(simpleOldSuccess, repos, postInv) shouldBe true
-
 
             val simpleOldFail = classDecl.extractMethodNode(postInv, "simpleOldFail", repos)
             executeNode(simpleOldFail, repos, postInv) shouldBe false
 
-
             val simpleLastSuccess = classDecl.extractMethodNode(postInv, "simpleLastSuccess", repos)
             executeNode(simpleLastSuccess, repos, postInv) shouldBe true
-
 
             val simpleLastFail = classDecl.extractMethodNode(postInv, "simpleLastFail", repos)
             executeNode(simpleLastFail, repos, postInv) shouldBe false
 
-            //syncCallSuccess
             val syncCallSuccess = classDecl.extractMethodNode(postInv, "syncCallSuccess", repos)
             executeNode(syncCallSuccess, repos, postInv) shouldBe true
 
@@ -103,6 +99,15 @@ class DatatypeTest : StringSpec({
             val constReturnSuccess = classDecl.extractMethodNode(postInv, "constReturnSuccess", repos)
             executeNode(constReturnSuccess, repos, postInv) shouldBe true
 
+            val wrapIntConstSuccess = classDecl.extractMethodNode(postInv, "wrapIntConstSuccess", repos)
+            executeNode(wrapIntConstSuccess, repos, postInv) shouldBe true
+
+            val wrapBoolConstSuccess = classDecl.extractMethodNode(postInv, "wrapBoolConstSuccess", repos)
+            executeNode(wrapBoolConstSuccess, repos, postInv) shouldBe true
+
+            val wrapWrapIntConstSuccess = classDecl.extractMethodNode(postInv, "wrapWrapIntConstSuccess", repos)
+            executeNode(wrapWrapIntConstSuccess, repos, postInv) shouldBe true
+
             val trivialSuccess = classDecl.extractMethodNode(postInv, "trivialSuccess", repos)
             executeNode(trivialSuccess, repos, postInv) shouldBe true
 
@@ -138,7 +143,6 @@ class DatatypeTest : StringSpec({
 
             val parametricParamSuccess = classDecl.extractMethodNode(postInv, "parametricParamSuccess", repos)
             executeNode(parametricParamSuccess, repos, postInv) shouldBe true
-
 
             val caseReturnWrappedFuncSuccess = classDecl.extractMethodNode(postInv, "caseReturnWrappedFuncSuccess", repos)
             executeNode(caseReturnWrappedFuncSuccess, repos, postInv) shouldBe true

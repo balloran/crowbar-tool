@@ -54,7 +54,7 @@ data class DataTypesDecl(val dTypesDecl : List<DataTypeDecl>) : ProofElement{
                             dataConstructor.constructorArgList.map {
                                 ArgsSMT(
                                     "${dataConstructor.qualifiedName}_${count++}",
-                                    listOf(Function(it.type.qualifiedName))
+                                    listOf(Function(ADTRepos.libPrefix(it.type.qualifiedName)))
                                 )
                             })
                     )

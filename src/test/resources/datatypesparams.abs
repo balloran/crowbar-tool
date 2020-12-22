@@ -6,6 +6,8 @@ data DataType = Default | DataA | DataB | DataC;
 data ComplexWrapType = ComplexWrap(ComplexType);
 data WrapType = Wrap(DataType);
 data WrapWrapType = WrapWrap(WrapType);
+data WrapPrim = WrapInt(Int) | WrapBool(Bool);
+data WrapWrapPrim = WrapWrapInt(WrapPrim);
 
 
 data MultiWrapType = MultiWrap(DataType,DataType);
@@ -30,10 +32,24 @@ def ComplexType complexB() = ComplexB;
 
 class C {
 
-
     [Spec : Ensures( result == Wrap(DataA) )]
     WrapType constReturnSuccess(){
         return Wrap(DataA);
+    }
+
+    [Spec : Ensures( result == WrapInt(0) )]
+    WrapPrim wrapIntConstSuccess(){
+        return WrapInt(0);
+    }
+
+    [Spec : Ensures( result == WrapBool(True) )]
+    WrapPrim wrapBoolConstSuccess(){
+        return WrapBool(True);
+    }
+
+    [Spec : Ensures( result == WrapWrapInt(WrapInt(0)) )]
+    WrapWrapPrim wrapWrapIntConstSuccess(){
+        return WrapWrapInt(WrapInt(0));
     }
 
     [Spec : Ensures( result == TrivialWrap(Trivial) )]
