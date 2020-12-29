@@ -10,13 +10,13 @@ data TrivialType = Trivial;
 [Spec : Ensures( result != ComplexB )]
 def ComplexType nonIntParams(ComplexType c) = c;
 
-[Spec : Ensures( result == Trivial )]
+//[Spec : Ensures( result == Trivial )]
 def TrivialType trivialFunc() = Trivial;
 
-[Spec : Ensures( result == ComplexA )]
+//[Spec : Ensures( result == ComplexA )]
 def ComplexType complexA() = ComplexA;
 
-[Spec : Ensures( result == ComplexB )]
+//[Spec : Ensures( result == ComplexB )]
 def ComplexType complexB() = ComplexB;
 
 class C{
