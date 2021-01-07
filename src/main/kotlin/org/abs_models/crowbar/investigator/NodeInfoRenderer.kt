@@ -441,7 +441,7 @@ fun stripModulePrefix(type: String): String {
 
 fun isDataType(dType: String): Boolean {
     val prefix = ADTRepos.libPrefix(dType)
-    return ADTRepos.getAllTypePrefixes().contains(prefix)
+    return prefix != "Int" && ADTRepos.getAllTypePrefixes().contains(prefix)
 }
 
 fun indent(text: String, level: Int, indentString: String = "\t"): String {
