@@ -180,19 +180,27 @@ class D (Int fi, Int i){
 
 }
 
-class E{
-    ComplexType fieldA = ComplexA;
-    ComplexType fieldB = ComplexB;
-    ComplexType fieldC = ComplexA;
 
 
-    [Spec : Ensures( this.fieldA == ComplexB)]
-    Unit moreFieldsThanValuesFail(){
-        this.fieldA = ComplexA;
-        this.fieldB = ComplexB;
-        this.fieldC = ComplexA;
+interface I{
+   [Spec : Ensures( result == 0 )]
+    Int m();
+}
+
+class E(ComplexType ct1, ComplexType ct2) implements I{
+
+    I i = null;
+
+    Int m(){
+        return 0;
     }
 
+   [Spec : Ensures( this.i != null && result == 0 )]
+    Int simpleSuccess(){
+        this.i = new E(ComplexA,ComplexB);
+        Int res = this.i.m();
+        return res;
+    }
 }
 
 {}

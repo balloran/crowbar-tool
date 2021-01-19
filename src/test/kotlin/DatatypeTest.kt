@@ -68,13 +68,13 @@ class DatatypeTest : StringSpec({
 
         }
 
-        "$smt fieldValuesTest"{
+        "$smt dTypeAsParamObjectCreation"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
             val classDecl = model.extractClassDecl("DTypes", "E", repos)
 
-            val moreFieldsThanValuesFail = classDecl.extractMethodNode(postInv, "moreFieldsThanValuesFail", repos)
-            executeNode(moreFieldsThanValuesFail, repos, postInv) shouldBe false
+            val moreFieldsThanValuesFail = classDecl.extractMethodNode(postInv, "simpleSuccess", repos)
+            executeNode(moreFieldsThanValuesFail, repos, postInv) shouldBe true
         }
 
         "$smt dTypeFuncTest"{

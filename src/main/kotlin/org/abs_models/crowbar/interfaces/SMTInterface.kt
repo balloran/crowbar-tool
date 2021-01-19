@@ -1,5 +1,6 @@
 package org.abs_models.crowbar.interfaces
 
+import arrow.core.extensions.option.semiring.empty
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.*
@@ -47,7 +48,7 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     val fields =  (pre.iterate { it is Field } + post.iterate { it is Field }) as Set<Field>
     setUsedHeaps(fields.map{libPrefix(it.dType)}.toSet())
     val vars =  ((pre.iterate { it is ProgVar } + post.iterate { it is ProgVar  }) as Set<ProgVar>).filter { it.name != "heap" && it.name !in specialHeapKeywords}
-    val heaps =  ((pre.iterate { it is Function } + post.iterate{ it is Function }) as Set<Function>).map { it.name }.filter { it.startsWith("NEW") }
+    val heaps =  ((pre.iterate { it is Function } + post.iterate{ it is Function }) as Set<Function>).filter { it.name.startsWith("NEW") }
     val futs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("fut_") }
     val funcs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("f_") }
 
@@ -55,7 +56,12 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     header += FunctionRepos
     header = fields.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Field)"})
     header = vars.fold(header, {acc, nx-> acc+"\n(declare-const ${nx.name} ${libPrefix(nx.dType)})"})
-    header = heaps.fold(header, {acc, nx-> "$acc\n(declare-fun $nx (${"Int ".repeat(nx.split("_")[1].toInt())}) Int)" })
+    header = heaps.fold(header, {acc, nx-> "$acc\n(declare-fun ${nx.name} (${nx.params.joinToString (" "){
+        if(it is DataTypeConst){
+            it.dType
+        }else
+            "Int"
+    }}) Int)" })
     header = futs.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Int)"})
     header = funcs.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Int)"})
     fields.forEach { f1 -> fields.minus(f1).forEach{ f2 -> if(libPrefix(f1.dType) == libPrefix(f2.dType)) header += "\n (assert (not (= ${f1.name} ${f2.name})))" } } //??

@@ -211,7 +211,7 @@ data class DataTypeConst(val name : String, val dType : String, val params : Lis
     override fun prettyPrint(): String {
         return name + ":" + dType+"("+params.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
     }
-//    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
     override fun toSMT(isInForm : Boolean, indent:String) : String {
         val back = getSMT(name, isInForm)
@@ -446,7 +446,8 @@ fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicEleme
             if(map.keys.any { it is ProgVar && input.left.assigns(it)}) return ChainUpdate(subst(input.left, map) as UpdateElement, input.right)
             return ChainUpdate(subst(input.left, map) as UpdateElement, subst(input.right, map) as UpdateElement)
         }
-        is DataTypeConst -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
+//        is DataTypeConst -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
+        is DataTypeConst -> return DataTypeConst(input.name, input.dType, input.params.map { p -> subst(p, map) as Term })
         is Function -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
         is Predicate -> return Predicate(input.name, input.params.map { p -> subst(p, map) as Term })
         is Impl -> return Impl(subst(input.left, map) as Formula, subst(input.right, map) as Formula)
