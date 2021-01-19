@@ -2,7 +2,9 @@ package org.abs_models.crowbar.interfaces
 
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Const
+import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.SkipStmt
+import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.FunctionRepos
 import org.abs_models.crowbar.main.extractSpec
 import org.abs_models.crowbar.rule.FreshGenerator
@@ -100,6 +102,14 @@ fun translateABSExpToSymExpr(input: Exp, returnType: String) : Expr {
                 CallExpr(met, params)
             else
                 SyncCallExpr(met, params)
+        }
+        is CaseExp ->{
+            CaseExpr(translateABSExpToSymExpr(input.expr, returnType),
+                ADTRepos.libPrefix(input.type.qualifiedName),
+                input.branchList.map {
+                BranchExpr(
+                    translateABSPatternToSymExpr(it.left, it.patternExpType, returnType),
+                    translateABSExpToSymExpr(it.right, returnType))})
         }
         else -> throw Exception("Translation of ${input::class} not supported, term is $input" )
     }
@@ -213,8 +223,8 @@ fun translateABSPatternToSymExpr(pattern : Pattern, overrideType : Type, returnT
         is PatternVar -> ProgVar(pattern.`var`.name, pattern.type.qualifiedName)
         is LiteralPattern -> translateABSExpToSymExpr(pattern.literal, returnType)
         is UnderscorePattern ->  FreshGenerator.getFreshProgVar(overrideType.qualifiedName)
-        is ConstructorPattern ->  DataTypeExpr(typeWithModule(pattern.constructor, pattern.moduleDecl.name), pattern.type.qualifiedName, pattern.params.map { translateABSPatternToSymExpr(it, overrideType, returnType) })
-            else -> throw Exception("Translation of complex constructors is not supported")
+        is ConstructorPattern -> DataTypeExpr(typeWithModule(pattern.constructor, pattern.moduleDecl.name),pattern.type.qualifiedName,pattern.params.map { translateABSPatternToSymExpr(it,it.inhType, returnType) })
+        else -> throw Exception("Translation of complex constructors is not supported")
         }
 
 fun typeWithModule(type : String, moduleName : String) :String {

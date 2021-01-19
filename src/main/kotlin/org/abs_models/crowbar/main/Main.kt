@@ -29,6 +29,7 @@ var smtPath  = "z3"
 //var timeoutS  = 100
 var verbosity = Verbosity.NORMAL
 var investigate = false
+var conciseProofs = false
 
 //todo: once allowedTypes is not needed anymore, the repository needs to be passed to fewer places
 data class Repository(private val model : Model?,
@@ -151,6 +152,7 @@ class Main : CliktCommand() {
     private val deductType by   option("--deduct", "-d", help="Used Deductive Type").choice("PostInv","RegAcc").convert { when(it){"PostInv" -> PostInvType::class; "RegAcc" -> RegAccType::class; else -> throw Exception(); } }.default(PostInvType::class)
     private val freedom    by   option("--freedom", "-fr", help="Performs a simple check for potentially deadlocking methods").flag()
     private val invFlag    by  option("--investigate", "-inv", help="Generate counterexamples for uncloseable branches").flag()
+    private val conciseProofsFlag    by  option("--concise_proofs", "-cp", help="Generate concise proofs omitting unused declarations").flag()
 
     override fun run() {
 
@@ -159,6 +161,7 @@ class Main : CliktCommand() {
         verbosity = Verbosity.values()[verbose]
         // timeoutS = timeout
         investigate = invFlag
+        conciseProofs = conciseProofsFlag
 
         val (model, repos) = load(filePath)
         //todo: check all VarDecls and Field Decls here

@@ -2,7 +2,7 @@ package org.abs_models.crowbar.data
 
 interface UpdateElement: LogicElement {
     fun assigns(v : ProgVar) : Boolean
-    override fun toSMT(isInForm : Boolean) : String = throw Exception("Updates are not translatable to SMT-LIB")
+    override fun toSMT(isInForm : Boolean, indent:String) : String = throw Exception("Updates are not translatable to SMT-LIB")
 }
 object EmptyUpdate : UpdateElement {
     override fun prettyPrint(): String {

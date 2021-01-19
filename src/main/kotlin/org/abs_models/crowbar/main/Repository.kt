@@ -13,6 +13,13 @@ object ADTRepos {
 
 	private val dtypeMap: MutableMap<String,  HeapDecl> = mutableMapOf()
 	val dTypesDecl = mutableListOf<DataTypeDecl>()
+	private val usedHeaps = mutableSetOf<String>()
+
+
+	fun setUsedHeaps(usedHeapsPar : Set<String>) {
+		usedHeaps.clear()
+		usedHeaps.addAll(usedHeapsPar)
+	}
 
 	fun getSMTDType(dType : String) : HeapDecl = dtypeMap[libPrefix(dType)]!!
 	fun getDeclForType(dType: String) : DataTypeDecl = dTypesDecl.find{ it.qualifiedName == dType }!!
@@ -21,8 +28,16 @@ object ADTRepos {
 
 	override fun toString() : String {
 		var header = DataTypesDecl(dTypesDecl).toSMT(true)
-		for (dtype in dtypeMap)
-			header += dtype.value.toSMT(true)
+		for (dtype in dtypeMap) {
+
+			header += DeclareConstSMT(Something(libPrefix(dtype.key)).toSMT(true), libPrefix(dtype.key)).toSMT(true, "\n") // to comment with nothing as type value
+			header +=
+				if(!conciseProofs || dtype.key in usedHeaps)
+					dtype.value.toSMT(true)
+				else
+					"\n; no fields of type ${dtype.key}: omitting declaration of ${dtype.value.heapType}"
+
+		}
 		return header
 	}
 
@@ -30,7 +45,7 @@ object ADTRepos {
 		dtypeMap.clear()
 		dTypesDecl.clear()
 		for(type in types)
-			dtypeMap[libPrefix(type.qualifiedName)] = HeapDecl(libPrefix(type.qualifiedName), listOf())
+			dtypeMap[libPrefix(type.qualifiedName)] = HeapDecl(libPrefix(type.qualifiedName))
 
 	}
 	fun init(model: Model){
@@ -39,12 +54,8 @@ object ADTRepos {
 			if(moduleDecl.name.startsWith("ABS.")) continue
 			for(decl in moduleDecl.decls){
 				if(decl is DataTypeDecl && decl.name != "Spec"){
-					val datatypesConstList = mutableListOf<DataConstructor>()
 					dTypesDecl.add(decl)
-					for(constructor in decl.dataConstructorList){
-						datatypesConstList.add(constructor)
-					}
-					dtypeMap[decl.qualifiedName] = HeapDecl(decl.type.qualifiedName, datatypesConstList.map { it.qualifiedName })
+					dtypeMap[decl.qualifiedName] = HeapDecl(decl.type.qualifiedName)
 				}
 			}
 		}
@@ -105,14 +116,25 @@ object FunctionRepos{
 		    if(direct.isNotEmpty()) {
 			    var sigs = ""
 			    var defs = ""
+				var functors = ""
 			    for (pair in direct) {
 				    val params = pair.value.params
 				    val eDef: ExpFunctionDef = pair.value.functionDef as ExpFunctionDef
 				    val def = eDef.rhs
-				    sigs += "\t(${pair.key.replace(".", "-")} (${params.fold("", { acc, nx -> "$acc (${nx.name} ${ADTRepos.libPrefix(nx.type.qualifiedName)})" })})  ${ADTRepos.libPrefix(def.type.qualifiedName)})\n"
-				    defs += "\t${exprToTerm(translateABSExpToSymExpr(def, "<UNKNOWN>")).toSMT(false)}\n"
+					if(def is CaseExp){
+						if(def.expr.toString() != "data")
+							throw Exception("Case Expression not supported: function ${def.contextDecl.qualifiedName}")
+						val sigNR = "\t${pair.key.replace(".", "-")} (${params.fold("", { acc, nx -> "$acc (${nx.name} ${ADTRepos.libPrefix(nx.type.qualifiedName)})" })})  ${ADTRepos.libPrefix(def.type.qualifiedName)}\n"
+						val defNR = "\t${exprToTerm(translateABSExpToSymExpr(def, "<UNKNOWN>")).toSMT(false)}\n"
+						functors += "\n(define-fun $sigNR $defNR)"
+					}else {
+						sigs += "\t(${pair.key.replace(".", "-")} (${params.fold("",{ acc, nx -> "$acc (${nx.name} ${ADTRepos.libPrefix(nx.type.qualifiedName)})" })})  ${ADTRepos.libPrefix(def.type.qualifiedName)})\n"
+						defs += "\t${exprToTerm(translateABSExpToSymExpr(def, "<UNKNOWN>")).toSMT(false)}\n"
+					}
 			    }
-			    ret += "\n(define-funs-rec(\n$sigs)(\n$defs))"
+				ret += "\n$functors"
+				if(sigs.isNotBlank())
+					ret += "\n(define-funs-rec(\n$sigs)(\n$defs))"
 		    }
 	    return ret
     }

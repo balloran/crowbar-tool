@@ -134,6 +134,10 @@ class DatatypeTest : StringSpec({
 
             val caseWrappedWrappedSuccess = classDecl.extractMethodNode(postInv, "caseWrappedWrappedSuccess", repos)
             executeNode(caseWrappedWrappedSuccess, repos, postInv) shouldBe true
+
+            val caseWrappedDoubleSuccess = classDecl.extractMethodNode(postInv, "caseWrappedDoubleSuccess", repos)
+            executeNode(caseWrappedDoubleSuccess, repos, postInv) shouldBe true
+
         }
 
 
@@ -164,7 +168,83 @@ class DatatypeTest : StringSpec({
 
             val whileSuccess = classDecl.extractMethodNode(postInv, "whileSuccess", repos)
             executeNode(whileSuccess, repos, postInv) shouldBe true
+
+            val awaitWhileSuccess = classDecl.extractMethodNode(postInv, "awaitWhileSuccess", repos)
+            executeNode(awaitWhileSuccess, repos, postInv) shouldBe true
         }
 
+        "$smt functors"{
+            val (model, repos) = load(listOf(Paths.get("src/test/resources/functors.abs")))
+            val classDecl = model.extractClassDecl("Functors", "C", repos)
+
+            val trivialSuccess = classDecl.extractMethodNode(postInv, "trivialSuccess", repos)
+            executeNode(trivialSuccess, repos, postInv) shouldBe true
+
+            val caseSimpleSuccess = classDecl.extractMethodNode(postInv, "caseSimpleSuccess", repos)
+            executeNode(caseSimpleSuccess, repos, postInv) shouldBe true
+
+            val caseSimpleFail = classDecl.extractMethodNode(postInv, "caseSimpleFail", repos)
+            executeNode(caseSimpleFail, repos, postInv) shouldBe false
+
+            val caseFail = classDecl.extractMethodNode(postInv, "caseFail", repos)
+            executeNode(caseFail, repos, postInv) shouldBe false
+
+            val constFunctSuccess = classDecl.extractMethodNode(postInv, "constFunctSuccess", repos)
+            executeNode(constFunctSuccess, repos, postInv) shouldBe true
+
+            val varReturnSuccess = classDecl.extractMethodNode(postInv, "varReturnSuccess", repos)
+            executeNode(varReturnSuccess, repos, postInv) shouldBe true
+
+            val comparisonEqConstFunct = classDecl.extractMethodNode(postInv, "comparisonEqConstFunct", repos)
+            executeNode(comparisonEqConstFunct, repos, postInv) shouldBe true
+
+            val comparisonUneqConstFunct = classDecl.extractMethodNode(postInv, "comparisonUneqConstFunct", repos)
+            executeNode(comparisonUneqConstFunct, repos, postInv) shouldBe true
+
+            val whileSuccess = classDecl.extractMethodNode(postInv, "whileSuccess", repos)
+            executeNode(whileSuccess, repos, postInv) shouldBe true
+
+            val whileFuncInvSuccess = classDecl.extractMethodNode(postInv, "whileFuncInvSuccess", repos)
+            executeNode(whileFuncInvSuccess, repos, postInv) shouldBe true
+
+            val somethingSimpleFail = classDecl.extractMethodNode(postInv, "somethingSimpleFail", repos)
+            executeNode(somethingSimpleFail, repos, postInv) shouldBe false
+
+            val somethingSimpleSuccess = classDecl.extractMethodNode(postInv, "somethingSimpleSuccess", repos)
+            executeNode(somethingSimpleSuccess, repos, postInv) shouldBe true
+
+            //simpleSuccess
+            val doubleFuncAppTrivialSuccess = classDecl.extractMethodNode(postInv, "doubleFuncAppTrivialSuccess", repos)
+            executeNode(doubleFuncAppTrivialSuccess, repos, postInv) shouldBe true
+        }
+
+        "$smt functors_fields"{
+            val (model, repos) = load(listOf(Paths.get("src/test/resources/functors.abs")))
+            val classDecl = model.extractClassDecl("Functors", "D", repos)
+
+            val simpleOldSuccess = classDecl.extractMethodNode(postInv, "simpleOldSuccess", repos)
+            executeNode(simpleOldSuccess, repos, postInv) shouldBe true
+
+            val simpleOldFail = classDecl.extractMethodNode(postInv, "simpleOldFail", repos)
+            executeNode(simpleOldFail, repos, postInv) shouldBe false
+
+            val simpleLastSuccess = classDecl.extractMethodNode(postInv, "simpleLastSuccess", repos)
+            executeNode(simpleLastSuccess, repos, postInv) shouldBe true
+
+            val simpleLastFail = classDecl.extractMethodNode(postInv, "simpleLastFail", repos)
+            executeNode(simpleLastFail, repos, postInv) shouldBe false
+
+            val whileSuccess = classDecl.extractMethodNode(postInv, "whileSuccess", repos)
+            executeNode(whileSuccess, repos, postInv) shouldBe true
+
+            val somethingSimpleFail = classDecl.extractMethodNode(postInv, "somethingSimpleFail", repos)
+            executeNode(somethingSimpleFail, repos, postInv) shouldBe false
+
+            val somethingSimpleSuccess = classDecl.extractMethodNode(postInv, "somethingSimpleSuccess", repos)
+            executeNode(somethingSimpleSuccess, repos, postInv) shouldBe true
+
+            val doubleFuncAppTrivialSuccess = classDecl.extractMethodNode(postInv, "doubleFuncAppTrivialSuccess", repos)
+            executeNode(doubleFuncAppTrivialSuccess, repos, postInv) shouldBe true
+        }
     }
 })

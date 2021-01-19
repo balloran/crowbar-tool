@@ -4,12 +4,14 @@ import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.main.ADTRepos.libPrefix
+import org.abs_models.crowbar.main.ADTRepos.setUsedHeaps
 import java.io.File
 import java.util.concurrent.TimeUnit
 
 //(set-option :timeout ${timeoutS*1000})
 val smtHeader = """
-    
+    ; static header
+    (set-logic ALL)
     (declare-fun   valueOf (Int) Int)
     (define-fun iOr((x Int) (y Int)) Int
         (ite (or (= x 1) (= y 1)) 1 0))
@@ -32,22 +34,24 @@ val smtHeader = """
     (define-fun iite((x Int) (y Int) (z Int)) Int (ite (= x 1) y z))
     (declare-const Unit Int)
     (assert (= Unit 0))
+    ${DefineSortSMT("Field", "Int").toSMT(true,"\n")}
+    ; end static header
     """.trimIndent()
 
 @Suppress("UNCHECKED_CAST")
 fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
-    var header = "\n(set-logic ALL)"
+    var header = smtHeader
     val pre = deupdatify(ante)
     val post = deupdatify(Not(succ))
 
     val fields =  (pre.iterate { it is Field } + post.iterate { it is Field }) as Set<Field>
+    setUsedHeaps(fields.map{libPrefix(it.dType)}.toSet())
     val vars =  ((pre.iterate { it is ProgVar } + post.iterate { it is ProgVar  }) as Set<ProgVar>).filter { it.name != "heap" && it.name !in specialHeapKeywords}
     val heaps =  ((pre.iterate { it is Function } + post.iterate{ it is Function }) as Set<Function>).map { it.name }.filter { it.startsWith("NEW") }
     val futs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("fut_") }
     val funcs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("f_") }
-    header += "\n" + DefineSortSMT("Field", "Int").toSMT(true)
+
     header += "\n" + ADTRepos
-    header += smtHeader
     header += FunctionRepos
     header = fields.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Field)"})
     header = vars.fold(header, {acc, nx-> acc+"\n(declare-const ${nx.name} ${libPrefix(nx.dType)})"})
@@ -100,23 +104,4 @@ fun evaluateSMT(ante: Formula, succ: Formula) : Boolean {
     val smtRep = generateSMT(ante, succ)
     if(verbosity >= Verbosity.VV) println("crowbar-v: \n$smtRep")
     return evaluateSMT(smtRep)
-}
-
-fun declareFunSMT(name : String, type:String,  params :List<String> = listOf()) : String{
-    return "\n(declare-fun $name (${params.joinToString(" ") {it}}) $type)"
-}
-
-fun declareConstSMT(name : String, type:String) : String{
-    return "\n(declare-const $name $type)"
-}
-fun defineSortSMT(name : String, type:String, params :List<String> = listOf()) : String{
-    return "\n(define-sort $name (${params.joinToString(" ") {it}}) $type)"
-}
-
-fun assertSMT(formula: String) :String{
-    return "\n(assert $formula)"
-}
-
-fun forallSMT(params :List<Pair<String,String>>, formula: String) :String{
-    return "(forall (${params.map { pair -> "${pair.first} ${pair.second}" }.joinToString(" ") { "($it)" }}) $formula)"
 }

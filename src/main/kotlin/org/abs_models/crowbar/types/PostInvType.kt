@@ -350,7 +350,7 @@ class PITSyncCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val target = cond.map[PostInvAbstractVar("TYPE")] as DeductType
 
 
-        val precond = repos.syncMethodReqs.getValue(call.met).first
+        val precond = repos.syncMethodReqs.getValue(call.met).first //Todo: objInv
         val targetPreDecl = repos.syncMethodReqs.getValue(call.met).second
 
         val freshVar = FreshGenerator.getFreshProgVar(targetPreDecl.type.qualifiedName)//ASK<<
@@ -367,7 +367,7 @@ class PITSyncCallAssign(repos: Repository) : PITAssign(repos, Modality(
                 info = InfoMethodPrecondition(precondSubst)
         )
 
-        var postCond = repos.syncMethodEnss[call.met]?.first ?: True
+        val postCond = repos.syncMethodEnss[call.met]?.first ?: True //Todo: objInv
         val targetPostDecl = repos.syncMethodEnss[call.met]!!.second
         val substPostMap = mapSubstPar(call, targetPostDecl)
 

@@ -9,12 +9,12 @@ data WrapWrapType = WrapWrap(WrapType);
 data WrapPrim = WrapInt(Int) | WrapBool(Bool);
 data WrapWrapPrim = WrapWrapInt(WrapPrim);
 
+data WrapDoublePrim = WrapDoubleInt(Int,Int);
+
 
 data MultiWrapType = MultiWrap(DataType,DataType);
 data TrivialWrapType = TrivialWrap(TrivialType);
 data TrivialType = Trivial;
-
-
 
 
 [Spec : Requires( c != ComplexWrap(ComplexB) )]
@@ -134,11 +134,23 @@ class C {
         }
         return WrapWrap(res);
     }
+
+    [Spec : Ensures( result != Wrap(Default) )]
+    WrapType caseWrappedDoubleSuccess(WrapDoublePrim p){
+        DataType res = Default;
+        case p{
+            WrapDoubleInt(0,1) => res = DataA;
+            WrapDoubleInt(1,0) => res = DataB;
+            _        => res = DataC;
+        }
+        return Wrap(res);
+    }
+
 }
 
 
 [Spec : ObjInv( this.f != Wrap(Default) )]
-class D{
+class D(Int fi){
 
     WrapType f = Wrap(DataA);
     ComplexWrapType fc = ComplexWrap(ComplexA);
@@ -184,7 +196,7 @@ class D{
         await this.f != Wrap(res);
     }
 
-    [Spec : Requires( this.f != Wrap(Default) )]
+   [Spec : Requires( this.f != Wrap(Default) )]
    [Spec : Ensures( result != Wrap(Default) && this.f != Wrap(Default) )]
     WrapType simpleReturnMethod(){
         await this.f != Wrap(Default);
@@ -206,6 +218,18 @@ class D{
         [Spec : WhileInv( res != Wrap(DataB) && this.f != Wrap(Default))]
         while( j >= 0 ){
             res = Wrap(DataA);
+        }
+        return res;
+    }
+
+    [Spec : Ensures( result != Wrap(Default) )]
+    WrapType awaitWhileSuccess(ComplexType p, Int i){
+        WrapType res = Wrap(DataB);
+        Int j = i;
+        [Spec : WhileInv( res != Wrap(Default) && this.f != Wrap(Default) )]
+        while( j >= 0 ){
+                await this.fi >= 0;
+                res = this.f;
         }
         return res;
     }

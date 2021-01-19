@@ -236,6 +236,23 @@ data class DataTypeExpr(val name : String, val dType : String, val e : List<Expr
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 }
 
+data class CaseExpr(val match: Expr, val expectedType:String, val content: List<BranchExpr> ) : Expr{
+    override var absExp: org.abs_models.frontend.ast.Exp? = null
+
+    override fun prettyPrint(): String {
+        return "case ${match.prettyPrint()}{\n\t${content.joinToString("\n\t") { it.prettyPrint()} }\n}"
+    }
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> =
+        content.fold(emptySet(),{ acc, branch ->  acc + branch.matchTerm.iterate(f) + branch.branch.iterate(f)})
+
+}
+
+data class BranchExpr(val matchTerm : Expr, val branch : Expr) {
+    fun prettyPrint(): String {
+        return matchTerm.prettyPrint()+" => "+branch.prettyPrint()
+    }
+}
+
 interface Location : Expr
 data class LocationAbstractVar(val name : String) : Location, AbstractVar{
     override var absExp: org.abs_models.frontend.ast.Exp? = null
@@ -263,7 +280,7 @@ open class Field(val name : String, val dType : String="ABS.StdLib.Int") : Locat
     override fun hashCode(): Int {
         return name.hashCode()
     }
-    override fun toSMT(isInForm : Boolean) : String = name
+    override fun toSMT(isInForm : Boolean, indent:String) : String = name
 }
 
 open class ProgVar(val name : String, val dType : String = "Int") : Location, Term { //todo: change simpleName to qualifiedName and do something clever in the SMT-translation
@@ -287,7 +304,7 @@ open class ProgVar(val name : String, val dType : String = "Int") : Location, Te
     override fun hashCode(): Int {
         return name.hashCode()
     }
-    override fun toSMT(isInForm : Boolean) : String = name
+    override fun toSMT(isInForm : Boolean, indent:String) : String = name
 }
 data class ReturnVar(val vParam : String) : ProgVar("result", vParam)
 
@@ -300,7 +317,7 @@ data class ProgFieldAbstractVar(val vName : String) : Field(vName, "AVAR"), Abst
     override fun prettyPrint(): String {
         return name
     }
-    override fun toSMT(isInForm : Boolean) : String = name
+    override fun toSMT(isInForm : Boolean, indent:String) : String = name
 }
 
 fun appendStmt(stmt : Stmt, add : Stmt) : Stmt {
