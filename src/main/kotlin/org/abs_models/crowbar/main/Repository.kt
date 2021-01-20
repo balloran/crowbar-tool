@@ -15,7 +15,6 @@ object ADTRepos {
 	val dTypesDecl = mutableListOf<DataTypeDecl>()
 	private val usedHeaps = mutableSetOf<String>()
 
-
 	fun setUsedHeaps(usedHeapsPar : Set<String>) {
 		usedHeaps.clear()
 		usedHeaps.addAll(usedHeapsPar)
@@ -25,6 +24,7 @@ object ADTRepos {
 	fun getDeclForType(dType: String) : DataTypeDecl = dTypesDecl.find{ it.qualifiedName == dType }!!
 
 	fun getAllTypePrefixes() : Set<String> = dtypeMap.keys
+	fun getUsedTypePrefixes() : Set<String> = usedHeaps
 
 	override fun toString() : String {
 		var header = DataTypesDecl(dTypesDecl).toSMT(true)

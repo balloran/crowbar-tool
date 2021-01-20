@@ -136,9 +136,10 @@ object CounterexampleGenerator {
 
         // "heap", "old", "last", function names etc do not reference program vars
         val functionNames = FunctionRepos.known.map { it.key.replace(".", "-") }
-        val usedTypes = ADTRepos.getAllTypePrefixes()
+        val usedTypes = ADTRepos.getUsedTypePrefixes()
+        val allTypes = ADTRepos.getAllTypePrefixes()
         val reservedVarNameStems = listOf("heap", "Something") + specialHeapKeywords.values.map { it.name }
-        val reservedVarNames = usedTypes.map { tpe -> reservedVarNameStems.map { stem -> "${stem}_${tpe.replace(".","_")}" } }.flatten() + functionNames + listOf("Unit")
+        val reservedVarNames = allTypes.map { tpe -> reservedVarNameStems.map { stem -> "${stem}_${tpe.replace(".","_")}" } }.flatten() + functionNames + listOf("Unit")
 
         // Collect types of fields and variables from leaf node
         val fieldTypes = ((leaf.ante.iterate { it is Field } + leaf.succ.iterate { it is Field }) as Set<Field>).associate { Pair(it.name, it.dType) }
@@ -226,7 +227,7 @@ object CounterexampleGenerator {
 
         // This got a bit tricky with the introduction of multiple sub-heaps
         // We first parse the typed versions of all heap expressions for all used types
-        val usedTypes = ADTRepos.getAllTypePrefixes()
+        val usedTypes = ADTRepos.getUsedTypePrefixes()
         val parsedHeaps = usedTypes.map { Pair(it, ModelParser.parseArrayValues()) }.toMap()
 
         // And then find the correct value for every field in every heap state
