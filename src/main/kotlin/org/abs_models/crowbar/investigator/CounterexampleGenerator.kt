@@ -305,8 +305,13 @@ object CounterexampleGenerator {
         val explainer = "\n// Proof failed here. Trying to show:\n"
         val oblString = obligations.map { "// ${it.first}: ${NodeInfoRenderer.renderFormula(it.second)}" }.joinToString("\n")
 
-        var subOblString = "\n// Failed to show the following sub-obligations:\n"
-        subOblString += model.subObligations.filter { !it.value }.map { "// ${NodeInfoRenderer.renderFormula(it.key)}" }.joinToString("\n")
+        // Evaluation of obligations by the solver can fail if the obligations contain quantifiers
+        val subOblString = if (model.subObligations.size == 0) {
+            "\n// Sub-obligation analysis unavailable - solver evaluation failed"
+        } else {
+            "\n// Failed to show the following sub-obligations:\n" +
+            model.subObligations.filter { !it.value }.map { "// ${NodeInfoRenderer.renderFormula(it.key)}" }.joinToString("\n")
+        }
 
         val requiredScopeCloses = NodeInfoRenderer.closeScopes() // Close scopes left open due to abrupt proof end
         val fieldDefs = NodeInfoRenderer.fieldDefs().joinToString("\n")
