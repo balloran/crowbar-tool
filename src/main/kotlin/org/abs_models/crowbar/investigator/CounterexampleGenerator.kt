@@ -135,9 +135,9 @@ object CounterexampleGenerator {
     ): Model {
 
         // "heap", "old", "last", function names etc do not reference program vars
-        val functionNames = FunctionRepos.contracts().map { it.key.replace(".", "-") }
+        val functionNames = FunctionRepos.known.map { it.key.replace(".", "-") }
         val usedTypes = ADTRepos.getAllTypePrefixes()
-        val reservedVarNameStems = listOf("heap") + specialHeapKeywords.values.map { it.name }
+        val reservedVarNameStems = listOf("heap", "Something") + specialHeapKeywords.values.map { it.name }
         val reservedVarNames = usedTypes.map { tpe -> reservedVarNameStems.map { stem -> "${stem}_${tpe.replace(".","_")}" } }.flatten() + functionNames + listOf("Unit")
 
         // Collect types of fields and variables from leaf node
@@ -194,8 +194,12 @@ object CounterexampleGenerator {
         val initialAssignments = mutableListOf<Pair<Location, ModelValue>>()
 
         vars.forEach {
-            val variable = ProgVar(it.name, varTypes[it.name]!!)
-            initialAssignments.add(Pair(variable, it.value))
+            if (varTypes[it.name] == null) {
+                output("Investigator: model contains unknown variable \"${it.name}\", ignoring. Generated counterexample might be faulty.")
+            } else {
+                val variable = ProgVar(it.name, varTypes[it.name]!!)
+                initialAssignments.add(Pair(variable, it.value))
+            }
         }
 
         // Get heap-states at heap anonymization points

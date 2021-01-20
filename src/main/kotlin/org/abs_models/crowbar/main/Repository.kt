@@ -74,7 +74,7 @@ object ADTRepos {
 }
 
 object FunctionRepos{
-    private val known : MutableMap<String, FunctionDecl> = mutableMapOf()
+    val known : MutableMap<String, FunctionDecl> = mutableMapOf()
     fun isKnown(str: String) = known.containsKey(str)
     fun get(str: String) = known.getValue(str)
 	fun hasContracts() = known.filter { hasContract(it.value) }.any()
