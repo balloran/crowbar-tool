@@ -3,6 +3,7 @@ import io.kotlintest.specs.StringSpec
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.types.PostInvType
 import java.nio.file.Paths
+import kotlin.system.exitProcess
 
 class DatatypeTest : StringSpec({
     val postInv = PostInvType::class
@@ -93,6 +94,7 @@ class DatatypeTest : StringSpec({
 
         }
         "$smt simpleDataTypesParams"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypesparams.abs")))
             val classDecl = model.extractClassDecl("DTypesPar", "C", repos)
 
@@ -142,6 +144,7 @@ class DatatypeTest : StringSpec({
 
 
         "$smt complexDataTypesParams"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypesparams.abs")))
             val classDecl = model.extractClassDecl("DTypesPar", "D", repos)
 
@@ -174,6 +177,7 @@ class DatatypeTest : StringSpec({
         }
 
         "$smt functors"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/functors.abs")))
             val classDecl = model.extractClassDecl("Functors", "C", repos)
 
@@ -213,12 +217,15 @@ class DatatypeTest : StringSpec({
             val somethingSimpleSuccess = classDecl.extractMethodNode(postInv, "somethingSimpleSuccess", repos)
             executeNode(somethingSimpleSuccess, repos, postInv) shouldBe true
 
-            //simpleSuccess
             val doubleFuncAppTrivialSuccess = classDecl.extractMethodNode(postInv, "doubleFuncAppTrivialSuccess", repos)
             executeNode(doubleFuncAppTrivialSuccess, repos, postInv) shouldBe true
+
+            val doubleFuncAppTrivial2Success = classDecl.extractMethodNode(postInv, "doubleFuncAppTrivial2Success", repos)
+            executeNode(doubleFuncAppTrivial2Success, repos, postInv) shouldBe true
         }
 
         "$smt functors_fields"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/functors.abs")))
             val classDecl = model.extractClassDecl("Functors", "D", repos)
 

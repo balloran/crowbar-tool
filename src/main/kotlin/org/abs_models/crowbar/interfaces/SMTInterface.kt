@@ -41,6 +41,9 @@ val smtHeader = """
 
 @Suppress("UNCHECKED_CAST")
 fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
+
+    FunctionRepos.resetWildCards()
+
     var header = smtHeader
     val pre = deupdatify(ante)
     val post = deupdatify(Not(succ))

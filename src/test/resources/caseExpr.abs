@@ -1,0 +1,119 @@
+module CaseExpr;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+
+data Type = Type1(Type t) | Type2 (Type t) |Type3;
+data DType = DType1(DType dt,DType) | DType2 (DType dt) |DType3 | DType4;
+
+def Int fullIntFunc(Int i) = case i {1 => 0;};
+def Type intParamTypeReturnFunc(Int i) = case i {1 => Type3;};
+def Type constMatchFullTypeFunc(Type i) = case i {Type3 => Type3;};
+def Type complexTypeMatchFunc(Type i) = case i {Type1(Type3) => Type3;};
+def Type functorUsageFunc(Type i) = case i {Type1(Type3) => t(i);};
+
+def Type patternMatchingIntTrivialType3Func(Int i) = case i {_ => Type3;};
+
+def Type patternMatchingFunctor(Type i) = case i {Type1(res) => res; Type2(res) => res;};
+
+def Type patternMatchingTypeTrivialType3Func(Type i) = case i {_ => Type3;};
+
+def Type patternMatchingWrappedTypeFunc(Type i) = case i {Type1(_) => Type3; _ => Type2(Type3);};
+def Type patternMatchingDoubleWrappedTypeFunc(Type i) = case i {Type1(Type1(_)) => Type3; _ => Type2(Type3);};
+
+def DType patternMatchingFuncMatchFun(DType i) = case dt(i) {DType1(_,res) => res;};
+
+
+
+class E{
+
+    [Spec : Requires( i == 1 )]
+    [Spec : Ensures(result == 0)]
+    Int fullIntSuccess(Int i){
+        Int res = fullIntFunc(i);
+        return res;
+    }
+
+    [Spec : Requires( i == 1 )]
+    [Spec : Ensures(result == Type3)]
+    Type intParamTypeReturnSuccess(Int i){
+        Type res = intParamTypeReturnFunc(i);
+        return res;
+    }
+
+    [Spec : Requires( i == Type3 )]
+    [Spec : Ensures(result == Type3)]
+    Type constMatchFullTypeSuccess(Type i){
+        Type res = constMatchFullTypeFunc(i);
+        return res;
+    }
+
+    [Spec : Requires( i == Type1(Type3) )]
+    [Spec : Ensures(result == Type3)]
+    Type complexTypeMatchSuccess(Type i){
+        Type res = complexTypeMatchFunc(i);
+        return res;
+    }
+
+    [Spec : Requires( i == Type1(Type3) )]
+    [Spec : Ensures(result == Type3)]
+    Type functorUsageSuccess(Type i){
+        Type res = functorUsageFunc(i);
+        return res;
+    }
+
+    [Spec : Ensures(result == Type3)]
+    Type patternMatchingIntTrivialType3Success(Int i){
+        Type res =  patternMatchingIntTrivialType3Func(i);
+        return res;
+    }
+
+    [Spec : Requires(i != Type3)]
+    [Spec : Ensures(t(i) == patternMatchingFunctor(i))]
+    Type patternMatchingFunctorSuccess(Type i){
+        Type res = i;
+        return res;
+    }
+
+    [Spec : Ensures(t(i) == patternMatchingFunctor(i))]
+    Type patternMatchingFunctorFail(Type i){
+        Type res = i;
+        return res;
+    }
+
+    [Spec : Ensures(result == Type3)]
+    Type patternMatchingTypeTrivialType3Success(Type i){
+        Type res =  patternMatchingTypeTrivialType3Func(i);
+        return res;
+    }
+
+    [Spec : Requires(i == Type1(Type3))]
+    [Spec : Ensures( result == Type3 ) ]
+    Type patternMatchingWrapTypeFirstBranchSuccess(Type i){
+        Type res = patternMatchingWrappedTypeFunc(i);
+        return res;
+    }
+
+    [Spec : Requires(i == Type1(Type1(Type3)))]
+    [Spec : Ensures( result == Type3 ) ]
+    Type patternMatchingDoubleWrapTypeFirstBranchSuccess(Type i){
+        Type res = patternMatchingDoubleWrappedTypeFunc(i);
+        return res;
+    }
+
+    [Spec : Requires(i == Type1(Type2(Type3)))]
+    [Spec : Ensures( result == Type3 ) ]
+    Type patternMatchingDoubleWrapTypeFirstBranchFail(Type i){
+        Type res = patternMatchingDoubleWrappedTypeFunc(i);
+        return res;
+    }
+
+    [Spec : Requires( i == DType1(DType1(DType3, DType4),DType3) )]
+    [Spec : Ensures(result == DType4)]
+    DType patternMatchingFuncMatchSuccess(DType i){
+        DType res = patternMatchingFuncMatchFun(i);
+        return res;
+    }
+}
+
+{}
+

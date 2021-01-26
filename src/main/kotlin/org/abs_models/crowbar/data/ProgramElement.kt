@@ -236,7 +236,7 @@ data class DataTypeExpr(val name : String, val dType : String, val e : List<Expr
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 }
 
-data class CaseExpr(val match: Expr, val expectedType:String, val content: List<BranchExpr> ) : Expr{
+data class CaseExpr(val match: Expr, val expectedType:String, val content: List<BranchExpr>, val freeVars : Set<String>) : Expr{
     override var absExp: org.abs_models.frontend.ast.Exp? = null
 
     override fun prettyPrint(): String {

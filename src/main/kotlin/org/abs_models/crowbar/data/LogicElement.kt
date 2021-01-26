@@ -1,6 +1,7 @@
 package org.abs_models.crowbar.data
 
 import org.abs_models.crowbar.main.ADTRepos
+import org.abs_models.crowbar.main.FunctionRepos
 import org.abs_models.frontend.ast.DataTypeDecl
 
 interface ProofElement: Anything {
@@ -75,11 +76,11 @@ data class DataTypesDecl(val dTypesDecl : List<DataTypeDecl>) : ProofElement{
     }
 }
 
-data class Something(val dtype: String) :Term{
-    override fun toSMT(isInForm : Boolean, indent:String) : String {
-        return "Something_${dtype.replace(".", "_")}"
-    }
-}
+//data class Something(val dtype: String) :Term{
+//    override fun toSMT(isInForm : Boolean, indent:String) : String {
+//        return "Something_${dtype.replace(".", "_")}"
+//    }
+//}
 
 data class ArgsSMT(val name : String, val params : List<Term> = emptyList()) : Term{
     override fun toSMT(isInForm : Boolean, indent:String) : String {
@@ -223,39 +224,64 @@ data class DataTypeConst(val name : String, val dType : String, val params : Lis
 
 }
 
-data class Case(val match : Term, val expectedType :String, val branches : List<BranchTerm>) : Term {
+fun extractPatternMatching(match: Term, branchTerm: DataTypeConst, freeVars: Set<String>): Formula {
+    var countParameter = 0
+
+    return branchTerm.params.foldRight(Is(branchTerm.name, match)) { nx, acc: Formula ->
+        val parameter = Function("${branchTerm.name}_${countParameter++}", listOf(match))
+        And(
+            acc,
+            if (nx is DataTypeConst) {
+                extractPatternMatching(
+                    parameter,
+                    nx,
+                    freeVars
+                )
+            } else if (nx is ProgVar && nx.name in freeVars)
+                Eq(parameter, nx)
+            else
+                True
+        )
+    }
+}
+
+data class Case(val match : Term, val expectedType :String, val branches : List<BranchTerm>, val freeVars : Set<String>) : Term {
     override fun toSMT(isInForm: Boolean, indent:String): String {
-        if (branches.isNotEmpty() && branches.first().matchTerm is DataTypeConst){
-            val firstMatchTerm = Something(expectedType)
+        if (branches.isNotEmpty() ){
+            val wildCardName = FunctionRepos.createWildCard(expectedType)
+            val firstMatchTerm = Function(wildCardName)
 
-            val branchTerm = branches.fold(firstMatchTerm as Term, {acc:Term,branchTerm:BranchTerm  ->
-
-                val indexOfParam = (branchTerm.matchTerm as DataTypeConst).params.indexOf(branchTerm.branch)
-                if (indexOfParam != -1){
-                    Ite(Exists((branchTerm.matchTerm).params.map { it as ProgVar }, Eq(match, branchTerm.matchTerm)),
-                        Function("${branchTerm.matchTerm.name}_$indexOfParam", listOf(match)),acc)
-                }else
-                    Ite(Exists((branchTerm.matchTerm).params.map { it as ProgVar }, Eq(match, branchTerm.matchTerm)), branchTerm.branch,acc)
+            val branchTerm = branches.foldRight(firstMatchTerm as Term, { branchTerm: BranchTerm,acc: Term ->
+                var indexOfParam = -1
+                val matchSMT =
+                    if(branchTerm.matchTerm is DataTypeConst)
+                        extractPatternMatching(match, branchTerm.matchTerm,freeVars)
+                    else if(branchTerm.matchTerm is ProgVar && branchTerm.matchTerm.name in freeVars )
+                        Eq(match, branchTerm.matchTerm)
+                    else
+                        True
+                if(branchTerm.matchTerm is DataTypeConst) {
+                    indexOfParam = branchTerm.matchTerm.params.indexOf(branchTerm.branch)
+                }
+                val branch =
+                if (branchTerm.matchTerm is DataTypeConst && indexOfParam != -1 )
+                    Function("${branchTerm.matchTerm.name}_$indexOfParam", listOf(match))
+                else
+                    branchTerm.branch
+                Ite(matchSMT, branch, acc)
             })
+            return branchTerm.toSMT(true)
 
-            return branchTerm.toSMT(isInForm)
         }else
-            throw Exception("Case branches with <${branches.first().matchTerm}> match terms is not supported: only DataTypeConst is supported")
+            throw Exception("No branches")
     }
-
 }
 
-data class BranchTerm(val match : Term, val matchTerm : Term, val branch : Term) :Term {
+data class BranchTerm(val matchTerm : Term, val branch : Term) :Term {
     override fun toSMT(isInForm: Boolean, indent:String): String {
-        if (matchTerm is DataTypeConst){
-            val condition = Exists((matchTerm).params.map { it as ProgVar }, Eq(match, matchTerm))
-            return condition.toSMT(isInForm)
-        }else
-            throw Exception("Case branches with <$matchTerm> match terms is not supported: only DataTypeConst is supported")
+        return "$indent(${matchTerm.toSMT(isInForm)} ${branch.toSMT(isInForm)})"
     }
 }
-
-
 data class UpdateOnTerm(val update : UpdateElement, val target : Term) : Term {
     override fun prettyPrint(): String {
         return "{"+update.prettyPrint()+"}"+target.prettyPrint()
@@ -315,7 +341,7 @@ data class UpdateOnFormula(val update : UpdateElement, val target : Formula) : F
     override fun toSMT(isInForm : Boolean, indent:String) : String = throw Exception("Updates are not translatable to Z3")
 }
 
-data class Ite(val condition :Term, val term1 : Term, val term2 : Term) : Term{
+data class Ite(val condition :Formula, val term1 : Term, val term2 : Term) : Term{
     override fun toSMT(isInForm: Boolean, indent: String): String {
         return "(ite ${condition.toSMT(isInForm)}" +
                 "\n\t\t$indent${term1.toSMT(isInForm, "$indent\t")}" +
@@ -323,7 +349,13 @@ data class Ite(val condition :Term, val term1 : Term, val term2 : Term) : Term{
     }
 }
 
-data class Exists(val params :List<ProgVar>, val formula: Formula) : Term{
+data class Is(val typeName : String, val term : Term) :Formula{
+    override fun toSMT(isInForm: Boolean, indent: String): String {
+        return "((_ is $typeName) ${term.toSMT(isInForm)})"
+    }
+}
+
+data class Exists(val params :List<ProgVar>, val formula: Formula) : Formula{
     override fun toSMT(isInForm: Boolean, indent:String): String {
         return "(exists (${params.joinToString(" ") { "(${it.name} ${ADTRepos.libPrefix(it.dType)})" }}) ${formula.toSMT(isInForm)})"
     }
@@ -334,6 +366,7 @@ data class Eq(val term1: Term, val term2 : Term) : Formula{
         return "(= ${term1.toSMT(isInForm)} ${term2.toSMT(isInForm)})"
     }
 }
+
 object True : Formula {
     override fun prettyPrint(): String {
         return "true"
@@ -385,7 +418,7 @@ fun exprToTerm(input : Expr, old : Boolean=false) : Term {//todo: add check for 
         }
         is CaseExpr -> {
             val match =exprToTerm(input.match)
-            Case(match, input.expectedType, input.content.map { ex -> BranchTerm(match,  exprToTerm(ex.matchTerm, old), exprToTerm(ex.branch, old)) })
+            Case(match, input.expectedType, input.content.map { ex -> BranchTerm(exprToTerm(ex.matchTerm, old), exprToTerm(ex.branch, old)) },input.freeVars)
         }
         else -> throw Exception("Expression cannot be converted to term: ${input.prettyPrint()} (${input.javaClass})")
     }

@@ -109,7 +109,7 @@ fun translateABSExpToSymExpr(input: Exp, returnType: String) : Expr {
                 input.branchList.map {
                 BranchExpr(
                     translateABSPatternToSymExpr(it.left, it.patternExpType, returnType),
-                    translateABSExpToSymExpr(it.right, returnType))})
+                    translateABSExpToSymExpr(it.right, returnType))}, input.freeVars)
         }
         else -> throw Exception("Translation of ${input::class} not supported, term is $input" )
     }

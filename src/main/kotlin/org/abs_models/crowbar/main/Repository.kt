@@ -1,6 +1,7 @@
 package org.abs_models.crowbar.main
 
 import org.abs_models.crowbar.data.*
+import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.interfaces.*
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.frontend.ast.*
@@ -14,6 +15,7 @@ object ADTRepos {
 	private val dtypeMap: MutableMap<String,  HeapDecl> = mutableMapOf()
 	val dTypesDecl = mutableListOf<DataTypeDecl>()
 	private val usedHeaps = mutableSetOf<String>()
+
 
 	fun setUsedHeaps(usedHeapsPar : Set<String>) {
 		usedHeaps.clear()
@@ -30,7 +32,6 @@ object ADTRepos {
 		var header = DataTypesDecl(dTypesDecl).toSMT(true)
 		for (dtype in dtypeMap) {
 
-			header += DeclareConstSMT(Something(libPrefix(dtype.key)).toSMT(true), libPrefix(dtype.key)).toSMT(true, "\n") // to comment with nothing as type value
 			header +=
 				if(!conciseProofs || dtype.key in usedHeaps)
 					dtype.value.toSMT(true)
@@ -75,6 +76,22 @@ object ADTRepos {
 
 object FunctionRepos{
     val known : MutableMap<String, FunctionDecl> = mutableMapOf()
+
+	private val wildCardsConst = mutableMapOf<String,String>()
+
+	private var countWildCard = 0
+
+	fun createWildCard(dType: String) : String{
+		val wildCard = "_${countWildCard++}"
+		wildCardsConst[wildCard] = dType
+		return wildCard
+	}
+
+
+	fun resetWildCards() {
+		countWildCard = 0
+	}
+
     fun isKnown(str: String) = known.containsKey(str)
     fun get(str: String) = known.getValue(str)
 	fun hasContracts() = known.filter { hasContract(it.value) }.any()
@@ -83,7 +100,8 @@ object FunctionRepos{
 	    val contracts = contracts()
 	    val direct = known.filter { !hasContract(it.value) }
 	    var ret = ""
-	    if(contracts.isNotEmpty()) {
+
+		if(contracts.isNotEmpty()) {
 		    var sigs = ""
 		    var defs = ""
 		    for (pair in contracts) {
@@ -117,26 +135,34 @@ object FunctionRepos{
 			    var sigs = ""
 			    var defs = ""
 				var functors = ""
+				val functions = ""
 			    for (pair in direct) {
 				    val params = pair.value.params
 				    val eDef: ExpFunctionDef = pair.value.functionDef as ExpFunctionDef
 				    val def = eDef.rhs
 					if(def is CaseExp){
-						if(def.expr.toString() != "data")
-							throw Exception("Case Expression not supported: function ${def.contextDecl.qualifiedName}")
-						val sigNR = "\t${pair.key.replace(".", "-")} (${params.fold("", { acc, nx -> "$acc (${nx.name} ${ADTRepos.libPrefix(nx.type.qualifiedName)})" })})  ${ADTRepos.libPrefix(def.type.qualifiedName)}\n"
-						val defNR = "\t${exprToTerm(translateABSExpToSymExpr(def, "<UNKNOWN>")).toSMT(false)}\n"
-						functors += "\n(define-fun $sigNR $defNR)"
+
+						val sigNR = "${pair.key.replace(".", "-")} (${params.fold("", { acc, nx -> "$acc (${nx.name} ${ADTRepos.libPrefix(nx.type.qualifiedName)})" })})  ${ADTRepos.libPrefix(def.type.qualifiedName)}"
+						val defNR = "${exprToTerm(translateABSExpToSymExpr(def, "<UNKNOWN>")).toSMT(false)}\n"
+
+						if(def.expr.toString() == "data")
+							functors += "\n(define-fun $sigNR \n\t$defNR)"
+						else{
+							sigs += "\t($sigNR)\n"
+							defs += "\t$defNR"
+						}
 					}else {
 						sigs += "\t(${pair.key.replace(".", "-")} (${params.fold("",{ acc, nx -> "$acc (${nx.name} ${ADTRepos.libPrefix(nx.type.qualifiedName)})" })})  ${ADTRepos.libPrefix(def.type.qualifiedName)})\n"
 						defs += "\t${exprToTerm(translateABSExpToSymExpr(def, "<UNKNOWN>")).toSMT(false)}\n"
 					}
 			    }
 				ret += "\n$functors"
+				ret += "\n$functions"
 				if(sigs.isNotBlank())
 					ret += "\n(define-funs-rec(\n$sigs)(\n$defs))"
 		    }
-	    return ret
+		val wildcards: String = wildCardsConst.map { FunctionDeclSMT(it.key,it.value).toSMT(true,"\n") }.joinToString("") { it } +"\n"
+	    return wildcards+ret
     }
 
 	private fun hasContract(fDecl: FunctionDecl) : Boolean {
@@ -146,6 +172,8 @@ object FunctionRepos{
 
 	fun init(model: Model, repos: Repository) {
 		known.clear()
+		wildCardsConst.clear()
+		countWildCard = 0
 		for (mDecl in model.moduleDecls){
 			if(mDecl.name.startsWith("ABS.")) continue
 			for (decl in mDecl.decls){
@@ -159,13 +187,14 @@ object FunctionRepos{
 	private fun initFunctionDef(fDecl: FunctionDecl, repos: Repository) {
 		val fName = fDecl.qualifiedName
 		val params = fDecl.params
-		if(params.find { !repos.isAllowedType(it.type.qualifiedName) } != null){
-			System.err.println("functions with non-Int type not supported")
+		if(params.find { !repos.isAllowedType(it.type.toString()) && !repos.isAllowedType(it.type.toString()) } != null){
+			System.err.println("functions with not supported types: ${params.map { it.type }}")
+
 			exitProcess(-1)
 		}
 		val fType = fDecl.type
-		if(!repos.isAllowedType(fType.qualifiedName)) {
-			System.err.println("parameters with non-Int type not supported")
+		if(!repos.isAllowedType(fType.toString())) {
+			System.err.println("parameters with not supported type: $fType")
 			exitProcess(-1)
 		}
 		if(fDecl.functionDef is ExpFunctionDef){
