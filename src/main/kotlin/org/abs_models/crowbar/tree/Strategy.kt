@@ -14,18 +14,21 @@ interface Strategy{
 class DefaultStrategy(private val rules: List<Rule>) : Strategy{
 
     override fun execute(symbolicNode: SymbolicNode){
-        symbolicNode.children = emptyList()
-        for(rule in rules){
-            if(rule.isApplicable(symbolicNode.content)){
-                val next = rule.apply(symbolicNode.content)
-                if(next != null) {
-                    symbolicNode.children = next
-                    for (node in next) {
-                        if(node is SymbolicNode)
-                             this.execute(node)
+        if(symbolicNode.children.isNotEmpty()) {
+            symbolicNode.children.filterIsInstance<SymbolicNode>().forEach { execute(it) }
+        } else {
+            for (rule in rules) {
+                if (rule.isApplicable(symbolicNode.content)) {
+                    val next = rule.apply(symbolicNode.content)
+                    if (next != null) {
+                        symbolicNode.children = next
+                        for (node in next) {
+                            if (node is SymbolicNode)
+                                this.execute(node)
+                        }
                     }
+                    break
                 }
-                break
             }
         }
     }

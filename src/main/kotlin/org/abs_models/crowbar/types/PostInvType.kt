@@ -16,6 +16,7 @@ import org.abs_models.crowbar.rule.FreshGenerator
 import org.abs_models.crowbar.rule.MatchCondition
 import org.abs_models.crowbar.rule.Rule
 import org.abs_models.crowbar.tree.LogicNode
+import org.abs_models.crowbar.tree.StaticNode
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.SymbolicTree
 import org.abs_models.frontend.ast.*
@@ -42,11 +43,18 @@ interface PostInvType : DeductType{
         val metpost: Formula?
         val metpre: Formula?
         val body: Stmt?
+        var overlapsSet : String? = null
+        var succeedsSet : String? = null
+        val hasPre = hasHeapPre(mDecl)
         try {
             objInv = extractSpec(classDecl, "ObjInv")
             metpost = extractSpec(mDecl, "Ensures")
             metpre = extractInheritedSpec(mDecl.methodSig, "Requires")
             body = getNormalizedStatement(mDecl.block)
+            if(hasPre) {
+                overlapsSet = extractContextSet(mDecl, "Overlaps")
+                succeedsSet = extractContextSet(mDecl, "Succeeds")
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             System.err.println("error during translation, aborting")
@@ -56,13 +64,46 @@ interface PostInvType : DeductType{
         output("Crowbar-v: object invariant: ${objInv.prettyPrint()}",Verbosity.V)
         val updateOldHeap =  ChainUpdate(ElementaryUpdate(LastHeap,Heap), ElementaryUpdate(OldHeap, Heap))
         symb = SymbolicState(And(objInv,metpre), updateOldHeap, Modality(body, PostInvariantPair(metpost, objInv)))
-        return SymbolicNode(symb, emptyList())
+        if(hasPre && (overlapsSet == null || succeedsSet == null)){
+            output("Crowbar: Method ${mDecl.methodSig.name} has a heap precondition but does not fully specify its context.")
+            val full = classDecl.allMethodSigs.joinToString(",") { it.name }
+            if(overlapsSet == null) overlapsSet = full
+            if(succeedsSet == null) succeedsSet = full
+        }
+        return SymbolicNode(symb, if (hasPre) listOf(SymbolicNode(symb, emptyList()),
+                                                     StaticNode("Overlaps ${classDecl.moduleName()}.${classDecl.name}.${mDecl.methodSig.name} {$overlapsSet}"),
+                                                     StaticNode("Succeeds ${classDecl.moduleName()}.${classDecl.name}.${mDecl.methodSig.name} {$succeedsSet}"))
+                                  else emptyList())
     }
 
+    fun hasHeapPre(mDecl: MethodImpl) : Boolean{
+        for (annotation in mDecl.nodeAnnotations) {
+            if (!annotation.type.toString().endsWith(".Spec") || annotation.value !is DataConstructorExp) continue
+            val annotated = annotation.value as DataConstructorExp
+            if (annotated.constructor == "Requires") return true
+        }
+        return false
+    }
 
+    fun extractContextSet(mDecl: MethodImpl, expectedSpec: String): String? {
 
-
-
+        for (annotation in mDecl.nodeAnnotations) {
+            if (!annotation.type.toString().endsWith(".Spec")) continue
+            if (annotation.value !is DataConstructorExp) {
+                throw Exception("Could not extract any specification from $mDecl because of the expected value")
+            }
+            val annotated = annotation.value as DataConstructorExp
+            if (annotated.constructor != expectedSpec) continue
+            val content = annotated.getParam(0) as Exp
+            if(content !is FnApp ||
+               content.name != "list" ||
+               content.getParam(0) !is ListLiteral ||
+               (content.getParam(0) as ListLiteral).pureExpList.any { it !is StringLiteral })
+                throw Exception("Could not extract context set $expectedSpec from ${mDecl.methodSig.name}: set must be declared using list[\"str\",...]")
+            return (content.getParam(0) as ListLiteral).pureExpList.joinToString(",") { (it as StringLiteral).content }
+        }
+        return null;
+    }
 
 
     override fun extractInitialNode(classDecl: ClassDecl) : SymbolicNode {

@@ -5,6 +5,7 @@ import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.Stmt
 import org.abs_models.crowbar.interfaces.translateABSExpToSymExpr
 import org.abs_models.crowbar.tree.LogicNode
+import org.abs_models.crowbar.tree.StaticNode
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.getStrategy
 import org.abs_models.frontend.ast.*
@@ -215,11 +216,13 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType : KClass<out De
             output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
             closed = closed && l.evaluate()
             output("Crowbar-v: verified? ${l.evaluate()}", Verbosity.V)
+        } else if(l is StaticNode){
+            output("Crowbar: open static leaf ${l.str}", Verbosity.SILENT)
         } else {
             System.err.println("Crowbar-v: non-logical analysis nodes not supported")
             throw Exception("Crowbar-v: non-logical analysis nodes not supported")
-            //exitProcess(-1)
         }
+
     }
 
     return closed

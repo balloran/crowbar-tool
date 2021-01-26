@@ -20,7 +20,7 @@ interface SymbolicLeaf : SymbolicTree{
 
 interface InferenceLeaf : SymbolicLeaf
 
-data class StaticNode(val str : String) : SymbolicLeaf{
+data class StaticNode(val str : String) : InferenceLeaf{
     override fun finishedExecution() : Boolean = true
     override fun debugString(steps : Int) : String = "NOT IMPLEMENTED"
     override fun collectLeaves() : List<SymbolicLeaf> = listOf(this)

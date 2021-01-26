@@ -1,0 +1,62 @@
+module Context;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool) | Succeeds(List<String>) | Overlaps(List<String>) ;
+
+interface I{
+    Int m1(Int j);
+    Int m2(Int j);
+    Int m3(Int j);
+    Int m4(Int j);
+    Int m5(Int j);
+    Int m6(Int j);
+}
+class C implements I{
+    Int i = 0;
+
+    [Spec : Requires( this.i >= 0 )]
+    [Spec : Ensures( result >= 0 )]
+    [Spec : Succeeds( list["m4"] )]
+    [Spec : Overlaps( list["m5"] )]
+    Int m1(Int j){
+        return i + j;
+    }
+
+
+    [Spec : Requires( this.i >= 0 )]
+    [Spec : Ensures( result >= 0 )]
+    [Spec : Overlaps( list["m5"] )]
+    Int m2(Int j){
+        return i + j;
+    }
+
+
+    [Spec : Requires( this.i >= 0 )]
+    [Spec : Ensures( result >= 0 )]
+    [Spec : Succeeds( list["m4"] )]
+    Int m3(Int j){
+        return i + j;
+    }
+
+
+    [Spec : Requires( this.i >= 0 )]
+    [Spec : Ensures( result >= 0 )]
+    Int m4(Int j){
+        return i + j;
+    }
+
+
+    [Spec : Ensures( result >= 0 )]
+    Int m5(Int j){
+        return i + j;
+    }
+
+    [Spec : Ensures( result >= 0 )]
+    [Spec : Succeeds( list["m4"] )]
+    [Spec : Overlaps( list["m5"] )]
+    Int m6(Int j){
+        return i + j;
+    }
+
+ }
+
+{}
