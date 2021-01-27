@@ -13,6 +13,7 @@ buildscript {
 
 plugins{
     id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id 'antlr'
 }
 
 group 'Crowbar'
@@ -27,8 +28,17 @@ repositories {
 test {
     useJUnitPlatform()
 }
+
 wrapper {
     gradleVersion = '5.6.3'
+}
+
+sourceSets {
+    main {
+        java.srcDirs += 'build/generated-src/main'
+        kotlin.srcDirs += 'build/generated-src/main'
+        antlr.srcDirs += 'src/main/antlr'
+    }
 }
 
 dependencies {
@@ -38,9 +48,15 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation fileTree(dir: 'lib', include: ['*.jar'])
     implementation("com.github.ajalt:clikt:2.3.0")
+    implementation "org.antlr:antlr4:4.8"
+    antlr "org.antlr:antlr4:4.8"
 }
 
 
+generateGrammarSource {
+    outputDirectory = file("build/generated-src/main/antlr/crowbar/gen")
+    arguments += ["-visitor"]
+}
 
 compileKotlin {
     kotlinOptions.jvmTarget = "1.8"
@@ -53,3 +69,6 @@ jar {
         attributes 'Main-Class': 'org.abs_models.crowbar.main.MainKt'
     }
 }
+
+
+compileKotlin.dependsOn generateGrammarSource
