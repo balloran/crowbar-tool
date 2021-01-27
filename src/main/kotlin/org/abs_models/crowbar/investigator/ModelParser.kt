@@ -14,7 +14,10 @@ object ModelParser {
 
     fun parseModel(): List<ModelFunction> {
         consume(LParen())
-        consume(Identifier("model"))
+
+        // the model keyword is apparently optional 
+        if (tokens[0].toString() == "model")
+            consume()
 
         val model = mutableListOf<ModelFunction>()
 
@@ -129,10 +132,12 @@ object ModelParser {
         } else if (tokens[0] is Identifier) {
             val typeid = tokens[0].spelling
             consume()
-            if (typeid == "Int")
-                return Type.INT
+            return if (typeid == "Int")
+                Type.INT
+            else if (typeid == "Bool")
+                Type.BOOL
             else
-                return Type.COMPLEX
+                Type.COMPLEX
         } else {
             throw Exception("Expected scalar or array type but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
         }
@@ -143,6 +148,7 @@ object ModelParser {
             Type.INT -> parseIntExp()
             Type.COMPLEX -> parseComplexTypeExp()
             Type.ARRAY -> parseArrayExp()
+            Type.BOOL -> parseBoolExp()
             Type.UNKNOWN -> throw Exception("Can't parse value of unknown type")
         }
     }
@@ -150,7 +156,12 @@ object ModelParser {
     private fun parseScalarValue(): ModelValue {
         return when (tokens[0]) {
             is ConcreteValue -> parseValue(Type.INT)
-            is Identifier -> parseValue(Type.COMPLEX)
+            is Identifier -> {
+                if (tokens[0].toString() == "true" || tokens[0].toString() == "false")
+                    parseValue(Type.BOOL)
+                else
+                    parseValue(Type.COMPLEX)
+            }
             is LParen -> {
                 if (tokens[1].toString() == "-")
                     parseValue(Type.INT)
@@ -221,6 +232,27 @@ object ModelParser {
             val index = parseIntExp().value
             val value = parseValue(elemType)
             array.map.put(index, value)
+        } else if (tokens[0] == Identifier("lambda")) {
+            // This is fragile - I'm hoping lambdas are only generated for very simple boolean array expressions
+            // At this point we only support lambdas that result in an all-false array with a single true value at a given index
+            consume()
+            val args = parseArguments()
+
+            if (args.size != 1)
+                throw Exception("Lambda with more than one argument in SMT array expression - unsupported")
+
+            consume(LParen())
+            consume(Identifier("="))
+            consume(Identifier(args[0]!!.name))
+
+            if (tokens[0] !is ConcreteValue)
+                throw Exception("Unsupported complex lambda in SMT array expression")
+
+            val index = (tokens[0] as ConcreteValue).value
+            consume()
+            consume(RParen())
+            array = MvArray(Type.BOOL, MvBoolean(false))
+            array.map.put(index, MvBoolean(true))
         } else
             throw Exception("Unexpected token \"${tokens[0]}\" in array expression")
 
@@ -253,6 +285,16 @@ object ModelParser {
             return MvDataType(typeConstructor, params)
         } else
             throw Exception("Expected data type value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+    }
+
+    private fun parseBoolExp(): MvBoolean {
+        // Simple types without parameters
+        if (tokens[0].toString() == "true" || tokens[0].toString() == "false") {
+            val value = (tokens[0] as Identifier).spelling == "true"
+            consume()
+            return MvBoolean(value)
+        } else
+            throw Exception("Expected boolean expression but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
     }
 
     private fun parseConstArray(): MvArray {
@@ -363,6 +405,10 @@ data class MvInteger(val value: Int) : ModelValue {
     override fun toString() = value.toString()
 }
 
+data class MvBoolean(val value: Boolean) : ModelValue {
+    override fun toString() = value.toString()
+}
+
 data class MvDataType(val value: String, val params: List<ModelValue> = listOf()) : ModelValue {
     override fun toString(): String {
         return if (params.size == 0)
@@ -373,5 +419,5 @@ data class MvDataType(val value: String, val params: List<ModelValue> = listOf()
 }
 
 enum class Type() {
-    INT, ARRAY, COMPLEX, UNKNOWN
+    INT, BOOL, ARRAY, COMPLEX, UNKNOWN
 }

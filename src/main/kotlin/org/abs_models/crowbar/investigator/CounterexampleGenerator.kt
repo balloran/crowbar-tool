@@ -78,7 +78,7 @@ object CounterexampleGenerator {
 
         output("Investigator: collecting other smt expressions....", Verbosity.V)
         val miscExpressionTerms = infoNodes.map { it.smtExpressions }.flatten()
-        val miscExpressions = miscExpressionTerms.filter { collectUsedDefinitions(it).minus(availableDefs).isEmpty() }.map { it.toSMT(false) }
+        val miscExpressions = miscExpressionTerms.filter { collectUsedDefinitions(it).minus(availableDefs).isEmpty() }.map { it.toSMT() }
 
         output("Investigator: collecting object allocation expressions....", Verbosity.V)
         val newExpressions = infoNodes.filter { it is InfoObjAlloc }.map { (it as InfoObjAlloc).newSMTExpr }
@@ -146,7 +146,7 @@ object CounterexampleGenerator {
         val varTypes = ((leaf.ante.iterate { it is ProgVar } + leaf.succ.iterate { it is ProgVar }) as Set<ProgVar>).filter { !reservedVarNames.contains(it.name) }.associate { Pair(it.name, it.dType) }
 
         // Collect conjunctively joined sub-obligation parts
-        val subObligationMap = collectSubObligations(deupdatify(leaf.succ) as Formula).associate { Pair(it.toSMT(true), it) }
+        val subObligationMap = collectSubObligations(deupdatify(leaf.succ) as Formula).associate { Pair(it.toSMT(), it) }
         val subObligations = subObligationMap.keys.toList()
 
         // Build model command
@@ -216,7 +216,7 @@ object CounterexampleGenerator {
         val smtExprs = getExpressionMap(miscExpressions)
 
         // Get evaluations of sub-obligations and create usable mapping by formula
-        val subObligationValues = getExpressionMap(subObligations).mapKeys { subObligationMap[it.key]!! }.mapValues { (it.value as MvDataType).value == "true" }
+        val subObligationValues = getExpressionMap(subObligations).mapKeys { subObligationMap[it.key]!! }.mapValues { (it.value as MvBoolean).value }
 
         return Model(initialAssignments, heapAssignments, futLookup, objLookup, smtExprs, subObligationValues)
     }
@@ -241,7 +241,7 @@ object CounterexampleGenerator {
                 Pair(Field(field.name, fieldType), value)
             }
 
-            Pair(exp.toSMT(false), heapContents)
+            Pair(exp.toSMT(), heapContents)
         }.toMap()
 
         return heapMap

@@ -55,7 +55,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
     }
 
     fun initAssignments(): String {
-        val oldHeap = model.heapMap[OldHeap.toSMT(false)]!!
+        val oldHeap = model.heapMap[OldHeap.toSMT()]!!
         // Do not render assignments for fields that do not change value from their declared values
         val initAssign = model.initState.filter { it.first is ProgVar || (it.first is Field && !oldHeap.contains(it)) }.map { renderModelAssignment(it.first, it.second) }
         val res = if (initAssign.size > 0)
@@ -68,7 +68,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
     fun fieldDefs(): List<String> {
         // For more intuitive counterexamples, we initialize fields to their value in the state before method execution
         // The state in which the actual counterexample begins is initialized in the method-internal initial assignments
-        val fields = model.heapMap[OldHeap.toSMT(false)]!!
+        val fields = model.heapMap[OldHeap.toSMT()]!!
         // Find fields not included in the model but included in the counterexample and initialize them with default value
         val missingFields = (usedFields - fields.map { it.first }.toSet()).map { Pair(it, getDefaultValueForType(it.dType)) }
 
@@ -105,13 +105,15 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
     override fun visit(info: NoInfo) = ""
 
     override fun visit(info: InfoAwaitUse): String {
-        val postHeap = model.heapMap[info.heapExpr.toSMT(false)]
+        val postHeap = model.heapMap[info.heapExpr.toSMT()]
         val assignmentBlock = renderHeapAssignmentBlock(postHeap)
 
         // If the guard is a True constant, this was probably a suspend statement before translation
         // so we'll render it accordingly
-        if (info.guard is Const && info.guard.name == "1")
+        if (info.guard is Const && info.guard.name == "true")
             return indent("\n// suspend;\n$assignmentBlock\n")
+
+        println(info.guard.prettyPrint())
 
         val isFutureGuard = info.guard.absExp!!.type.simpleName == "Fut"
         val maybeQuestionmark = if (isFutureGuard) "?" else ""
@@ -155,7 +157,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         val location = renderDeclLocation(info.lhs, type2str = false, declare = false)
         val origGet = "// $location = ${renderExp(info.expression)};"
 
-        var futureValue = model.smtExprs[info.futureExpr.toSMT(false)]
+        var futureValue = model.smtExprs[info.futureExpr.toSMT()]
         var getReplacement = ""
         if (futureValue == null) {
             getReplacement = "// Future value irrelevant or unavailable, using default:\n"
@@ -186,10 +188,10 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         val origCallExp = "${renderExp(info.callee)}.${renderExp(info.call)}"
 
         // Get heap anonymization assignments
-        val postHeap = model.heapMap[info.heapExpr.toSMT(false)]
+        val postHeap = model.heapMap[info.heapExpr.toSMT()]
         val assignmentBlock = renderHeapAssignmentBlock(postHeap)
 
-        var methodReturnVal = model.smtExprs[info.returnValExpr.toSMT(false)]
+        var methodReturnVal = model.smtExprs[info.returnValExpr.toSMT()]
         var callReplacement = ""
         if (methodReturnVal == null) {
             callReplacement = "// Return value irrelevant or unavailable, using default:\n"
@@ -246,12 +248,12 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         val replacement = "println(toString(${renderExp(info.expression)})); // return statement"
 
         // Get the evaluation of the whole expression
-        val evalValue = model.smtExprs[info.retExpr.toSMT(false)]
+        val evalValue = model.smtExprs[info.retExpr.toSMT()]
         val eval = if (evalValue == null) "Irrelevant or unavailable value" else renderModelValue(evalValue, info.expression.absExp!!.type.qualifiedName)
 
         // Get evaluations of all used definitions (progVars and fields)
         val componentValues = info.retExprComponentMap.mapValues {
-            model.smtExprs[it.value.toSMT(false)]
+            model.smtExprs[it.value.toSMT()]
         }.filterValues { it != null } // There shouldn't be any null values here, but we'll discard them just in case
 
         // Render value and location for each component
@@ -360,7 +362,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         return when {
             dType == "ABS.StdLib.Int" -> (value as MvInteger).value.toString()
             dType == "ABS.StdLib.Fut" -> "\"${model.futNameById((value as MvInteger).value)}\""
-            dType == "ABS.StdLib.Bool" -> if ((value as MvInteger).value == 0) "False" else "True"
+            dType == "ABS.StdLib.Bool" -> if ((value as MvBoolean).value) "True" else "False"
             dType == "<UNKNOWN>" -> "\"unknownType($value)\""
             isDataType(dType) -> (value as MvDataType).toString()
             value is MvInteger -> if (value.value == 0) "null" else "\"${getObjectById(value.value)}\""
@@ -383,6 +385,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
                     MvDataType(preferredConstructor.qualifiedName, params)
                 }
             }
+            dType == "ABS.StdLib.Bool" -> MvBoolean(false)
             else -> MvInteger(0)
         }
     }
