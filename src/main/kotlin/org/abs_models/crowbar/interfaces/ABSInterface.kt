@@ -77,8 +77,8 @@ fun translateABSExpToSymExpr(input: Exp, returnType: String) : Expr {
                 throw Exception("Wrong use of data constructor ${input.constructor} with parameters ${input.paramList} ")
             when (input.dataConstructor!!.name) {
                 "Unit" -> unitExpr()
-                "True" -> Const("1")
-                "False" -> Const("0")
+                "True" -> Const("true")
+                "False" -> Const("false")
                 else -> DataTypeExpr(input.dataConstructor!!.qualifiedName, input.type.qualifiedName, input.params.map { translateABSExpToSymExpr(it, returnType) })
             }
         }
@@ -93,7 +93,7 @@ fun translateABSExpToSymExpr(input: Exp, returnType: String) : Expr {
             } else if (FunctionRepos.isKnown(input.decl.qualifiedName)) {
                 SExpr(input.decl.qualifiedName.replace(".", "-"), input.params.map { translateABSExpToSymExpr(it, returnType) })
             } else throw Exception("Translation of FnApp is not fully supported, term is $input with function ${input.name}")
-        is IfExp -> SExpr("iite", listOf(translateABSExpToSymExpr(input.condExp, returnType),translateABSExpToSymExpr(input.thenExp, returnType),translateABSExpToSymExpr(input.elseExp, returnType)))
+        is IfExp -> SExpr("ite", listOf(translateABSExpToSymExpr(input.condExp, returnType),translateABSExpToSymExpr(input.thenExp, returnType),translateABSExpToSymExpr(input.elseExp, returnType)))
         is Call -> {
             val met = input.methodSig.contextDecl.qualifiedName+"."+input.methodSig.name
             val params = input.params.map {  translateABSExpToSymExpr(it, returnType) }
@@ -175,7 +175,7 @@ fun translateABSStmtToSymStmt(input: Stmt?) : org.abs_models.crowbar.data.Stmt {
                                                          extractSpec(input,"WhileInv", returnType))
         }
         is AwaitStmt -> return org.abs_models.crowbar.data.AwaitStmt(translateABSGuardToSymExpr(input.guard, returnType),FreshGenerator.getFreshPP())
-        is SuspendStmt -> return org.abs_models.crowbar.data.AwaitStmt(Const("1"),FreshGenerator.getFreshPP()) // We should be able to model a suspend; as an await True;
+        is SuspendStmt -> return org.abs_models.crowbar.data.AwaitStmt(Const("true"),FreshGenerator.getFreshPP()) // We should be able to model a suspend; as an await True;
         is ReturnStmt -> return org.abs_models.crowbar.data.ReturnStmt(translateABSExpToSymExpr(input.retExp, returnType))
         is IfStmt -> return org.abs_models.crowbar.data.IfStmt(translateABSExpToSymExpr(input.conditionNoTransform, returnType), translateABSStmtToSymStmt(input.then), translateABSStmtToSymStmt(input.`else`))
         is CaseStmt -> {

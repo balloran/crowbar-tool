@@ -4,6 +4,7 @@ import io.kotlintest.specs.StringSpec
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.types.PostInvType
 import java.nio.file.Paths
+import kotlin.system.exitProcess
 
 class PostInvTest : StringSpec ({
 	val postInv = PostInvType::class

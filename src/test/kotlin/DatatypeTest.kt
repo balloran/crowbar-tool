@@ -36,6 +36,12 @@ class DatatypeTest : StringSpec({
             val whileSuccess = classDecl.extractMethodNode(postInv, "whileSuccess", repos)
             executeNode(whileSuccess, repos, postInv) shouldBe true
 
+            val ifExpSuccess = classDecl.extractMethodNode(postInv, "ifExpSuccess", repos)
+            executeNode(ifExpSuccess, repos, postInv) shouldBe true
+
+            val ifExpFail = classDecl.extractMethodNode(postInv, "ifExpFail", repos)
+            executeNode(ifExpFail, repos, postInv) shouldBe false
+
         }
 
         "$smt mixedHeapsTest"{

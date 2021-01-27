@@ -1,11 +1,11 @@
 package org.abs_models.crowbar.interfaces
 
-import arrow.core.extensions.option.semiring.empty
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.main.ADTRepos.libPrefix
 import org.abs_models.crowbar.main.ADTRepos.setUsedHeaps
+import org.abs_models.crowbar.types.booleanFunction
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -14,28 +14,9 @@ val smtHeader = """
     ; static header
     (set-logic ALL)
     (declare-fun   valueOf (Int) Int)
-    (define-fun iOr((x Int) (y Int)) Int
-        (ite (or (= x 1) (= y 1)) 1 0))
-    (define-fun iAnd((x Int) (y Int)) Int
-        (ite (and (= x 1) (= y 1)) 1 0))
-    (define-fun iNot((x Int)) Int
-        (ite (= x 1) 0 1))
-    (define-fun iLt((x Int) (y Int)) Int
-        (ite (< x y) 1 0))
-    (define-fun iLeq((x Int) (y Int)) Int
-        (ite (<= x y) 1 0))
-    (define-fun iGt((x Int) (y Int)) Int
-        (ite (> x y) 1 0))
-    (define-fun iGeq((x Int) (y Int)) Int
-        (ite (>= x y) 1 0))
-    (define-fun iEq((x Int) (y Int)) Int
-        (ite (= x y) 1 0))
-    (define-fun iNeq((x Int) (y Int)) Int
-        (ite (= x y) 0 1)) 
-    (define-fun iite((x Int) (y Int) (z Int)) Int (ite (= x 1) y z))
     (declare-const Unit Int)
     (assert (= Unit 0))
-    ${DefineSortSMT("Field", "Int").toSMT(true,"\n")}
+    ${DefineSortSMT("Field", "Int").toSMT(true, "\n")}
     ; end static header
     """.trimIndent()
 
@@ -60,10 +41,13 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     header = fields.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Field)"})
     header = vars.fold(header, {acc, nx-> acc+"\n(declare-const ${nx.name} ${libPrefix(nx.dType)})"})
     header = heaps.fold(header, {acc, nx-> "$acc\n(declare-fun ${nx.name} (${nx.params.joinToString (" "){
-        if(it is DataTypeConst){
+        if(it is DataTypeConst)
             it.dType
-        }else
+        else if(it is Function && it.name in booleanFunction)
+            "Bool"
+        else {
             "Int"
+        }
     }}) Int)" })
     header = futs.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Int)"})
     header = funcs.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Int)"})
@@ -72,9 +56,9 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     return """
     $header 
     ; Precondition
-    (assert ${pre.toSMT(true)} )
+    (assert ${pre.toSMT()} )
     ; Negated postcondition
-    (assert ${post.toSMT(true)}) 
+    (assert ${post.toSMT()}) 
     (check-sat)
     $modelCmd
     (exit)

@@ -5,11 +5,11 @@ import org.abs_models.crowbar.main.FunctionRepos
 import org.abs_models.frontend.ast.DataTypeDecl
 
 interface ProofElement: Anything {
-    fun toSMT(isInForm : Boolean, indent:String="") : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
+    fun toSMT(isInForm : Boolean=true, indent:String="") : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
 }
 
 interface LogicElement: Anything {
-    fun toSMT(isInForm : Boolean, indent:String="") : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
+    fun toSMT(isInForm : Boolean=true, indent:String="") : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
 }
 interface Formula: LogicElement
 interface Term : LogicElement
@@ -70,7 +70,7 @@ data class DataTypesDecl(val dTypesDecl : List<DataTypeDecl>) : ProofElement{
                         ))
             )
 
-            return "; DataTypes declaration\n" + decl.toSMT(isInForm)
+            return "; DataTypes declaration\n" + decl.toSMT()
         }
         return ""
     }
@@ -87,13 +87,13 @@ data class ArgsSMT(val name : String, val params : List<Term> = emptyList()) : T
         if(params.isEmpty())
             return "($name)"
 
-        val list = params.joinToString (" "){it.toSMT(isInForm)}
+        val list = params.joinToString (" "){it.toSMT()}
         return "($name $list)"
     }
 }
 data class ArgSMT(val params : List<Term> = emptyList()) : Term{
     override fun toSMT(isInForm : Boolean, indent:String) : String {
-        val list = params.joinToString (" "){it.toSMT(isInForm)}
+        val list = params.joinToString (" "){it.toSMT()}
         return "\n\t($list)"
     }
 }
@@ -156,8 +156,8 @@ fun filterHeapTypes(term : Term, dtype: String) : String{
             if (ADTRepos.libPrefix((term.params[1] as Field).dType) == dtype)
                 return "(store " +
                         "${filterHeapTypes(term.params[0], dtype)} " +
-                        "${term.params[1].toSMT(false)} " +
-                        "${term.params[2].toSMT(false)})"
+                        "${term.params[1].toSMT()} " +
+                        "${term.params[2].toSMT()})"
             else
                 return filterHeapTypes(term.params[0], dtype)
         // Rewrite generic anon to correctly typed anon function
@@ -191,11 +191,12 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
     override fun toSMT(isInForm : Boolean, indent:String) : String {
-        val back = getSMT(name, isInForm)
+
+
 
         if(name == "select") {
             val heapType = ADTRepos.libPrefix((params[1] as Field).dType)
-            val fieldName = params[1].toSMT(false)
+            val fieldName = params[1].toSMT()
             return "(select ${filterHeapTypes(params[0], heapType)} $fieldName)"
         }
 
@@ -203,8 +204,8 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
             if(name.startsWith("-")) return "(- ${name.substring(1)})" //CVC4 requires -1 to be passed as (- 1)
             return name
         }
-        val list = params.fold("",{acc,nx -> acc + " ${nx.toSMT(isInForm)}"})
-        return "($back $list)"
+        val list = params.fold("",{acc,nx -> acc + " ${nx.toSMT()}"})
+        return getSMT(name, list)
     }
 }
 
@@ -215,10 +216,10 @@ data class DataTypeConst(val name : String, val dType : String, val params : Lis
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
     override fun toSMT(isInForm : Boolean, indent:String) : String {
-        val back = getSMT(name, isInForm)
+        val back = name
         if(params.isEmpty())
             return name
-        val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT(isInForm)}"})
+        val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT()}"})
         return "($back $list)"
     }
 
@@ -270,7 +271,7 @@ data class Case(val match : Term, val expectedType :String, val branches : List<
                     branchTerm.branch
                 Ite(matchSMT, branch, acc)
             })
-            return branchTerm.toSMT(true)
+            return branchTerm.toSMT()
 
         }else
             throw Exception("No branches")
@@ -279,7 +280,7 @@ data class Case(val match : Term, val expectedType :String, val branches : List<
 
 data class BranchTerm(val matchTerm : Term, val branch : Term) :Term {
     override fun toSMT(isInForm: Boolean, indent:String): String {
-        return "$indent(${matchTerm.toSMT(isInForm)} ${branch.toSMT(isInForm)})"
+        return "$indent(${matchTerm.toSMT()} ${branch.toSMT()})"
     }
 }
 data class UpdateOnTerm(val update : UpdateElement, val target : Term) : Term {
@@ -294,7 +295,7 @@ data class Impl(val left : Formula, val right : Formula) : Formula {
         return "(${left.prettyPrint()}) -> (${right.prettyPrint()})"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + left.iterate(f) + right.iterate(f)
-    override fun toSMT(isInForm : Boolean, indent:String) : String = if(isInForm) "(=> ${left.toSMT(isInForm)} ${right.toSMT(isInForm)})" else Or(Not(left),right).toSMT(isInForm)
+    override fun toSMT(isInForm : Boolean, indent:String) : String = "(=> ${left.toSMT()} ${right.toSMT()})"
 }
 data class And(val left : Formula, val right : Formula) : Formula {
     override fun prettyPrint(): String {
@@ -303,7 +304,7 @@ data class And(val left : Formula, val right : Formula) : Formula {
         return "(${left.prettyPrint()}) /\\ (${right.prettyPrint()})"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + left.iterate(f) + right.iterate(f)
-    override fun toSMT(isInForm : Boolean, indent:String) : String = if(isInForm) "(and ${left.toSMT(isInForm)} ${right.toSMT(isInForm)})" else "(iAnd ${left.toSMT(isInForm)} ${right.toSMT(isInForm)})"
+    override fun toSMT(isInForm : Boolean, indent:String) : String = "(and ${left.toSMT()} ${right.toSMT()})"
 }
 data class Or(val left : Formula, val right : Formula) : Formula {
     override fun prettyPrint(): String {
@@ -312,14 +313,14 @@ data class Or(val left : Formula, val right : Formula) : Formula {
         return "(${left.prettyPrint()}) \\/ (${right.prettyPrint()})"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + left.iterate(f) + right.iterate(f)
-    override fun toSMT(isInForm : Boolean, indent:String) : String = if(isInForm) "(or ${left.toSMT(isInForm)} ${right.toSMT(isInForm)})" else "(iOr ${left.toSMT(isInForm)} ${right.toSMT(isInForm)})"
+    override fun toSMT(isInForm : Boolean, indent:String) : String = "(or ${left.toSMT()} ${right.toSMT()})"
 }
 data class Not(val left : Formula) : Formula {
     override fun prettyPrint(): String {
         return "!"+left.prettyPrint()
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + left.iterate(f)
-    override fun toSMT(isInForm : Boolean, indent:String) : String = if(isInForm) "(not ${left.toSMT(isInForm)})" else "(iNot ${left.toSMT(isInForm)})"
+    override fun toSMT(isInForm : Boolean, indent:String) : String = "(not ${left.toSMT()})"
 }
 data class Predicate(val name : String, val params : List<Term> = emptyList()) : Formula {
     override fun prettyPrint(): String {
@@ -328,9 +329,8 @@ data class Predicate(val name : String, val params : List<Term> = emptyList()) :
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
     override fun toSMT(isInForm : Boolean, indent:String) : String {
         if(params.isEmpty()) return name
-        val back = getSMT(name, isInForm)
-        val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT(false)}"})
-        return "($back $list)"
+        val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT()}"})
+        return getSMT(name, list)
     }
 }
 data class UpdateOnFormula(val update : UpdateElement, val target : Formula) : Formula {
@@ -343,7 +343,7 @@ data class UpdateOnFormula(val update : UpdateElement, val target : Formula) : F
 
 data class Ite(val condition :Formula, val term1 : Term, val term2 : Term) : Term{
     override fun toSMT(isInForm: Boolean, indent: String): String {
-        return "(ite ${condition.toSMT(isInForm)}" +
+        return "(ite ${condition.toSMT()}" +
                 "\n\t\t$indent${term1.toSMT(isInForm, "$indent\t")}" +
                 "\n\t\t$indent${term2.toSMT(isInForm, "$indent\t")})"
     }
@@ -351,19 +351,19 @@ data class Ite(val condition :Formula, val term1 : Term, val term2 : Term) : Ter
 
 data class Is(val typeName : String, val term : Term) :Formula{
     override fun toSMT(isInForm: Boolean, indent: String): String {
-        return "((_ is $typeName) ${term.toSMT(isInForm)})"
+        return "((_ is $typeName) ${term.toSMT()})"
     }
 }
 
 data class Exists(val params :List<ProgVar>, val formula: Formula) : Formula{
     override fun toSMT(isInForm: Boolean, indent:String): String {
-        return "(exists (${params.joinToString(" ") { "(${it.name} ${ADTRepos.libPrefix(it.dType)})" }}) ${formula.toSMT(isInForm)})"
+        return "(exists (${params.joinToString(" ") { "(${it.name} ${ADTRepos.libPrefix(it.dType)})" }}) ${formula.toSMT()})"
     }
 }
 
 data class Eq(val term1: Term, val term2 : Term) : Formula{
     override fun toSMT(isInForm: Boolean, indent:String): String {
-        return "(= ${term1.toSMT(isInForm)} ${term2.toSMT(isInForm)})"
+        return "(= ${term1.toSMT()} ${term2.toSMT()})"
     }
 }
 
@@ -371,13 +371,13 @@ object True : Formula {
     override fun prettyPrint(): String {
         return "true"
     }
-    override fun toSMT(isInForm : Boolean, indent:String) : String = if(isInForm) "true" else "1"
+    override fun toSMT(isInForm : Boolean, indent:String) : String = "true"
 }
 object False : Formula {
     override fun prettyPrint(): String {
         return "false"
     }
-    override fun toSMT(isInForm : Boolean, indent:String) : String = if(isInForm) "false" else "0"
+    override fun toSMT(isInForm : Boolean, indent:String) : String = "false"
 }
 
 val specialHeapKeywords = mapOf(OldHeap.name to OldHeap, LastHeap.name to LastHeap)
@@ -442,7 +442,7 @@ fun exprToForm(input : Expr, old : Boolean=false) : Formula {//todo: add check f
         return Predicate(input.op, input.e.map { ex -> exprToTerm(ex, old) })
     }
     if(input is Field || input is ProgVar || input is Const)
-        return exprToForm(SExpr("=",listOf(input, Const("1"))), old)
+        return exprToForm(SExpr("=",listOf(input, Const("true"))), old)
     throw Exception("Expression cannot be converted to formula: $input")
 }
 
@@ -503,23 +503,16 @@ fun subst(input: LogicElement, elem : ProgVar, term : Term) : LogicElement = sub
 
 fun valueOfFunc(t : Term) = Function("valueOf", listOf(t))
 
-fun getSMT(name: String, isInForm: Boolean): String{
-    if(!isInForm) {
-        if (name == "||") return "iOr"
-        if (name == "&&") return "iAnd"
-        if (name == "!")  return "iNot"
-        if (name == "<")  return "iLt"
-        if (name == "<=") return "iLeq"
-        if (name == ">")  return "iGt"
-        if (name == ">=") return "iGeq"
-        if (name == "=")  return "iEq"
-        if (name == "!=") return "iNeq"
-    } else {
-        if (name == "||") return "or"
-        if (name == "&&") return "and"
-        if (name == "!")  return "not"
-    }
-    return name
+fun getSMT(name: String, params: String): String{
+    val ret =
+        when(name) {
+            "!=" -> "not ${getSMT("=", params)}"
+            "||" -> "or $params"
+            "&&" -> "and $params"
+            "!" -> "not $params"
+            else -> "$name $params"
+        }
+    return "($ret)"
 }
 
 fun prettyPrintFunction(params: List<Term>, name: String):String{

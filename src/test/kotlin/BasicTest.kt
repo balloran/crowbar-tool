@@ -1,6 +1,7 @@
 
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.StringSpec
+import org.abs_models.backend.java.lib.types.ABSInteger
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.ADTRepos
@@ -23,8 +24,7 @@ class BasicTest : StringSpec() {
     private val pattern3 = addExpr(ExprAbstractVar("A"), Const("1"))
 
     init {
-        val model = Model()
-        ADTRepos.init(listOf(model.intType))
+        ADTRepos.initStdLib()
         "collect"{
             val stmt = WhileStmt(SExpr(">=", listOf(Field("f"), Const("0"))),
                                  SeqStmt(AssignStmt(Field("g"), ProgVar("v")), SkipStmt),

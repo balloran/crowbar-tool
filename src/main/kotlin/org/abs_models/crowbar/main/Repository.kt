@@ -1,7 +1,6 @@
 package org.abs_models.crowbar.main
 
 import org.abs_models.crowbar.data.*
-import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.interfaces.*
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.frontend.ast.*
@@ -15,6 +14,7 @@ object ADTRepos {
 	private val dtypeMap: MutableMap<String,  HeapDecl> = mutableMapOf()
 	val dTypesDecl = mutableListOf<DataTypeDecl>()
 	private val usedHeaps = mutableSetOf<String>()
+	private val stdLibTypes = mutableSetOf<String>()
 
 
 	fun setUsedHeaps(usedHeapsPar : Set<String>) {
@@ -29,12 +29,12 @@ object ADTRepos {
 	fun getUsedTypePrefixes() : Set<String> = usedHeaps
 
 	override fun toString() : String {
-		var header = DataTypesDecl(dTypesDecl).toSMT(true)
+		var header = DataTypesDecl(dTypesDecl).toSMT()
 		for (dtype in dtypeMap) {
 
 			header +=
 				if(!conciseProofs || dtype.key in usedHeaps)
-					dtype.value.toSMT(true)
+					dtype.value.toSMT()
 				else
 					"\n; no fields of type ${dtype.key}: omitting declaration of ${dtype.value.heapType}"
 
@@ -42,15 +42,14 @@ object ADTRepos {
 		return header
 	}
 
-	fun init(types:List<Type>){
+	fun initStdLib(){
 		dtypeMap.clear()
 		dTypesDecl.clear()
-		for(type in types)
-			dtypeMap[libPrefix(type.qualifiedName)] = HeapDecl(libPrefix(type.qualifiedName))
-
+		dtypeMap["Int"] = HeapDecl("Int")
+		dtypeMap["Bool"] = HeapDecl("Bool")
 	}
 	fun init(model: Model){
-		init(listOf(model.intType))
+		initStdLib()
 		for(moduleDecl in model.moduleDecls){
 			if(moduleDecl.name.startsWith("ABS.")) continue
 			for(decl in moduleDecl.decls){
@@ -62,14 +61,12 @@ object ADTRepos {
 		}
 
 	}
-	fun libPrefix(type : String) : String {
-
-		if(type=="ABS.StdLib.Fut"
-				|| type=="ABS.StdLib.Bool"
-				|| type.startsWith("Reference.")
-				|| !dtypeMap.containsKey(type))
-			return "Int"
-		return type.removePrefix("ABS.StdLib.")
+	fun libPrefix(type: String): String {
+		return when {
+			type == "ABS.StdLib.Bool" -> "Bool"
+			dtypeMap.containsKey(type) -> type
+			else -> "Int"
+		}
 	}
 
 }
@@ -119,12 +116,12 @@ object FunctionRepos{
 
 				val paramsTyped = params.joinToString(" ") { "(${it.name} ${ADTRepos.libPrefix(it.type.qualifiedName)})" }
 				if(params.count() > 0) {
-					val transpost = funpost.toSMT(true).replace("result","($name $callParams)")
-					val nextDef = "\n(assert (forall ($paramsTyped) (=> ${funpre.toSMT(true)} $transpost)))"
+					val transpost = funpost.toSMT().replace("result","($name $callParams)")
+					val nextDef = "\n(assert (forall ($paramsTyped) (=> ${funpre.toSMT()} $transpost)))"
 					defs += nextDef
 				}else{
-					val transpost = funpost.toSMT(true).replace("result","$name ")
-					val nextDef = "\n(assert  (=> ${funpre.toSMT(true)} $transpost))"
+					val transpost = funpost.toSMT().replace("result","$name ")
+					val nextDef = "\n(assert  (=> ${funpre.toSMT()} $transpost))"
 					defs += nextDef
 				}
 
@@ -134,32 +131,14 @@ object FunctionRepos{
 		    if(direct.isNotEmpty()) {
 			    var sigs = ""
 			    var defs = ""
-				var functors = ""
-				val functions = ""
 			    for (pair in direct) {
 				    val params = pair.value.params
 				    val eDef: ExpFunctionDef = pair.value.functionDef as ExpFunctionDef
 				    val def = eDef.rhs
-					if(def is CaseExp){
-
-						val sigNR = "${pair.key.replace(".", "-")} (${params.fold("", { acc, nx -> "$acc (${nx.name} ${ADTRepos.libPrefix(nx.type.qualifiedName)})" })})  ${ADTRepos.libPrefix(def.type.qualifiedName)}"
-						val defNR = "${exprToTerm(translateABSExpToSymExpr(def, "<UNKNOWN>")).toSMT(false)}\n"
-
-						if(def.expr.toString() == "data")
-							functors += "\n(define-fun $sigNR \n\t$defNR)"
-						else{
-							sigs += "\t($sigNR)\n"
-							defs += "\t$defNR"
-						}
-					}else {
-						sigs += "\t(${pair.key.replace(".", "-")} (${params.fold("",{ acc, nx -> "$acc (${nx.name} ${ADTRepos.libPrefix(nx.type.qualifiedName)})" })})  ${ADTRepos.libPrefix(def.type.qualifiedName)})\n"
-						defs += "\t${exprToTerm(translateABSExpToSymExpr(def, "<UNKNOWN>")).toSMT(false)}\n"
-					}
+					sigs += "\t(${pair.key.replace(".", "-")} (${params.fold("",{ acc, nx -> "$acc (${nx.name} ${ADTRepos.libPrefix(nx.type.qualifiedName)})" })})  ${ADTRepos.libPrefix(def.type.qualifiedName)})\n"
+					defs += "\t${exprToTerm(translateABSExpToSymExpr(def, "<UNKNOWN>")).toSMT()}\n"
 			    }
-				ret += "\n$functors"
-				ret += "\n$functions"
-				if(sigs.isNotBlank())
-					ret += "\n(define-funs-rec(\n$sigs)(\n$defs))"
+				ret += "\n(define-funs-rec(\n$sigs)(\n$defs))"
 		    }
 		val wildcards: String = wildCardsConst.map { FunctionDeclSMT(it.key,it.value).toSMT(true,"\n") }.joinToString("") { it } +"\n"
 	    return wildcards+ret

@@ -5,6 +5,10 @@ data ComplexType = ComplexA | ComplexB;
 data DataType = Default | DataA | DataB | DataC;
 data TrivialType = Trivial;
 
+data Type = Type1(Type t) | Type2 (Type t, Bool) |Type3;
+
+def Type f(Type i) = if(i == Type3) then Type1(Type3) else Type3;
+
 
 [Spec : Requires( c != ComplexB )]
 [Spec : Ensures( result != ComplexB )]
@@ -75,6 +79,18 @@ class C{
         while( j >= 0 ){
             res = DataA;
         }
+        return res;
+    }
+
+    [Spec : Ensures(result == Type3)]
+    Type ifExpSuccess(){
+        Type res =  f(Type1(Type3));
+        return res;
+    }
+
+    [Spec : Ensures(result == Type3)]
+    Type ifExpFail(){
+        Type res =  f(Type3);
         return res;
     }
 

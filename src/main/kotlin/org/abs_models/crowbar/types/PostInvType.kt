@@ -44,7 +44,7 @@ import kotlin.system.exitProcess
 
 
 val intFunction = setOf("+","-","*","/")
-val booleanFunction = setOf(">=","<=","<",">","=","!=",">=","<=","<",">","&&","||")
+val booleanFunction = setOf(">=","<=","<",">","=","!=",">=","<=","<",">","&&","||", "true", "false")
 
 //Declaration
 interface PostInvType : DeductType{
@@ -257,7 +257,7 @@ class PITAllocAssign(repos: Repository) : PITAssign(repos, Modality(
         )
 
         // Generate SMT representation of the NEW expression to get its model value later
-        val constructorSMTExpr = apply(input.update, nextRhs).toSMT(false)
+        val constructorSMTExpr = apply(input.update, nextRhs).toSMT()
 
         val next = symbolicNext(lhs,
                                             nextRhs,
@@ -616,6 +616,7 @@ fun getReturnType(term: Term) : String{
         return when (term.name) {
             "Unit" -> "ABS.StdLib.Unit"
             "iite" -> getReturnType(term.params[1])
+            "ite" -> getReturnType(term.params[1])
             "select" -> (term.params[1] as Field).dType
             else -> {
                 val fName = term.name.replace("-",".")
