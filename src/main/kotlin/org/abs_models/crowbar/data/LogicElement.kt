@@ -248,9 +248,12 @@ fun extractPatternMatching(match: Term, branchTerm: DataTypeConst, freeVars: Set
 }
 
 data class Case(val match : Term, val expectedType :String, val branches : List<BranchTerm>, val freeVars : Set<String>) : Term {
+    private lateinit var wildCardName: String
+
     override fun toSMT(indent:String): String {
         if (branches.isNotEmpty() ){
-            val wildCardName = createWildCard(expectedType)
+            if(!::wildCardName.isInitialized)
+                wildCardName = createWildCard(expectedType)
             val firstMatchTerm = Function(wildCardName)
 
             val branchTerm = branches.foldRight(firstMatchTerm as Term, { branchTerm: BranchTerm,acc: Term ->
