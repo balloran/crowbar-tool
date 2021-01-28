@@ -188,7 +188,7 @@ object CounterexampleGenerator {
 
         val parsed = ModelParser.parseModel()
         val constants = parsed.filter { it is ModelConstant }.map { it as ModelConstant }
-        val vars = constants.filter { !(it.name matches Regex("(.*_f|fut_.*|NEW\\d.*|f_(\\d)+)") || reservedVarNames.contains(it.name)) }
+        val vars = constants.filter { !(it.name matches Regex("(.*_f|fut_.*|NEW\\d.*|(f)?_(\\d)+|)") || reservedVarNames.contains(it.name)) }
         val fields = constants.filter { it.name matches Regex(".*_f") }
         val futLookup = constants.filter { it.name.startsWith("fut_") }.associate { Pair((it.value as MvInteger).value, it.name) }
 

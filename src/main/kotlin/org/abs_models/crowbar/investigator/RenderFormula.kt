@@ -1,6 +1,8 @@
 package org.abs_models.crowbar.investigator
 
 import org.abs_models.crowbar.data.And
+import org.abs_models.crowbar.data.BranchTerm
+import org.abs_models.crowbar.data.Case
 import org.abs_models.crowbar.data.DataTypeConst
 import org.abs_models.crowbar.data.False
 import org.abs_models.crowbar.data.Field
@@ -39,6 +41,8 @@ fun renderTerm(t: Term, m: Map<String, String>): String {
         is Field            -> "this.${t.name.substring(0, t.name.length - 2)}" // Strip _f suffix
         is ProgVar          -> if (m.containsKey(t.name)) m[t.name]!! else t.name
         is DataTypeConst    -> if (t.params.isEmpty()) t.name else "${t.name}(${t.params.map{ renderTerm(it, m) }.joinToString(", ")})"
+        is Case             -> "case(${renderTerm(t.match, m)}){ ${t.branches.map{ renderTerm(it, m) }.joinToString("; ")} }"
+        is BranchTerm       -> "${renderTerm(t.matchTerm, m)} => ${renderTerm(t.branch, m)}"
         else                -> throw Exception("Cannot render term: ${t.prettyPrint()}")
     }
 }

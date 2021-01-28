@@ -1,6 +1,9 @@
 package org.abs_models.crowbar.investigator
 
+import org.abs_models.crowbar.data.BranchTerm
 import org.abs_models.crowbar.data.CallExpr
+import org.abs_models.crowbar.data.Case
+import org.abs_models.crowbar.data.CaseExpr
 import org.abs_models.crowbar.data.Const
 import org.abs_models.crowbar.data.DataTypeConst
 import org.abs_models.crowbar.data.DataTypeExpr
@@ -19,8 +22,16 @@ fun collectUsedDefinitions(elem: Term): Set<String> {
         is ProgVar -> setOf(elem.name)
         is Field -> setOf(elem.name)
         is DataTypeConst -> setOf(elem.name)
+        is Case -> collectFromCase(elem)
+        is BranchTerm -> collectUsedDefinitions(elem.matchTerm) + collectUsedDefinitions(elem.branch)
         else -> throw Exception("Cannot collect used definitions from term: ${elem::class.simpleName} ${elem.prettyPrint()}")
     }
+}
+
+fun collectFromCase(case: Case): Set<String> {
+    val freeVars = case.freeVars
+    val usedDefs = case.branches.fold(setOf<String>()) { collected, branch -> collected + collectUsedDefinitions(branch) }
+    return usedDefs - freeVars
 }
 
 fun collectFromFunction(func: Function): Set<String> {
@@ -44,6 +55,13 @@ fun collectBaseExpressions(exp: Expr, old: Boolean = false): Set<Expr> {
         is SExpr -> {
             val oldflag = (exp.op == "old") || old
             exp.e.map { collectBaseExpressions(it, oldflag) }.flatten().toSet()
+        }
+        is CaseExpr -> {
+            val branchCondition = collectBaseExpressions(exp.match, old)
+            val branchContents = exp.content.map {
+                collectBaseExpressions(it.matchTerm, old) + collectBaseExpressions(it.branch, old)
+            }.flatten().toSet()
+            branchCondition + branchContents.filter { it !is ProgVar || !exp.freeVars.contains(it.name) }
         }
         else -> throw Exception("Cannot collect base expressions from unknown expression: ${exp.prettyPrint()}")
     }

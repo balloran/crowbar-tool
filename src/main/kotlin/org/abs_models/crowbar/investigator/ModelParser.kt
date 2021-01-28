@@ -243,7 +243,7 @@ object ModelParser {
 
             consume(LParen())
             consume(Identifier("="))
-            consume(Identifier(args[0]!!.name))
+            consume(Identifier(args[0].name))
 
             if (tokens[0] !is ConcreteValue)
                 throw Exception("Unsupported complex lambda in SMT array expression")

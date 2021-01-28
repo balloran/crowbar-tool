@@ -137,7 +137,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
     }
 
     override fun visit(info: InfoBranch): String {
-        var res = indent("switch(${renderExp(info.matchExpr)}){") + "\n"
+        var res = indent("case ${renderExp(info.matchExpr)} {") + "\n"
         scopeLevel += 1
         res = res + indent("${renderExp(info.pattern)} => {") + "\n"
         scopeLevel += 1

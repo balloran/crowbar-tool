@@ -8,6 +8,7 @@ import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.frontend.ast.AddAddExp
 import org.abs_models.frontend.ast.AndBoolExp
 import org.abs_models.frontend.ast.Call
+import org.abs_models.frontend.ast.CaseExp
 import org.abs_models.frontend.ast.DataConstructorExp
 import org.abs_models.frontend.ast.DivMultExp
 import org.abs_models.frontend.ast.EqExp
@@ -31,6 +32,12 @@ import org.abs_models.frontend.ast.OrBoolExp
 import org.abs_models.frontend.ast.SubAddExp
 import org.abs_models.frontend.ast.ThisExp
 import org.abs_models.frontend.ast.VarUse
+import org.abs_models.frontend.ast.Pattern
+import org.abs_models.frontend.ast.PatternVar
+import org.abs_models.frontend.ast.PatternVarUse
+import org.abs_models.frontend.ast.LiteralPattern
+import org.abs_models.frontend.ast.UnderscorePattern
+import org.abs_models.frontend.ast.ConstructorPattern
 
 fun renderExpression(expression: Expr, varSubMap: Map<String, String> = mapOf()): String {
     if (expression.absExp == null)
@@ -65,6 +72,12 @@ fun renderAbsExpression(e: Exp, m: Map<String, String>): String {
         is Call            -> "${e.methodSig.name}(${e.params.map{ renderAbsExpression(it, m) }.joinToString(", ")})"
         is IfExp           -> "(if ${renderAbsExpression(e.condExp, m)} then ${renderAbsExpression(e.thenExp, m)} else ${renderAbsExpression(e.elseExp, m)})"
         is FnApp           -> "${e.name}(${e.params.map{ renderAbsExpression(it, m) }.joinToString(", ")})"
+        is CaseExp         -> {
+            val branches = e.branchList.map {
+                "${renderPattern(it.left, m)} => ${renderAbsExpression(it.right, m)}"
+            }.joinToString("\n")
+            "case ${renderAbsExpression(e.expr, m)} {\n${indent(branches, 1)}\n}"
+        }
         is DataConstructorExp -> {
             if (e.params.toList().isEmpty())
                 e.dataConstructor!!.name
@@ -72,6 +85,21 @@ fun renderAbsExpression(e: Exp, m: Map<String, String>): String {
                 "${e.dataConstructor!!.name}(${e.params.map{ renderAbsExpression(it, m) }.joinToString(", ")})"
         }
         else               -> throw Exception("Cannot render ABS Expression: $e")
+    }
+}
+
+fun renderPattern(p: Pattern, m: Map<String, String>): String {
+    return when (p) {
+        is LiteralPattern     -> renderAbsExpression(p.literal, m)
+        is PatternVar         -> p.`var`.name
+        is PatternVarUse      -> if (m.containsKey(p.name)) m[p.name]!! else p.name
+        is UnderscorePattern  -> "_"
+        is ConstructorPattern ->
+            if (p.params.toList().isEmpty())
+                "${p.constructor}"
+            else
+                "${p.constructor}(${p.params.map{ renderPattern(it, m)}.joinToString(", ")})"
+        else -> throw Exception("Cannot render unknown ABS pattern: $p")
     }
 }
 
