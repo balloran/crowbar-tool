@@ -16,7 +16,7 @@ val smtHeader = """
     (declare-fun   valueOf (Int) Int)
     (declare-const Unit Int)
     (assert (= Unit 0))
-    ${DefineSortSMT("Field", "Int").toSMT(true, "\n")}
+    ${DefineSortSMT("Field", "Int").toSMT("\n")}
     ; end static header
     """.trimIndent()
 
@@ -40,7 +40,7 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
 
     val dTypesDecl = ADTRepos.toString()
     val functionDecl = FunctionRepos.toString()
-    val wildcards: String = wildCardsConst.map { FunctionDeclSMT(it.key,it.value).toSMT(true,"\n\t") }.joinToString("") { it }
+    val wildcards: String = wildCardsConst.map { FunctionDeclSMT(it.key,it.value).toSMT("\n\t") }.joinToString("") { it }
     val fieldsDecl = fields.joinToString("\n\t"){ "(declare-const ${it.name} Field)"}
     val varsDecl = vars.joinToString("\n\t"){"(declare-const ${it.name} ${libPrefix(it.dType)})"}
     val objectsDecl = heaps.joinToString("\n\t"){"(declare-fun ${it.name} (${it.params.joinToString (" "){

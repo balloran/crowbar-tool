@@ -280,7 +280,7 @@ open class Field(val name : String, val dType : String="ABS.StdLib.Int") : Locat
     override fun hashCode(): Int {
         return name.hashCode()
     }
-    override fun toSMT(isInForm : Boolean, indent:String) : String = name
+    override fun toSMT(indent:String) : String = name
 }
 
 open class ProgVar(val name : String, val dType : String = "Int") : Location, Term { //todo: change simpleName to qualifiedName and do something clever in the SMT-translation
@@ -304,7 +304,7 @@ open class ProgVar(val name : String, val dType : String = "Int") : Location, Te
     override fun hashCode(): Int {
         return name.hashCode()
     }
-    override fun toSMT(isInForm : Boolean, indent:String) : String = name
+    override fun toSMT(indent:String) : String = name
 }
 data class ReturnVar(val vParam : String) : ProgVar("result", vParam)
 
@@ -317,7 +317,7 @@ data class ProgFieldAbstractVar(val vName : String) : Field(vName, "AVAR"), Abst
     override fun prettyPrint(): String {
         return name
     }
-    override fun toSMT(isInForm : Boolean, indent:String) : String = name
+    override fun toSMT(indent:String) : String = name
 }
 
 fun appendStmt(stmt : Stmt, add : Stmt) : Stmt {

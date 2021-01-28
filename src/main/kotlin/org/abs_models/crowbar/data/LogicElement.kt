@@ -6,11 +6,11 @@ import org.abs_models.crowbar.main.FunctionRepos
 import org.abs_models.frontend.ast.DataTypeDecl
 
 interface ProofElement: Anything {
-    fun toSMT(isInForm : Boolean=true, indent:String="") : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
+    fun toSMT(indent:String="") : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
 }
 
 interface LogicElement: Anything {
-    fun toSMT(isInForm : Boolean=true, indent:String="") : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
+    fun toSMT(indent:String="") : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
 }
 interface Formula: LogicElement
 interface Term : LogicElement
@@ -28,20 +28,20 @@ data class HeapDecl(val dtype: String) : ProofElement{
     val heapType :String = name("Heap")
     val field :String = "Field"
 
-    override fun toSMT(isInForm: Boolean, indent:String): String {
+    override fun toSMT(indent:String): String {
 
         var ret = "\n; $dtype Heap declaration"
-        ret += DefineSortSMT(heapType, "(Array $field ${ADTRepos.libPrefix(dtype)})").toSMT(isInForm, "\n")//todo: refactor hard-code
-        ret += DeclareConstSMT(heap, heapType).toSMT(isInForm, "\n")
-        ret += DeclareConstSMT(old, heapType).toSMT(isInForm, "\n")
-        ret += DeclareConstSMT(last, heapType).toSMT(isInForm, "\n")
-        ret += FunctionDeclSMT(anon, heapType, listOf(heapType)).toSMT(isInForm,"\n")
+        ret += DefineSortSMT(heapType, "(Array $field ${ADTRepos.libPrefix(dtype)})").toSMT("\n")//todo: refactor hard-code
+        ret += DeclareConstSMT(heap, heapType).toSMT("\n")
+        ret += DeclareConstSMT(old, heapType).toSMT("\n")
+        ret += DeclareConstSMT(last, heapType).toSMT("\n")
+        ret += FunctionDeclSMT(anon, heapType, listOf(heapType)).toSMT("\n")
         return ret
     }
 }
 
 data class DataTypesDecl(val dTypesDecl : List<DataTypeDecl>) : ProofElement{
-    override fun toSMT(isInForm: Boolean, indent:String): String {
+    override fun toSMT(indent:String): String {
         if(dTypesDecl.isNotEmpty()) {
             val dTypeDecl = mutableListOf<ArgsSMT>()
             val dTypeValsDecl = mutableListOf<Term>()
@@ -84,7 +84,7 @@ data class DataTypesDecl(val dTypesDecl : List<DataTypeDecl>) : ProofElement{
 //}
 
 data class ArgsSMT(val name : String, val params : List<Term> = emptyList()) : Term{
-    override fun toSMT(isInForm : Boolean, indent:String) : String {
+    override fun toSMT(indent:String) : String {
         if(params.isEmpty())
             return "($name)"
 
@@ -93,27 +93,27 @@ data class ArgsSMT(val name : String, val params : List<Term> = emptyList()) : T
     }
 }
 data class ArgSMT(val params : List<Term> = emptyList()) : Term{
-    override fun toSMT(isInForm : Boolean, indent:String) : String {
+    override fun toSMT(indent:String): String {
         val list = params.joinToString (" "){it.toSMT()}
         return "\n\t($list)"
     }
 }
 
 data class FunctionDeclSMT(val name : String, val type: String, val params :List<String> = listOf()) :ProofElement{
-    override fun toSMT(isInForm: Boolean, indent:String): String {
+    override fun toSMT(indent:String): String {
         return "$indent(declare-fun $name (${params.joinToString(" ") {it}}) $type)"
     }
 }
 
 
 data class DefineSortSMT(val name :String, val type: String, val params :List<String> = listOf()):ProofElement{
-    override fun toSMT(isInForm: Boolean, indent:String): String {
+    override fun toSMT(indent:String): String {
         return "$indent(define-sort $name (${params.joinToString(" ") {it}}) $type)"
     }
 }
 
 data class DeclareConstSMT(val name :String, val type: String):ProofElement{
-    override fun toSMT(isInForm: Boolean, indent:String): String {
+    override fun toSMT(indent:String): String {
         return "$indent(declare-const $name $type)"
     }
 }
@@ -142,7 +142,7 @@ data class FormulaAbstractVar(val name : String) : Formula, AbstractVar {
     override fun prettyPrint(): String {
         return name
     }
-    override fun toSMT(isInForm : Boolean, indent:String) : String = name
+    override fun toSMT(indent:String) : String = name
 }
 
 // Crowbar uses type-agnostic heaps internally that can store any data type
@@ -191,7 +191,7 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
-    override fun toSMT(isInForm : Boolean, indent:String) : String {
+    override fun toSMT(indent:String): String {
 
 
 
@@ -216,7 +216,7 @@ data class DataTypeConst(val name : String, val dType : String, val params : Lis
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
-    override fun toSMT(isInForm : Boolean, indent:String) : String {
+    override fun toSMT(indent:String): String {
         val back = name
         if(params.isEmpty())
             return name
@@ -248,7 +248,7 @@ fun extractPatternMatching(match: Term, branchTerm: DataTypeConst, freeVars: Set
 }
 
 data class Case(val match : Term, val expectedType :String, val branches : List<BranchTerm>, val freeVars : Set<String>) : Term {
-    override fun toSMT(isInForm: Boolean, indent:String): String {
+    override fun toSMT(indent:String): String {
         if (branches.isNotEmpty() ){
             val wildCardName = createWildCard(expectedType)
             val firstMatchTerm = Function(wildCardName)
@@ -281,7 +281,7 @@ data class Case(val match : Term, val expectedType :String, val branches : List<
 }
 
 data class BranchTerm(val matchTerm : Term, val branch : Term) :Term {
-    override fun toSMT(isInForm: Boolean, indent:String): String {
+    override fun toSMT(indent:String): String {
         return "$indent(${matchTerm.toSMT()} ${branch.toSMT()})"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + matchTerm.iterate(f) + branch.iterate(f)
@@ -292,14 +292,14 @@ data class UpdateOnTerm(val update : UpdateElement, val target : Term) : Term {
         return "{"+update.prettyPrint()+"}"+target.prettyPrint()
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + update.iterate(f) + target.iterate(f)
-    override fun toSMT(isInForm : Boolean, indent:String) : String = throw Exception("Updates are not translatable to Z3")
+    override fun toSMT(indent:String) : String = throw Exception("Updates are not translatable to Z3")
 }
 data class Impl(val left : Formula, val right : Formula) : Formula {
     override fun prettyPrint(): String {
         return "(${left.prettyPrint()}) -> (${right.prettyPrint()})"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + left.iterate(f) + right.iterate(f)
-    override fun toSMT(isInForm : Boolean, indent:String) : String = "(=> ${left.toSMT()} ${right.toSMT()})"
+    override fun toSMT(indent:String) : String = "(=> ${left.toSMT()} ${right.toSMT()})"
 }
 data class And(val left : Formula, val right : Formula) : Formula {
     override fun prettyPrint(): String {
@@ -308,7 +308,7 @@ data class And(val left : Formula, val right : Formula) : Formula {
         return "(${left.prettyPrint()}) /\\ (${right.prettyPrint()})"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + left.iterate(f) + right.iterate(f)
-    override fun toSMT(isInForm : Boolean, indent:String) : String = "(and ${left.toSMT()} ${right.toSMT()})"
+    override fun toSMT(indent:String) : String = "(and ${left.toSMT()} ${right.toSMT()})"
 }
 data class Or(val left : Formula, val right : Formula) : Formula {
     override fun prettyPrint(): String {
@@ -317,21 +317,21 @@ data class Or(val left : Formula, val right : Formula) : Formula {
         return "(${left.prettyPrint()}) \\/ (${right.prettyPrint()})"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + left.iterate(f) + right.iterate(f)
-    override fun toSMT(isInForm : Boolean, indent:String) : String = "(or ${left.toSMT()} ${right.toSMT()})"
+    override fun toSMT(indent:String) : String = "(or ${left.toSMT()} ${right.toSMT()})"
 }
 data class Not(val left : Formula) : Formula {
     override fun prettyPrint(): String {
         return "!"+left.prettyPrint()
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + left.iterate(f)
-    override fun toSMT(isInForm : Boolean, indent:String) : String = "(not ${left.toSMT()})"
+    override fun toSMT(indent:String) : String = "(not ${left.toSMT()})"
 }
 data class Predicate(val name : String, val params : List<Term> = emptyList()) : Formula {
     override fun prettyPrint(): String {
         return prettyPrintFunction(params, name)
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
-    override fun toSMT(isInForm : Boolean, indent:String) : String {
+    override fun toSMT(indent:String) : String {
         if(params.isEmpty()) return name
         val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT()}"})
         return getSMT(name, list)
@@ -342,31 +342,31 @@ data class UpdateOnFormula(val update : UpdateElement, val target : Formula) : F
         return "{"+update.prettyPrint()+"}"+target.prettyPrint()
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + update.iterate(f) + target.iterate(f)
-    override fun toSMT(isInForm : Boolean, indent:String) : String = throw Exception("Updates are not translatable to Z3")
+    override fun toSMT(indent:String) : String = throw Exception("Updates are not translatable to Z3")
 }
 
 data class Ite(val condition :Formula, val term1 : Term, val term2 : Term) : Term{
-    override fun toSMT(isInForm: Boolean, indent: String): String {
+    override fun toSMT(indent:String): String {
         return "(ite ${condition.toSMT()}" +
-                "\n\t\t$indent${term1.toSMT(isInForm, "$indent\t")}" +
-                "\n\t\t$indent${term2.toSMT(isInForm, "$indent\t")})"
+                "\n\t\t$indent${term1.toSMT("$indent\t")}" +
+                "\n\t\t$indent${term2.toSMT("$indent\t")})"
     }
 }
 
 data class Is(val typeName : String, val term : Term) :Formula{
-    override fun toSMT(isInForm: Boolean, indent: String): String {
+    override fun toSMT(indent:String): String {
         return "((_ is $typeName) ${term.toSMT()})"
     }
 }
 
 data class Exists(val params :List<ProgVar>, val formula: Formula) : Formula{
-    override fun toSMT(isInForm: Boolean, indent:String): String {
+    override fun toSMT(indent:String): String {
         return "(exists (${params.joinToString(" ") { "(${it.name} ${ADTRepos.libPrefix(it.dType)})" }}) ${formula.toSMT()})"
     }
 }
 
 data class Eq(val term1: Term, val term2 : Term) : Formula{
-    override fun toSMT(isInForm: Boolean, indent:String): String {
+    override fun toSMT(indent:String): String {
         return "(= ${term1.toSMT()} ${term2.toSMT()})"
     }
 }
@@ -375,13 +375,13 @@ object True : Formula {
     override fun prettyPrint(): String {
         return "true"
     }
-    override fun toSMT(isInForm : Boolean, indent:String) : String = "true"
+    override fun toSMT(indent:String) : String = "true"
 }
 object False : Formula {
     override fun prettyPrint(): String {
         return "false"
     }
-    override fun toSMT(isInForm : Boolean, indent:String) : String = "false"
+    override fun toSMT(indent:String) : String = "false"
 }
 
 val specialHeapKeywords = mapOf(OldHeap.name to OldHeap, LastHeap.name to LastHeap)
