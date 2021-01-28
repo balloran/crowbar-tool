@@ -74,20 +74,6 @@ object ADTRepos {
 object FunctionRepos{
     val known : MutableMap<String, FunctionDecl> = mutableMapOf()
 
-	private val wildCardsConst = mutableMapOf<String,String>()
-
-	private var countWildCard = 0
-
-	fun createWildCard(dType: String) : String{
-		val wildCard = "_${countWildCard++}"
-		wildCardsConst[wildCard] = dType
-		return wildCard
-	}
-
-
-	fun resetWildCards() {
-		countWildCard = 0
-	}
 
     fun isKnown(str: String) = known.containsKey(str)
     fun get(str: String) = known.getValue(str)
@@ -140,8 +126,7 @@ object FunctionRepos{
 			    }
 				ret += "\n(define-funs-rec(\n$sigs)(\n$defs))"
 		    }
-		val wildcards: String = wildCardsConst.map { FunctionDeclSMT(it.key,it.value).toSMT(true,"\n") }.joinToString("") { it } +"\n"
-	    return wildcards+ret
+	    return ret
     }
 
 	private fun hasContract(fDecl: FunctionDecl) : Boolean {
@@ -151,8 +136,6 @@ object FunctionRepos{
 
 	fun init(model: Model, repos: Repository) {
 		known.clear()
-		wildCardsConst.clear()
-		countWildCard = 0
 		for (mDecl in model.moduleDecls){
 			if(mDecl.name.startsWith("ABS.")) continue
 			for (decl in mDecl.decls){

@@ -1,5 +1,6 @@
 package org.abs_models.crowbar.data
 
+import org.abs_models.crowbar.interfaces.createWildCard
 import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.FunctionRepos
 import org.abs_models.frontend.ast.DataTypeDecl
@@ -249,7 +250,7 @@ fun extractPatternMatching(match: Term, branchTerm: DataTypeConst, freeVars: Set
 data class Case(val match : Term, val expectedType :String, val branches : List<BranchTerm>, val freeVars : Set<String>) : Term {
     override fun toSMT(isInForm: Boolean, indent:String): String {
         if (branches.isNotEmpty() ){
-            val wildCardName = FunctionRepos.createWildCard(expectedType)
+            val wildCardName = createWildCard(expectedType)
             val firstMatchTerm = Function(wildCardName)
 
             val branchTerm = branches.foldRight(firstMatchTerm as Term, { branchTerm: BranchTerm,acc: Term ->
@@ -276,12 +277,15 @@ data class Case(val match : Term, val expectedType :String, val branches : List<
         }else
             throw Exception("No branches")
     }
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + match.iterate(f) + branches.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 }
 
 data class BranchTerm(val matchTerm : Term, val branch : Term) :Term {
     override fun toSMT(isInForm: Boolean, indent:String): String {
         return "$indent(${matchTerm.toSMT()} ${branch.toSMT()})"
     }
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + matchTerm.iterate(f) + branch.iterate(f)
+
 }
 data class UpdateOnTerm(val update : UpdateElement, val target : Term) : Term {
     override fun prettyPrint(): String {
@@ -481,6 +485,7 @@ fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicEleme
         }
 //        is DataTypeConst -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
         is DataTypeConst -> return DataTypeConst(input.name, input.dType, input.params.map { p -> subst(p, map) as Term })
+//        is Case -> return Case(subst(input.match, map) as Term, input.expectedType, input.branches.map { p -> subst(p, map) as BranchTerm }, input.freeVars)
         is Function -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
         is Predicate -> return Predicate(input.name, input.params.map { p -> subst(p, map) as Term })
         is Impl -> return Impl(subst(input.left, map) as Formula, subst(input.right, map) as Formula)
