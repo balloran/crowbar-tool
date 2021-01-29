@@ -1,6 +1,7 @@
 package org.abs_models.crowbar.data
 
 import org.abs_models.crowbar.interfaces.createWildCard
+import org.abs_models.crowbar.interfaces.refreshWildCard
 import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.FunctionRepos
 import org.abs_models.frontend.ast.DataTypeDecl
@@ -254,6 +255,9 @@ data class Case(val match : Term, val expectedType :String, val branches : List<
         if (branches.isNotEmpty() ){
             if(!::wildCardName.isInitialized)
                 wildCardName = createWildCard(expectedType)
+            else
+                refreshWildCard(wildCardName, expectedType)
+                
             val firstMatchTerm = Function(wildCardName)
 
             val branchTerm = branches.foldRight(firstMatchTerm as Term, { branchTerm: BranchTerm,acc: Term ->

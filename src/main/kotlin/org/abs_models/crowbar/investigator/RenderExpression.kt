@@ -9,6 +9,7 @@ import org.abs_models.frontend.ast.AddAddExp
 import org.abs_models.frontend.ast.AndBoolExp
 import org.abs_models.frontend.ast.Call
 import org.abs_models.frontend.ast.CaseExp
+import org.abs_models.frontend.ast.ConstructorPattern
 import org.abs_models.frontend.ast.DataConstructorExp
 import org.abs_models.frontend.ast.DivMultExp
 import org.abs_models.frontend.ast.EqExp
@@ -22,6 +23,7 @@ import org.abs_models.frontend.ast.IfExp
 import org.abs_models.frontend.ast.IntLiteral
 import org.abs_models.frontend.ast.LTEQExp
 import org.abs_models.frontend.ast.LTExp
+import org.abs_models.frontend.ast.LiteralPattern
 import org.abs_models.frontend.ast.MinusExp
 import org.abs_models.frontend.ast.MultMultExp
 import org.abs_models.frontend.ast.NegExp
@@ -29,15 +31,13 @@ import org.abs_models.frontend.ast.NewExp
 import org.abs_models.frontend.ast.NotEqExp
 import org.abs_models.frontend.ast.NullExp
 import org.abs_models.frontend.ast.OrBoolExp
-import org.abs_models.frontend.ast.SubAddExp
-import org.abs_models.frontend.ast.ThisExp
-import org.abs_models.frontend.ast.VarUse
 import org.abs_models.frontend.ast.Pattern
 import org.abs_models.frontend.ast.PatternVar
 import org.abs_models.frontend.ast.PatternVarUse
-import org.abs_models.frontend.ast.LiteralPattern
+import org.abs_models.frontend.ast.SubAddExp
+import org.abs_models.frontend.ast.ThisExp
 import org.abs_models.frontend.ast.UnderscorePattern
-import org.abs_models.frontend.ast.ConstructorPattern
+import org.abs_models.frontend.ast.VarUse
 
 fun renderExpression(expression: Expr, varSubMap: Map<String, String> = mapOf()): String {
     if (expression.absExp == null)

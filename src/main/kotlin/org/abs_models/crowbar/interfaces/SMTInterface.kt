@@ -23,7 +23,7 @@ val smtHeader = """
 @Suppress("UNCHECKED_CAST")
 fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
 
-    //resetWildCards()
+    resetWildCards()
 
     val pre = deupdatify(ante)
     val post = deupdatify(Not(succ))
@@ -132,6 +132,10 @@ fun createWildCard(dType: String) : String{
     val wildCard = "_${countWildCard++}"
     wildCardsConst[wildCard] = dType
     return wildCard
+}
+
+fun refreshWildCard(name: String, dType: String) {
+    wildCardsConst[name] = dType
 }
 
 fun resetWildCards() {
