@@ -3,7 +3,6 @@ package org.abs_models.crowbar.data
 import org.abs_models.crowbar.interfaces.createWildCard
 import org.abs_models.crowbar.interfaces.refreshWildCard
 import org.abs_models.crowbar.main.ADTRepos
-import org.abs_models.crowbar.main.FunctionRepos
 import org.abs_models.frontend.ast.DataTypeDecl
 
 interface ProofElement: Anything {
@@ -402,58 +401,62 @@ fun select(field : Field) : Function = Function("select", listOf(Heap, field))
 fun anon(heap : Term) : Function = Function("anon", listOf(heap))
 fun poll(term : Term) : Function = Function("poll", listOf(term))
 fun readFut(term : Expr) : Expr = SExpr("valueOf", listOf(term))
-fun exprToTerm(input : Expr, old : Boolean=false) : Term {//todo: add check for non-field reference inside old and last
+fun exprToTerm(input : Expr, specialKeyword : String="NONE") : Term {//todo: add check for non-field reference inside old and last
     return when(input){
         is ProgVar -> input
         is Field -> {
-            if(old)
-                return Function("old", listOf(select(input)))
+            if(specialKeyword != "NONE")
+                return Function(specialKeyword, listOf(select(input)))
             return select(input)
         }
         is PollExpr -> poll(exprToTerm(input.e1))
         is Const -> Function(input.name)
         is SExpr -> {
-            if (specialHeapKeywords.containsKey(input.op)) {//todo: fix for last
-                if (input.e.size == 1)
-                    if(input.op != "old" && input.e[0] !is Field)
-                        throw Exception("Complex argument ${input.e[0].prettyPrint()} not supported for keyword ${input.op}" )
+            if (specialHeapKeywords.containsKey(input.op)) {
+                val op =
+                    if(specialKeyword != "NONE")
+                        input.op
                     else
-                        Function(input.op, input.e.map { ex -> exprToTerm(ex, input.op == "old") })
+                        "NONE"
+                    //throw Exception("Cannot apply a special keyword ($specialKeyword) to another keyword (${input.op})")
+                if (input.e.size == 1)
+                        Function(input.op, input.e.map { ex -> exprToTerm(ex, op) })
                 else
                     throw Exception("Special keyword ${input.op} must have one argument, actual arguments size:" + input.e.size)
             }
-            Function(input.op, input.e.map { ex -> exprToTerm(ex, old) })
+            Function(input.op, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
         }
         is DataTypeExpr -> {
-            DataTypeConst(input.name, input.dType, input.e.map { ex -> exprToTerm(ex, old) })
+            DataTypeConst(input.name, input.dType, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
         }
         is CaseExpr -> {
             val match =exprToTerm(input.match)
-            Case(match, input.expectedType, input.content.map { ex -> BranchTerm(exprToTerm(ex.matchTerm, old), exprToTerm(ex.branch, old)) },input.freeVars)
+            Case(match, input.expectedType, input.content.map { ex -> BranchTerm(exprToTerm(ex.matchTerm, specialKeyword), exprToTerm(ex.branch, specialKeyword)) },input.freeVars)
         }
         else -> throw Exception("Expression cannot be converted to term: ${input.prettyPrint()} (${input.javaClass})")
     }
 }
 
-//todo: the comparisons with 1 should be removed once the Bool data type is split from Int
-fun exprToForm(input : Expr, old : Boolean=false) : Formula {//todo: add check for non-field reference inside old and last
-    if(input is SExpr && input.op == "&&" && input.e.size ==2 ) return And(exprToForm(input.e[0], old), exprToForm(input.e[1], old))
-    if(input is SExpr && input.op == "||" && input.e.size ==2 ) return Or(exprToForm(input.e[0], old), exprToForm(input.e[1], old))
-    if(input is SExpr && input.op == "->" && input.e.size ==2 ) return Impl(exprToForm(input.e[0], old), exprToForm(input.e[1], old))
+fun exprToForm(input : Expr, specialKeyword : String="NONE") : Formula {//todo: add check for non-field reference inside old and last
+    if(input is SExpr && input.op == "&&" && input.e.size ==2 ) return And(exprToForm(input.e[0], specialKeyword), exprToForm(input.e[1], specialKeyword))
+    if(input is SExpr && input.op == "||" && input.e.size ==2 ) return Or(exprToForm(input.e[0], specialKeyword), exprToForm(input.e[1], specialKeyword))
+    if(input is SExpr && input.op == "->" && input.e.size ==2 ) return Impl(exprToForm(input.e[0], specialKeyword), exprToForm(input.e[1], specialKeyword))
     if(input is SExpr && input.op == "!" && input.e.size ==1 ) return Not(exprToForm(input.e[0]))
-    if(input is SExpr && input.op == "!=") return Not(exprToForm(SExpr("=",input.e), old))
+    if(input is SExpr && input.op == "!=") return Not(exprToForm(SExpr("=",input.e), specialKeyword))
 
     if(input is SExpr){
-        if(input.op == "old"){//todo: fix for last
+        if (specialHeapKeywords.containsKey(input.op)){//todo: fix for last
+            if(specialKeyword != "NONE")
+                throw Exception("Cannot apply a special keyword ($specialKeyword) to another keyword (${input.op})")
             if(input.e.size == 1) {
-                return exprToForm(input.e[0], true)
+                return exprToForm(input.e[0], input.op)
             }else
-                throw Exception("Special keyword old must have one argument, actual arguments size:" + input.e.size)
+                throw Exception("Special keywords must have one argument, actual arguments size:" + input.e.size)
         }
-        return Predicate(input.op, input.e.map { ex -> exprToTerm(ex, old) })
+        return Predicate(input.op, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
     }
     if(input is Field || input is ProgVar || input is Const)
-        return exprToForm(SExpr("=",listOf(input, Const("true"))), old)
+        return exprToForm(SExpr("=",listOf(input, Const("true"))), specialKeyword) //todo: remove useless comparison with true
     throw Exception("Expression cannot be converted to formula: $input")
 }
 

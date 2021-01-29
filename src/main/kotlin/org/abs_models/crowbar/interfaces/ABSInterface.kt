@@ -25,6 +25,8 @@ fun translateABSExpToSymExpr(input: Exp, returnType: String) : Expr {
                 throw Exception("fields cannot be referred to in the declaration of interfaces: " +
                         "field $input is referred to in the declaration of ${input.contextDecl.name}")
             val type = if (input.type.qualifiedName == "<UNKNOWN>") {
+                if(input.contextDecl.locallookupVarOrFieldName(input.name, true) == null)
+                    throw Exception("Field ${input.name} not defined")
                 input.contextDecl.locallookupVarOrFieldName(input.name, true).type.qualifiedName
             } else
                 input.type.qualifiedName

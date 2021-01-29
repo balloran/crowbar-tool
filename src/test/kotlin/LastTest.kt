@@ -11,7 +11,18 @@ class LastTest : StringSpec({
     for (smt in listOf(z3, cvc)) {
         println("testing with: $smt as backend")
         val fails = listOf("noLastFail")
-        val successes = listOf("simpleSuccess", "oldSuccess", "oldWithUpdateSuccess")
+        val successes = listOf( //todo: refactor the test as the others
+            "simpleSuccess",
+            "lastIfSuccess",
+            "lastWithUpdateSuccess",
+            "simpleSuccessComplex",
+            "lastWhileSuccess",
+            "lastWrappedPredicateWhileSuccess",
+            "lastComplexPredicateWhileSuccess",
+            "lastWrappedComplexPredicateWhileSuccess",
+            "lastFormulaWhileSuccess",
+            "lastWrappedFormulaWhileSuccess",
+            "complexWrapPredicateWhileSuccess")
 
         "$smt last"{
             smtPath = smt
