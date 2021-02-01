@@ -55,10 +55,10 @@ interface PostInvType : DeductType{
             System.err.println("method not found: ${classDecl.qualifiedName}.${name}")
             exitProcess(-1)
         }
-        if (mDecl.methodSig.params.any { !repos.isAllowedType(it.type.toString()) }) {
-            System.err.println("parameters with non-Int type not supported")
-            exitProcess(-1)
-        }
+//        if (mDecl.methodSig.params.any { !repos.isAllowedType(it.type.toString()) }) {
+//            System.err.println("parameters with non-Int type not supported")
+//            exitProcess(-1)
+//        }
 
         output("Crowbar  : loading specification....")
         val symb: SymbolicState?
@@ -309,8 +309,7 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
             info = InfoMethodPrecondition(precondSubst)
         )
 
-
-        val freshFut = FreshGenerator.getFreshFuture()
+        val freshFut = FreshGenerator.getFreshFuture(targetDecl.type.qualifiedName)
         val read = repos.methodEnss[call.met]
         val postCond = read?.first ?: True
 
@@ -609,13 +608,14 @@ fun getReturnType(term: Term) : String{
         return term.dType
     }
     else if (term is Function) {booleanFunction
-        if ( term.name in intFunction || term.name.toIntOrNull() != null || term.name == "valueOf") //todo: hack for futures that are not Int
+        if ( term.name in intFunction || term.name.toIntOrNull() != null)
             return "ABS.StdLib.Int"
+        if (term.name == "valueOf")
+            return (term.params[0] as ProgVar).dType
         if (term.name in booleanFunction)
             return "ABS.StdLib.Bool"
         return when (term.name) {
             "Unit" -> "ABS.StdLib.Unit"
-            "iite" -> getReturnType(term.params[1])
             "ite" -> getReturnType(term.params[1])
             "select" -> (term.params[1] as Field).dType
             else -> {

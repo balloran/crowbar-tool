@@ -259,5 +259,25 @@ class DatatypeTest : StringSpec({
             val doubleFuncAppTrivialSuccess = classDecl.extractMethodNode(postInv, "doubleFuncAppTrivialSuccess", repos)
             executeNode(doubleFuncAppTrivialSuccess, repos, postInv) shouldBe true
         }
+        "$smt valueofDataTypes"{
+            smtPath = smt
+            val (model, repos) = load(listOf(Paths.get("src/test/resources/valueofDataTypes.abs")))
+            val classDecl = model.extractClassDecl("Values", "C", repos)
+
+            val iNode = classDecl.extractInitialNode(postInv)
+            executeNode(iNode, repos, postInv) shouldBe true
+
+            var sNode = classDecl.extractMethodNode(postInv,"success", repos)
+            executeNode(sNode, repos, postInv) shouldBe true
+
+            sNode = classDecl.extractMethodNode(postInv,"internal", repos)
+            executeNode(sNode, repos, postInv) shouldBe true
+
+            sNode = classDecl.extractMethodNode(postInv,"fail", repos)
+            executeNode(sNode, repos, postInv) shouldBe false
+
+            sNode = classDecl.extractMethodNode(postInv,"callOneOnThis", repos)
+            executeNode(sNode, repos, postInv) shouldBe true
+        }
     }
 })

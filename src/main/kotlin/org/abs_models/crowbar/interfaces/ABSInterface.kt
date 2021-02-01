@@ -2,7 +2,6 @@ package org.abs_models.crowbar.interfaces
 
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Const
-import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.SkipStmt
 import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.FunctionRepos
@@ -15,7 +14,9 @@ import org.abs_models.frontend.ast.IfStmt
 import org.abs_models.frontend.ast.ReturnStmt
 import org.abs_models.frontend.ast.Stmt
 import org.abs_models.frontend.ast.WhileStmt
+import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
+import kotlin.system.exitProcess
 
 fun translateABSExpToSymExpr(input: Exp, returnType: String) : Expr {
 
@@ -39,11 +40,17 @@ fun translateABSExpToSymExpr(input: Exp, returnType: String) : Expr {
         is ThisExp         -> Const("1")
         is VarUse -> {
             if (input.name == "result") {
+
                 if (returnType == "<UNKNOWN>")
                     throw Exception("result type cannot be <UNKNOWN>")
                 ReturnVar(returnType)
-            } else
-                ProgVar(input.name, input.type.qualifiedName)
+            } else {
+                if (input.type.isFutureType) {
+                    ProgVar(input.name, (input.type as DataTypeType).getTypeArg(0).qualifiedName, true)
+                }
+                else
+                    ProgVar(input.name, input.type.qualifiedName)
+            }
         }
         is Binary -> {
             val op = when (input) {
@@ -201,7 +208,7 @@ fun desugaring(loc: Location, type: Type, syncCall: SyncCall, returnType :String
     if(syncCall.callee is ThisExp)
         return SyncCallStmt(loc, calleeExpr, callExpr as SyncCallExpr)
 
-    val fut = FreshGenerator.getFreshProgVar("Fut<$type>")
+    val fut = FreshGenerator.getFreshProgVar(type.qualifiedName,true)
     val callStmt = CallStmt(fut, calleeExpr, callExpr as CallExpr)
     val syncStmt = SyncStmt(loc, readFut(fut))
     return SeqStmt(callStmt, syncStmt)

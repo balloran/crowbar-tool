@@ -63,6 +63,7 @@ object ADTRepos {
 	}
 	fun libPrefix(type: String): String {
 		return when {
+			type == "<UNKNOWN>" -> throw Exception("Unknown Type")
 			type == "ABS.StdLib.Bool" -> "Bool"
 			dtypeMap.containsKey(type) -> type
 			else -> "Int"
@@ -154,11 +155,11 @@ object FunctionRepos{
 
 			exitProcess(-1)
 		}
-		val fType = fDecl.type
-		if(!repos.isAllowedType(fType.toString())) {
-			System.err.println("parameters with not supported type: $fType")
-			exitProcess(-1)
-		}
+//		val fType = fDecl.type
+//		if(!repos.isAllowedType(fType.toString())) {
+//			System.err.println("parameters with not supported type: $fType")
+//			exitProcess(-1)
+//		}
 		if(fDecl.functionDef is ExpFunctionDef){
 			known[fName] = fDecl
 		} else {

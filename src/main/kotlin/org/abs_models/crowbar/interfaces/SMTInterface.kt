@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 val smtHeader = """
     ; static header
     (set-logic ALL)
-    (declare-fun   valueOf (Int) Int)
+    (declare-fun   valueOf_Int (Int) Int)
     (declare-const Unit Int)
     (assert (= Unit 0))
     ${DefineSortSMT("Field", "Int").toSMT("\n")}
@@ -30,9 +30,9 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
 
     val fields =  (pre.iterate { it is Field } + post.iterate { it is Field }) as Set<Field>
     setUsedHeaps(fields.map{libPrefix(it.dType)}.toSet())
-    val vars =  ((pre.iterate { it is ProgVar } + post.iterate { it is ProgVar  }) as Set<ProgVar>).filter { it.name != "heap" && it.name !in specialHeapKeywords}
+    val vars =  ((pre.iterate { it is ProgVar} + post.iterate { it is ProgVar   }) as Set<ProgVar>).filter {!it.isFuture && it.name != "heap" && it.name !in specialHeapKeywords}
     val heaps =  ((pre.iterate { it is Function } + post.iterate{ it is Function }) as Set<Function>).filter { it.name.startsWith("NEW") }
-    val futs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("fut_") }
+    val futs =  ((pre.iterate { it is ProgVar  } + post.iterate { it is ProgVar }) as Set<ProgVar>).filter {it.isFuture }
     val funcs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("f_") }
 
     val preSMT = pre.toSMT()

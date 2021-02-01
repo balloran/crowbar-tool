@@ -42,10 +42,12 @@ data class HeapDecl(val dtype: String) : ProofElement{
 
 data class DataTypesDecl(val dTypesDecl : List<DataTypeDecl>) : ProofElement{
     override fun toSMT(indent:String): String {
+        var valueOfs = ""
         if(dTypesDecl.isNotEmpty()) {
             val dTypeDecl = mutableListOf<ArgsSMT>()
             val dTypeValsDecl = mutableListOf<Term>()
             for (dType in dTypesDecl) {
+                valueOfs += "(declare-fun   valueOf_${dType.qualifiedName.replace(".","_")} (Int) ${dType.qualifiedName})\n"
                 dTypeDecl.add(ArgsSMT(dType.qualifiedName, listOf(Function("0"))))
                 val dTypeValDecl = mutableListOf<Term>()
                 for (dataConstructor in dType.dataConstructorList) {
@@ -71,7 +73,7 @@ data class DataTypesDecl(val dTypesDecl : List<DataTypeDecl>) : ProofElement{
                         ))
             )
 
-            return "; DataTypes declaration\n" + decl.toSMT()
+            return "; DataTypes declaration\n${decl.toSMT()}\n$valueOfs"
         }
         return ""
     }
@@ -193,8 +195,13 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
 
     override fun toSMT(indent:String): String {
 
-
-
+        if(name == "valueOf") {
+            if(params[0] is ProgVar)
+                return "(valueOf_${
+                    ADTRepos.libPrefix((params[0] as ProgVar).dType).replace(".", "_")} ${(params[0] as ProgVar).name})"
+            else
+                throw Exception("parameter of \"valueOf\" expects Progvar or Future, actual value: ${params[0]}")
+        }
         if(name == "select") {
             val heapType = ADTRepos.libPrefix((params[1] as Field).dType)
             val fieldName = params[1].toSMT()

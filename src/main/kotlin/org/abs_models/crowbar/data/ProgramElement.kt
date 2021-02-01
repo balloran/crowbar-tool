@@ -283,7 +283,7 @@ open class Field(val name : String, val dType : String="ABS.StdLib.Int") : Locat
     override fun toSMT(indent:String) : String = name
 }
 
-open class ProgVar(val name : String, val dType : String = "Int") : Location, Term { //todo: change simpleName to qualifiedName and do something clever in the SMT-translation
+open class ProgVar(open val name : String, open val dType : String = "Int", val  isFuture:Boolean=false) : Location, Term {
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
         return "$name:$dType"

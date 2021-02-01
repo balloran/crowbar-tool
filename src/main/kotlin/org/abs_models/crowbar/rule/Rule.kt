@@ -9,14 +9,14 @@ import org.abs_models.crowbar.types.AccVar
 //todo: make some less intrusive restrictions
 object FreshGenerator {
     private var count = 0
-    fun getFreshProgVar(dType : String) : ProgVar {
-        return ProgVar("pv_" + (count++), dType)
+    fun getFreshProgVar(dType : String, isFuture:Boolean=false) : ProgVar {
+        return ProgVar("pv_" + (count++), dType,isFuture)
     }
     fun getFreshPP() : PP {
         return PPId(count++)
     }
-    fun getFreshFuture() : Function {
-        return Function("fut_"+ (count++), emptyList())
+    fun getFreshFuture(dType : String) : ProgVar {
+        return ProgVar("fut_"+ (count++), dType,true)
     }
     fun getFreshFunction() : Function {
         return Function("f_"+ (count++), emptyList())
