@@ -13,6 +13,7 @@ buildscript {
 
 plugins{
     id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id 'org.jmailen.kotlinter' version '2.3.2'
     id 'antlr'
 }
 
@@ -50,6 +51,38 @@ dependencies {
     implementation("com.github.ajalt:clikt:2.3.0")
     implementation "org.antlr:antlr4:4.8"
     antlr "org.antlr:antlr4:4.8"
+}
+
+kotlinter {
+    disabledRules = ['no-multi-spaces']
+}
+
+lintKotlinMain {
+    exclude '**/data/**'
+    exclude '**/rule/**'
+    exclude '**/main/**'
+    exclude '**/tree/**'
+    exclude '**/types/**'
+    exclude '**/interfaces/ABSInterface.kt'
+    exclude '**/interfaces/SMTInterface.kt'
+}
+
+lintKotlinTest {
+    exclude '*'
+}
+
+formatKotlinMain {
+    exclude '**/data/**'
+    exclude '**/rule/**'
+    exclude '**/main/**'
+    exclude '**/tree/**'
+    exclude '**/types/**'
+    exclude '**/interfaces/ABSInterface.kt'
+    exclude '**/interfaces/SMTInterface.kt'
+}
+
+formatKotlinTest {
+    exclude '*'
 }
 
 
