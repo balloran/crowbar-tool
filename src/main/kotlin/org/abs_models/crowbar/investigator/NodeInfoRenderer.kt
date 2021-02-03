@@ -5,7 +5,6 @@ import org.abs_models.crowbar.data.Expr
 import org.abs_models.crowbar.data.Field
 import org.abs_models.crowbar.data.Formula
 import org.abs_models.crowbar.data.Location
-import org.abs_models.crowbar.data.OldHeap
 import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.crowbar.data.SExpr
 import org.abs_models.crowbar.main.ADTRepos
@@ -55,7 +54,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
     }
 
     fun initAssignments(): String {
-        val oldHeap = model.heapMap[OldHeap.toSMT()]!!
+        val oldHeap = model.oldHeap
         // Do not render assignments for fields that do not change value from their declared values
         val initAssign = model.initState.filter { it.first is ProgVar || (it.first is Field && !oldHeap.contains(it)) }.map { renderModelAssignment(it.first, it.second) }
         val res = if (initAssign.size > 0)
@@ -68,7 +67,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
     fun fieldDefs(): List<String> {
         // For more intuitive counterexamples, we initialize fields to their value in the state before method execution
         // The state in which the actual counterexample begins is initialized in the method-internal initial assignments
-        val fields = model.heapMap[OldHeap.toSMT()]!!
+        val fields = model.oldHeap
         // Find fields not included in the model but included in the counterexample and initialize them with default value
         val missingFields = (usedFields - fields.map { it.first }.toSet()).map { Pair(it, getDefaultValueForType(it.dType)) }
 

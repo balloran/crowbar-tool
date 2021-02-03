@@ -8,6 +8,7 @@ import org.abs_models.crowbar.data.Location
 import org.abs_models.crowbar.data.OldHeap
 import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.crowbar.data.Term
+import org.abs_models.crowbar.data.apply
 import org.abs_models.crowbar.data.deupdatify
 import org.abs_models.crowbar.data.filterHeapTypes
 import org.abs_models.crowbar.data.specialHeapKeywords
@@ -74,7 +75,10 @@ object CounterexampleGenerator {
 
         output("Investigator: collecting anonymized heap expressions....", Verbosity.V)
         val heapExpressionTerms = infoNodes.map { it.heapExpressions }.flatten()
-        val heapExpressions = (heapExpressionTerms.filter { collectUsedDefinitions(it).minus(availableDefs).isEmpty() } + Heap + OldHeap)
+        // The old heap doesn't change throughout the method, so we can just evaluate the OldHeap expression in ~some~ state
+        val oldHeapStateUpdate = (branchNodes.findLast { it is SymbolicNode }!! as SymbolicNode).content.update
+        val oldHeapExpr = apply(oldHeapStateUpdate, OldHeap) as Term
+        val heapExpressions = (heapExpressionTerms.filter { collectUsedDefinitions(it).minus(availableDefs).isEmpty() } + Heap + oldHeapExpr)
 
         output("Investigator: collecting other smt expressions....", Verbosity.V)
         val miscExpressionTerms = infoNodes.map { it.smtExpressions }.flatten()
@@ -84,7 +88,7 @@ object CounterexampleGenerator {
         val newExpressions = infoNodes.filter { it is InfoObjAlloc }.map { (it as InfoObjAlloc).newSMTExpr }
 
         output("Investigator: parsing model....", Verbosity.V)
-        val model = getModel(uncloseable, heapExpressions, newExpressions, miscExpressions)
+        val model = getModel(uncloseable, heapExpressions, newExpressions, miscExpressions, oldHeapExpr)
 
         output("Investigator: rendering counterexample....", Verbosity.V)
 
@@ -131,7 +135,8 @@ object CounterexampleGenerator {
         leaf: LogicNode,
         heapExpressions: List<Term>,
         newExpressions: List<String>,
-        miscExpressions: List<String>
+        miscExpressions: List<String>,
+        oldHeapExpr: Term
     ): Model {
 
         // "heap", "old", "last", function names etc do not reference program vars
@@ -218,7 +223,7 @@ object CounterexampleGenerator {
         // Get evaluations of sub-obligations and create usable mapping by formula
         val subObligationValues = getExpressionMap(subObligations).mapKeys { subObligationMap[it.key]!! }.mapValues { (it.value as MvBoolean).value }
 
-        return Model(initialAssignments, heapAssignments, futLookup, objLookup, smtExprs, subObligationValues)
+        return Model(initialAssignments, heapAssignments, futLookup, objLookup, smtExprs, subObligationValues, oldHeapExpr.toSMT())
     }
 
     private fun getHeapMap(heapExpressions: List<Term>, fields: List<ModelConstant>, fieldTypes: Map<String, String>): Map<String, List<Pair<Field, ModelValue>>> {
@@ -356,11 +361,15 @@ class Model(
     val futLookup: Map<Int, String>,
     val objLookup: Map<Int, String>,
     val smtExprs: Map<String, ModelValue>,
-    val subObligations: Map<Formula, Boolean>
+    val subObligations: Map<Formula, Boolean>,
+    val oldHeapKey: String
 ) {
     // The SMT solver may reference futures that were not defined in the program
     // we'll mark these with a questionmark and give the underlying integer id from the solver
     fun futNameById(id: Int) = if (futLookup.containsKey(id)) futLookup[id]!! else "fut_?($id)"
+
+    val oldHeap: List<Pair<Field, ModelValue>>
+        get() = heapMap[oldHeapKey] ?: listOf<Pair<Field, ModelValue>>()
 }
 
-val EmptyModel = Model(listOf(), mapOf(), mapOf(), mapOf(), mapOf(), mapOf())
+val EmptyModel = Model(listOf(), mapOf(), mapOf(), mapOf(), mapOf(), mapOf(), "")
