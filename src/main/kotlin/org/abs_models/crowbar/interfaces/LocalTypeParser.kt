@@ -112,7 +112,7 @@ object LocalTypeFormulaConverter : LocalSessionBaseVisitor<LogicElement>() {
 
     override fun visitBoolean_type_formula(ctx: Boolean_type_formulaContext): Formula {
         val term = ctx.term().accept(this) as Term
-        return Predicate("=", listOf(term, Function("1")))
+        return Predicate("=", listOf(term, Function("true")))
     }
 
     override fun visitNot_type_formula(ctx: Not_type_formulaContext): Formula {

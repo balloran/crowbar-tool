@@ -1,8 +1,10 @@
 
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.StringSpec
+import org.abs_models.backend.java.lib.types.ABSInteger
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
+import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.Repository
 import org.abs_models.crowbar.rule.MatchCondition
 import org.abs_models.crowbar.rule.containsAbstractVar
@@ -10,6 +12,7 @@ import org.abs_models.crowbar.rule.match
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.nextPITStrategy
 import org.abs_models.crowbar.types.PostInvariantPair
+import org.abs_models.frontend.ast.Model
 
 class BasicTest : StringSpec() {
 
@@ -21,6 +24,7 @@ class BasicTest : StringSpec() {
     private val pattern3 = addExpr(ExprAbstractVar("A"), Const("1"))
 
     init {
+        ADTRepos.initStdLib()
         "collect"{
             val stmt = WhileStmt(SExpr(">=", listOf(Field("f"), Const("0"))),
                                  SeqStmt(AssignStmt(Field("g"), ProgVar("v")), SkipStmt),

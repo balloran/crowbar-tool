@@ -10,11 +10,22 @@ class LastTest : StringSpec({
     val z3: String = System.getenv("Z3") ?: "z3"
     for (smt in listOf(z3, cvc)) {
         println("testing with: $smt as backend")
-        smtPath = smt
         val fails = listOf("noLastFail")
-        val successes = listOf("simpleSuccess", "oldSuccess", "oldWithUpdateSuccess")
+        val successes = listOf( //todo: refactor the test as the others
+            "simpleSuccess",
+            "lastIfSuccess",
+            "lastWithUpdateSuccess",
+            "simpleSuccessComplex",
+            "lastWhileSuccess",
+            "lastWrappedPredicateWhileSuccess",
+            "lastComplexPredicateWhileSuccess",
+            "lastWrappedComplexPredicateWhileSuccess",
+            "lastFormulaWhileSuccess",
+            "lastWrappedFormulaWhileSuccess",
+            "complexWrapPredicateWhileSuccess")
 
         "$smt last"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/last.abs")))
             val classDecl = model.extractClassDecl("Last", "LastC", repos)
             for(fail in fails) {

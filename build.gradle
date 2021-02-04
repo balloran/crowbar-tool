@@ -85,7 +85,6 @@ formatKotlinTest {
     exclude '*'
 }
 
-
 generateGrammarSource {
     outputDirectory = file("build/generated-src/main/antlr/crowbar/gen")
     arguments += ["-visitor"]

@@ -4,17 +4,9 @@ data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 interface OldI {
 
-    [Spec : Ensures(old(this.f)<this.f)]
-    Unit inheritedSimpleSuccess();
+    [Spec : Ensures(result == 1)]
+    Int incr();
 
-    [Spec : Ensures(old(this.f)<this.f)]
-    Unit inheritedSimpleFail();
-
-    [Spec : Ensures(this.f == old(this.f) + 1)]
-    Unit incr();
-
-    [Spec : Ensures(old(this.f) < result)]
-    Int retFIncr();
 }
 
 class OldC implements OldI {
@@ -42,14 +34,6 @@ class OldC implements OldI {
 
     [Spec : Ensures(old(this.f)<this.f)]
     Unit simpleFail(){
-        this.f = this.f;
-    }
-
-    Unit inheritedSimpleSuccess(){
-        this.f = this.f + 1;
-    }
-
-    Unit inheritedSimpleFail(){
         this.f = this.f;
     }
 
@@ -83,7 +67,7 @@ class OldC implements OldI {
         this.f = this.f + 1;
     }
 
-    [Spec : Ensures((!(old(this.f > 0) && old(f == 0)) || (this.f > 1)))]
+    [Spec : Ensures((!(old(this.f > 0) && old(this.f == 0)) || (this.f > 1)))]
     Unit predicateComplexSuccess(){
         this.f = this.f + 1;
     }
@@ -98,28 +82,25 @@ class OldC implements OldI {
             this.f = this.f + 1;
     }
 
-    Unit incr(){
-        this.f = this.f + 1;
+    Int incr(){
+        return 1;
     }
 
-   [Spec : Ensures(old(this.f) + 1 < this.f)]
+   [Spec : Ensures(old(this.f) + 1 == this.f)]
    Unit awaitSuccess(){
+
+       Int oldVal = this.f;
        await this!incr();
-       this.f = this.f + 1;
+       this.f = oldVal + 1;
    }
 
-    Int retFIncr(){
-        this.f = this.f + 1;
-        return this.f;
-    }
+   [Spec : Ensures(old(this.f) + 1 == this.f)]
+   Unit awaitFail(){
 
-    [Spec : Requires(i>0)]
-    [Spec : Ensures(old(this.f) < this.f)]
-    Unit getSuccess(Int i){
-       Fut<Int> f = this!retFIncr();
-       await f?;
-       this.f = f.get;
-    }
+      Int oldVal = this.f;
+      await this!incr();
+      this.f = this.f + 1;
+   }
 
     [Spec : Ensures(old(this.f) <= this.f)]
     Unit predicateWhileSuccess(Int i){

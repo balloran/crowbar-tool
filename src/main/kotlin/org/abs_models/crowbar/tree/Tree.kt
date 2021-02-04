@@ -29,7 +29,15 @@ data class StaticNode(val str : String) : InferenceLeaf{
     override fun normalize() = Unit
 }
 
-data class LogicNode(val ante: Formula, val succ : Formula) : SymbolicLeaf{
+interface InfoNode {
+    val info: NodeInfo
+}
+
+data class LogicNode(
+    val ante: Formula,
+    val succ : Formula,
+    override val info: NodeInfo = NoInfo()
+) : InfoNode, SymbolicLeaf{
     private var isEvaluated = false
     private var isValid = false
     override fun evaluate() : Boolean{
@@ -45,7 +53,12 @@ data class LogicNode(val ante: Formula, val succ : Formula) : SymbolicLeaf{
     override fun hasAbstractVar() : Boolean = containsAbstractVar(ante) || containsAbstractVar(succ)
     override fun normalize() = Unit
 }
-data class SymbolicNode(val content : SymbolicState, var children : List<SymbolicTree> = emptyList()) : SymbolicTree{
+
+data class SymbolicNode(
+    val content : SymbolicState,
+    var children : List<SymbolicTree> = emptyList(),
+    override val info: NodeInfo = NoInfo()
+) : InfoNode, SymbolicTree{
     override fun finishedExecution() : Boolean {
         return children.isNotEmpty() && children.fold(true, { acc, nx -> acc && nx.finishedExecution()})
     }

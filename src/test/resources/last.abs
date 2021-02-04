@@ -3,11 +3,10 @@ module Last;
 data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 interface LastI{
-    [Spec : Ensures(this.i == old(this.i) + 1)]
-    Unit incr();
+    Int incr();
 }
 
-class LastC(Int i) implements LastI{
+class LastC(Int i, Int k) implements LastI{
 
     [Ensures (last(this.i) != this.i)]
     Unit noLastFail(){
@@ -22,7 +21,7 @@ class LastC(Int i) implements LastI{
     }
 
     [Ensures (last(this.i) != old(this.i))]
-    Unit oldSuccess(){
+    Unit lastIfSuccess(){
       if(this.i == 0){
         await this.i!=0;
       }else{
@@ -30,14 +29,100 @@ class LastC(Int i) implements LastI{
       }
     }
 
-    Unit incr(){
+    Int incr(){
+        return  1;
+    }
+
+    [Ensures(this.i == last(this.i) + 1)]
+    Unit lastWithUpdateSuccess(){
+        this.i = 3;
+        Fut<Int> fut = this!incr();
+        await fut?;
         this.i = this.i + 1;
     }
 
-    [Spec : Ensures(last(this.i) == old(this.i) + 1)]
-    Unit oldWithUpdateSuccess(Int i){
-       Fut<Unit> f = this!incr();
-       await f?;
+    [Ensures (last((this.i) != 0))]
+    Unit simpleSuccessComplex(){
+        this.i = 0;
+        await this.i!=0;
+        this.i=0;
+    }
+
+    [Spec : Requires(this.i != 0)]
+    [Spec : Ensures(last(this.i) != 0)]
+    Unit lastWhileSuccess(Int j){
+
+        [Spec: WhileInv(last(this.i) != 0)]
+        while(j>0){
+            await this.i!=0;
+            j = j-1;
+        }
+        this.i = this.i + 1;
+    }
+
+    [Spec : Requires(this.i != 0)]
+    [Spec : Ensures(last(this.i != 0))]
+    Unit lastWrappedPredicateWhileSuccess(Int j){
+
+        [Spec: WhileInv(last(this.i != 0))]
+        while(j>0){
+            await this.i!=0;
+            j = j-1;
+        }
+        this.i = this.i + 1;
+    }
+    [Spec : Requires(this.i!=this.k)]
+    [Spec : Ensures(last(this.i) != last(this.k))]
+    Unit lastComplexPredicateWhileSuccess(Int j){
+
+        [Spec: WhileInv(last(this.i!=this.k))]
+        while(j>0){
+            await this.i!=this.k;
+            j = j-1;
+        }
+        this.i = this.i + 1;
+    }
+
+    [Spec : Requires(this.i!=this.k)]
+    [Spec : Ensures(last(this.i!=this.k))]
+    Unit lastWrappedComplexPredicateWhileSuccess(Int j){
+
+        [Spec: WhileInv(last(this.i!=this.k))]
+        while(j>0){
+            await this.i!=this.k;
+            j = j-1;
+        }
+        this.i = this.i + 1;
+    }
+    [Spec : Requires(this.i!= 0 && this.k != 0)]
+    [Spec : Ensures(last(this.i!= 0 && this.k != 0))]
+    Unit lastFormulaWhileSuccess(Int j){
+
+        [Spec: WhileInv(last(this.i!= 0) && last(this.k != 0))]
+        while(j>0){
+            await (this.i!= 0 && this.k != 0);
+            j = j-1;
+        }
+        this.i = this.i + 1;
+    }
+
+    [Spec : Requires(this.i!= 0 && this.k != 0)]
+    [Spec : Ensures(last(this.i!= 0 && this.k != 0))]
+    Unit lastWrappedFormulaWhileSuccess(Int j){
+
+        [Spec: WhileInv(last(this.i!= 0 && this.k != 0))]
+        while(j>0){
+            await (this.i!= 0 && this.k != 0);
+            j = j-1;
+        }
+        this.i = this.i + 1;
+    }
+
+    [Spec : Ensures(last(this.i != this.k && this.i != old(this.i)))]
+    Unit complexWrapPredicateWhileSuccess(Int j){
+        Int oldI = this.i;
+        await this.i != this.k && this.i != oldI;
+        this.i = this.i + 1;
     }
 }
 

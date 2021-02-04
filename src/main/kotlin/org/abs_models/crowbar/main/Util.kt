@@ -4,11 +4,13 @@ import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.Stmt
 import org.abs_models.crowbar.interfaces.translateABSExpToSymExpr
+import org.abs_models.crowbar.investigator.CounterexampleGenerator
 import org.abs_models.crowbar.tree.LogicNode
 import org.abs_models.crowbar.tree.StaticNode
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.getStrategy
 import org.abs_models.frontend.ast.*
+import sun.reflect.generics.tree.ReturnType
 import java.io.File
 import java.nio.file.Path
 import kotlin.reflect.KClass
@@ -47,6 +49,7 @@ fun load(paths : List<Path>) : Pair<Model,Repository> {
 
     //initialization: first read the types, then the function definitions and then the specifications
     FunctionRepos.init(model, repos)
+    ADTRepos.init(model)
     repos.populateClassReqs(model)
     repos.populateMethodReqs(model)
     return Pair(model, repos)
@@ -54,7 +57,7 @@ fun load(paths : List<Path>) : Pair<Model,Repository> {
 
 fun extractInheritedSpec(iDecl : InterfaceTypeUse, expectedSpec : String, mSig: MethodSig, default:Formula) : Formula? {
     for( miSig in iDecl.decl.findChildren(MethodSig::class.java)){
-        if(miSig.matches(mSig)) return extractSpec(miSig, expectedSpec, default)
+        if(miSig.matches(mSig)) return extractSpec(miSig, expectedSpec,mSig.type.qualifiedName, default)
     }
     if(iDecl.decl.getChild(1) !is org.abs_models.frontend.ast.List<*>) throw Exception("Invalid specification AST ${iDecl.decl}")
 
@@ -68,7 +71,7 @@ fun extractInheritedSpec(iDecl : InterfaceTypeUse, expectedSpec : String, mSig: 
 }
 
 fun extractInheritedSpec(mSig : MethodSig, expectedSpec : String, default:Formula = True) : Formula {
-    val direct = extractSpec(mSig, expectedSpec, default)
+    val direct = extractSpec(mSig, expectedSpec, mSig.type.qualifiedName,default)
     val conDecl = mSig.contextDecl
     if(conDecl is ClassDecl){
         for( iDecl in conDecl.implementedInterfaceUses){
@@ -79,7 +82,7 @@ fun extractInheritedSpec(mSig : MethodSig, expectedSpec : String, default:Formul
     return direct
 }
 
-fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : String, default:Formula = True, multipleAllowed:Boolean = true) : Formula {
+fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : String, returnType: String, default:Formula = True, multipleAllowed:Boolean = true) : Formula {
     var ret : Formula? = null
     //TODO: this seems to be a problem with annotations in the functional layer in the ABS AST
     //TODO: refactor the code duplication
@@ -91,12 +94,12 @@ fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : 
             }
             val annotated = annotation.value as DataConstructorExp
             if(annotated.constructor != expectedSpec) continue
-            val next = exprToForm(translateABSExpToSymExpr(annotated.getParam(0) as Exp))
+            val next = exprToForm(translateABSExpToSymExpr(annotated.getParam(0) as Exp,decl.type.qualifiedName))
             ret = if(ret == null) next else And(ret, next)
             if(!multipleAllowed) break
         }
     }else if (decl is MethodImpl && decl !is FunctionDecl){
-        ret = extractInheritedSpec(decl.methodSig,expectedSpec,default)
+        ret = extractInheritedSpec(decl.methodSig,expectedSpec, default)
     }else {
         for (annotation in decl.nodeAnnotations){
             if(!annotation.type.toString().endsWith(".Spec")) continue
@@ -105,7 +108,7 @@ fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : 
             }
             val annotated = annotation.value as DataConstructorExp
             if(annotated.constructor != expectedSpec) continue
-            val next = exprToForm(translateABSExpToSymExpr(annotated.getParam(0) as Exp))
+            val next = exprToForm(translateABSExpToSymExpr(annotated.getParam(0) as Exp,returnType))
             ret = if(ret == null) next else And(ret, next)
             if(!multipleAllowed) break
         }
@@ -194,7 +197,7 @@ fun ClassDecl.extractMethodNode(usedType: KClass<out DeductType>, name : String,
     return callTarget.call(obj, this, name, repos) as SymbolicNode
 }
 
-fun executeNode(node : SymbolicNode, repos: Repository, usedType : KClass<out DeductType>) : Boolean{ //todo: this should handle inference and static leafs now
+fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out DeductType>, identifier: String = "unknown") : Boolean{ //todo: this should handle inference and static leafs now
 
     output("Crowbar  : starting symbolic execution....")
     val pit = getStrategy(usedType,repos)
@@ -225,17 +228,22 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType : KClass<out De
 
     }
 
+    if(!closed && investigate) {
+        output("Crowbar  : failed to close node, starting investigator....")
+        CounterexampleGenerator.investigateAll(node, identifier)
+    }
+
     return closed
 }
 
 fun ClassDecl.executeAll(repos: Repository, usedType: KClass<out DeductType>): Boolean{
     val iNode = extractInitialNode(usedType)
-    var totalClosed = executeNode(iNode, repos, usedType)
+    var totalClosed = executeNode(iNode, repos, usedType, "<init>")
     output("Crowbar  : Verification <init>: $totalClosed")
 
     for(m in methods){
         val node = extractMethodNode(usedType, m.methodSig.name, repos)
-        val closed = executeNode(node, repos, usedType)
+        val closed = executeNode(node, repos, usedType, m.methodSig.name)
         output("Crowbar  : Verification ${m.methodSig.name}: $closed")
         totalClosed = totalClosed && closed
     }

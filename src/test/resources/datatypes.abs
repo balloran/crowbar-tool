@@ -1,0 +1,222 @@
+module DTypes;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+data ComplexType = ComplexA | ComplexB;
+data DataType = Default | DataA | DataB | DataC;
+data TrivialType = Trivial;
+
+data Type = Type1(Type t) | Type2 (Type t, Bool) |Type3;
+
+def Type f(Type i) = if(i == Type3) then Type1(Type3) else Type3;
+
+
+[Spec : Requires( c != ComplexB )]
+[Spec : Ensures( result != ComplexB )]
+def ComplexType nonIntParams(ComplexType c) = c;
+
+//[Spec : Ensures( result == Trivial )]
+def TrivialType trivialFunc() = Trivial;
+
+//[Spec : Ensures( result == ComplexA )]
+def ComplexType complexA() = ComplexA;
+
+//[Spec : Ensures( result == ComplexB )]
+def ComplexType complexB() = ComplexB;
+
+class C{
+    [Spec : Requires( p != ComplexB )]
+    [Spec : Ensures( result == DataA )]
+    DataType caseSimpleSuccess(ComplexType p){
+        DataType res = Default;
+        case p{
+            ComplexA => res = DataA;
+            ComplexB => res = DataB;
+            _        => skip;
+        }
+        return res;
+    }
+
+    [Spec : Requires( p != ComplexB )]
+    [Spec : Ensures( result == DataB )]
+    DataType caseSimpleFail(ComplexType p){
+        DataType res = Default;
+        case p{
+            ComplexA => res = DataA;
+            ComplexB => res = DataB;
+            _        => skip;
+        }
+        return res;
+    }
+
+    [Spec : Ensures( result == Default )]
+    DataType caseFail(ComplexType p){
+        DataType res = Default;
+        case p{
+            ComplexA => res = DataA;
+            ComplexB => res = DataB;
+            _        => skip;
+        }
+        return res;
+    }
+
+    [Spec : Ensures( result == Trivial )]
+    TrivialType constReturnSuccess(){
+        return Trivial;
+    }
+
+
+    [Spec : Ensures( result == Trivial )]
+    TrivialType trivialSuccess(TrivialType p){
+        return p;
+    }
+
+    [Spec : Ensures( result != DataB )]
+    DataType whileSuccess(ComplexType p, Int i){
+        DataType res = Default;
+        Int j = i;
+
+        [Spec : WhileInv( res != DataB )]
+        while( j >= 0 ){
+            res = DataA;
+        }
+        return res;
+    }
+
+    [Spec : Ensures(result == Type3)]
+    Type ifExpSuccess(){
+        Type res =  f(Type1(Type3));
+        return res;
+    }
+
+    [Spec : Ensures(result == Type3)]
+    Type ifExpFail(){
+        Type res =  f(Type3);
+        return res;
+    }
+
+}
+
+[Spec : ObjInv( this.f != Default )]
+class D (Int fi, Int i){
+	DataType f = DataA;
+	ComplexType fc = ComplexA;
+	DataType res = DataC;
+
+    [Spec : Ensure( i >= 0 && this.res != DataC )]
+	DataType mixedHeapSuccess(ComplexType p){
+        case (p){
+            ComplexA => { i = 1; res = DataA; }
+            ComplexB => { i = 2; res = DataB; }
+            _        => skip;
+        }
+        return res;
+    }
+
+   [Spec : Ensures( result != Default )]
+    DataType awaitSuccess(ComplexType p, Int i){
+        DataType res = DataB;
+        await this.fi >= 0;
+    	this.f = res;
+        return res;
+    }
+
+
+   [Spec : Ensures( result != Default )]
+    DataType awaitWhileSuccess(ComplexType p, Int i){
+        DataType res = DataB;
+        Int j = i;
+  		[Spec : WhileInv( res != Default && this.f != Default )]
+        while( j >= 0 ){
+				await this.fi >= 0;
+				res = this.f;
+    	}
+        return res;
+    }
+
+    [Spec : Ensures( result == Trivial )]
+    TrivialType trivialFuncSuccess(){
+        return trivialFunc();
+    }
+
+    [Spec : Requires( p != Default )]
+    [Spec : Ensures( result == ComplexB )]
+    ComplexType caseReturnFunc(DataType p){
+        ComplexType res = ComplexA;
+        case p{
+            Default => res = complexA();
+            _ => res = complexB();
+        }
+        return res;
+    }
+
+    [Spec : Requires( p != ComplexB )]
+    [Spec : Ensures( result != ComplexB )]
+    ComplexType nonIntParamsSuccess(ComplexType p){
+        return nonIntParams(p);
+    }
+
+
+    [Spec : Requires( this.f == p )]
+    [Spec : Ensures( result == old(this.f) )]
+    DataType simpleOldSuccess(DataType p){
+        return p;
+    }
+
+    [Spec : Requires( this.f != p )]
+    [Spec : Ensures( result == old(this.f) )]
+    DataType simpleOldFail(DataType p){
+        return p;
+    }
+
+    [Spec : Ensures( last(this.fc) == ComplexA )]
+    Unit simpleLastSuccess(DataType p){
+        await this.fc != complexB();
+    }
+
+    [Spec : Ensures( last(this.f) == DataA )]
+    Unit simpleLastFail(DataType p){
+        DataType res = DataA;
+        await this.f != res;
+    }
+
+
+   [Spec : Requires( this.f != Default )]
+   [Spec : Ensures( result != Default && this.f!=Default )]
+    DataType simpleReturnMethod(){
+        await this.f != Default;
+        return this.f;
+    }
+
+   [Spec : Requires( this.f != Default )]
+   [Spec : Ensures( result != Default && this.f!=Default )]
+    DataType syncCallSuccess(){
+        DataType res = this.simpleReturnMethod();
+        return res;
+    }
+
+}
+
+
+
+interface I{
+   [Spec : Ensures( result == 0 )]
+    Int m();
+}
+
+class E(ComplexType ct1, ComplexType ct2) implements I{
+
+    I i = null;
+
+    Int m(){
+        return 0;
+    }
+
+   [Spec : Ensures( this.i != null && result == 0 )]
+    Int simpleSuccess(){
+        this.i = new E(ComplexA,ComplexB);
+        Int res = this.i.m();
+        return res;
+    }
+}
+
+{}

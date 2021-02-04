@@ -10,9 +10,9 @@ class OldTest : StringSpec({
     val z3: String = System.getenv("Z3") ?: "z3"
     for (smt in listOf(z3, cvc)) {
         println("testing with: $smt as backend")
-        smtPath = smt
 
         "$smt trivialOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -25,8 +25,9 @@ class OldTest : StringSpec({
             val trivialFail = classDecl.extractMethodNode(postInv,"trivialFail", repos)
             executeNode(trivialFail, repos, postInv) shouldBe false
         }
-
+//
         "$smt simpleOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -38,18 +39,8 @@ class OldTest : StringSpec({
 
         }
 
-        "$smt inheritedOld"{
-            val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
-            val classDecl = model.extractClassDecl("Old", "OldC", repos)
-
-            val inheritedSimpleSuccess = classDecl.extractMethodNode(postInv,"inheritedSimpleSuccess", repos)
-            executeNode(inheritedSimpleSuccess, repos, postInv) shouldBe true
-
-            val inheritedSimpleFail = classDecl.extractMethodNode(postInv,"inheritedSimpleFail", repos)
-            executeNode(inheritedSimpleFail, repos, postInv) shouldBe false
-        }
-
         "$smt booleanOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -61,6 +52,7 @@ class OldTest : StringSpec({
         }
 
         "$smt predicateOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -82,6 +74,7 @@ class OldTest : StringSpec({
         }
 
         "$smt ifOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -91,15 +84,20 @@ class OldTest : StringSpec({
         }
 
         "$smt awaitOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
             val awaitSuccess = classDecl.extractMethodNode(postInv,"awaitSuccess", repos)
             executeNode(awaitSuccess, repos, postInv) shouldBe true
 
+            val awaitFail = classDecl.extractMethodNode(postInv,"awaitFail", repos)
+            executeNode(awaitFail, repos, postInv) shouldBe false
+
         }
 
         "$smt whileOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
             val classDecl = model.extractClassDecl("Old", "OldC", repos)
 
@@ -108,8 +106,8 @@ class OldTest : StringSpec({
 
         }
 
-
         "$smt propOld"{
+            smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/oldprop.abs")))
             val classDecl = model.extractClassDecl("M", "C", repos)
 
@@ -129,10 +127,6 @@ class OldTest : StringSpec({
             executeNode(ss, repos, postInv) shouldBe false
             ss = classDecl.extractMethodNode(postInv,"doNothing", repos)
             executeNode(ss, repos, postInv) shouldBe true
-
-
         }
-
-
     }
 })

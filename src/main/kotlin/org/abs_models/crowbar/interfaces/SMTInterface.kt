@@ -3,66 +3,89 @@ package org.abs_models.crowbar.interfaces
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.*
+import org.abs_models.crowbar.main.ADTRepos.libPrefix
+import org.abs_models.crowbar.main.ADTRepos.setUsedHeaps
+import org.abs_models.crowbar.types.booleanFunction
 import java.io.File
 import java.util.concurrent.TimeUnit
 
 //(set-option :timeout ${timeoutS*1000})
 val smtHeader = """
+    ; static header
     (set-logic ALL)
-    (define-sort Field () Int)
-    (define-sort MHeap () (Array Field Int))
-    (declare-const heap MHeap)
-    (declare-const ${OldHeap.name} MHeap)
-    (declare-const ${LastHeap.name} MHeap)
-    (declare-fun   anon (MHeap) MHeap)
-    (declare-fun   valueOf (Int) Int)
-    (define-fun iOr((x Int) (y Int)) Int
-        (ite (or (= x 1) (= y 1)) 1 0))
-    (define-fun iAnd((x Int) (y Int)) Int
-        (ite (and (= x 1) (= y 1)) 1 0))
-    (define-fun iNot((x Int)) Int
-        (ite (= x 1) 0 1))
-    (define-fun iLt((x Int) (y Int)) Int
-        (ite (< x y) 1 0))
-    (define-fun iLeq((x Int) (y Int)) Int
-        (ite (<= x y) 1 0))
-    (define-fun iGt((x Int) (y Int)) Int
-        (ite (> x y) 1 0))
-    (define-fun iGeq((x Int) (y Int)) Int
-        (ite (>= x y) 1 0))
-    (define-fun iEq((x Int) (y Int)) Int
-        (ite (= x y) 1 0))
-    (define-fun iNeq((x Int) (y Int)) Int
-        (ite (= x y) 0 1)) 
-    (define-fun iite((x Int) (y Int) (z Int)) Int (ite (= x 1) y z))
+    (declare-fun   valueOf_Int (Int) Int)
     (declare-const Unit Int)
     (assert (= Unit 0))
+    ${DefineSortSMT("Field", "Int").toSMT("\n")}
+    ; end static header
     """.trimIndent()
 
 @Suppress("UNCHECKED_CAST")
-fun generateSMT(ante : Formula, succ: Formula) : String {
+fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
+
+    resetWildCards()
+
     val pre = deupdatify(ante)
     val post = deupdatify(Not(succ))
 
     val fields =  (pre.iterate { it is Field } + post.iterate { it is Field }) as Set<Field>
-    val vars =  ((pre.iterate { it is ProgVar } + post.iterate { it is ProgVar  }) as Set<ProgVar>).filter { it.name != "heap" && it.name !in specialHeapKeywords}
-    val heaps =  ((pre.iterate { it is Function } + post.iterate{ it is Function }) as Set<Function>).map { it.name }.filter { it.startsWith("NEW") }
-    val futs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("fut_") }
+    setUsedHeaps(fields.map{libPrefix(it.dType)}.toSet())
+    val vars =  ((pre.iterate { it is ProgVar} + post.iterate { it is ProgVar   }) as Set<ProgVar>).filter {!it.isFuture && it.name != "heap" && it.name !in specialHeapKeywords}
+    val heaps =  ((pre.iterate { it is Function } + post.iterate{ it is Function }) as Set<Function>).filter { it.name.startsWith("NEW") }
+    val futs =  ((pre.iterate { it is ProgVar  } + post.iterate { it is ProgVar }) as Set<ProgVar>).filter {it.isFuture }
     val funcs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("f_") }
-    var header = smtHeader
-    header += FunctionRepos
-    header = fields.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Field)"})
-    header = vars.fold(header, {acc, nx-> acc+"\n(declare-const ${nx.name} Int)"}) //hack: dtype goes here
-    header = heaps.fold(header, {acc, nx-> "$acc\n(declare-fun $nx (${"Int ".repeat(nx.split("_")[1].toInt())}) Int)" })
-    header = futs.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Int)"})
-    header = funcs.fold(header, { acc, nx-> acc +"\n(declare-const ${nx.name} Int)"})
-    fields.forEach { f1 -> fields.minus(f1).forEach{ f2 -> header += "\n (assert (not (= ${f1.name} ${f2.name})))" } }
+
+    val preSMT = pre.toSMT()
+    val postSMT = post.toSMT()
+
+    val dTypesDecl = ADTRepos.toString()
+    val functionDecl = FunctionRepos.toString()
+    val wildcards: String = wildCardsConst.map { FunctionDeclSMT(it.key,it.value).toSMT("\n\t") }.joinToString("") { it }
+    val fieldsDecl = fields.joinToString("\n\t"){ "(declare-const ${it.name} Field)"}
+    val varsDecl = vars.joinToString("\n\t"){"(declare-const ${it.name} ${libPrefix(it.dType)})"}
+    val objectsDecl = heaps.joinToString("\n\t"){"(declare-fun ${it.name} (${it.params.joinToString (" "){
+        term ->
+        if(term is DataTypeConst)
+            term.dType
+        else if(term is Function && term.name in booleanFunction)
+            "Bool"
+        else {
+            "Int"
+        }
+    }}) Int)" }
+    val futsDecl = futs.joinToString("\n") { "(declare-const ${it.name} Int)"}
+    val funcsDecl = funcs.joinToString("\n") { "(declare-const ${it.name} Int)"}
+    var fieldsConstraints = ""
+    fields.forEach { f1 -> fields.minus(f1).forEach{ f2 -> if(libPrefix(f1.dType) == libPrefix(f2.dType)) fieldsConstraints += "(assert (not (= ${f1.name} ${f2.name})))" } } //??
+
 
     return """
-    $header 
-    (assert ${pre.toSMT(true)} ) 
-    (assert ${post.toSMT(true)}) 
+;header
+    $smtHeader
+;data type declaration
+    $dTypesDecl
+;wildcards declaration
+    $wildcards
+;functions declaration
+    $functionDecl
+;fields declaration
+    $fieldsDecl
+;variables declaration
+    $varsDecl
+;objects declaration
+    $objectsDecl
+;futures declaration
+    $futsDecl
+;funcs declaration
+    $funcsDecl
+;fields constraints 
+    $fieldsConstraints
+    ; Precondition
+    (assert $preSMT )
+    ; Negated postcondition
+    (assert $postSMT) 
     (check-sat)
+    $modelCmd
     (exit)
     """.trimIndent()
 }
@@ -84,10 +107,14 @@ fun String.runCommand(
     null
 }
 
-fun evaluateSMT(smtRep : String) : Boolean {
+fun plainSMTCommand(smtRep: String) : String? {
     val path = "${tmpPath}out.smt2"
     File(path).writeText(smtRep)
-    val res = "$smtPath $path".runCommand()
+    return "$smtPath $path".runCommand()
+}
+
+fun evaluateSMT(smtRep : String) : Boolean {
+    val res = plainSMTCommand(smtRep)
     return res != null && res.trim() == "unsat"
 }
 
@@ -95,4 +122,23 @@ fun evaluateSMT(ante: Formula, succ: Formula) : Boolean {
     val smtRep = generateSMT(ante, succ)
     if(verbosity >= Verbosity.VV) println("crowbar-v: \n$smtRep")
     return evaluateSMT(smtRep)
+}
+
+private val wildCardsConst = mutableMapOf<String,String>()
+
+private var countWildCard = 0
+
+fun createWildCard(dType: String) : String{
+    val wildCard = "_${countWildCard++}"
+    wildCardsConst[wildCard] = dType
+    return wildCard
+}
+
+fun refreshWildCard(name: String, dType: String) {
+    wildCardsConst[name] = dType
+}
+
+fun resetWildCards() {
+    wildCardsConst.clear()
+    countWildCard = 0
 }

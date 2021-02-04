@@ -1,0 +1,212 @@
+module Functors;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+data TrivialType = Trivial;
+data WrapTrivialType = WrapTrivial(TrivialType wt);
+data ComplexType = ComplexA | ComplexB;
+data WrapComplexType = WrapComplex(ComplexType wc);
+data DataType = DataA | DataB | Default;
+data WrapPairComplexType = WrapPairComplex(ComplexType wpc0,  ComplexType wpc1);
+data WrapDataType = WrapData(DataType wd);
+
+data Type = Type1(Type t) | Type2 (Type t) |Type3;
+
+[Spec : Ensures( result == ComplexA )]
+def ComplexType complexA() = ComplexA;
+
+[Spec : Ensures( result == ComplexB )]
+def ComplexType complexB() = ComplexB;
+
+class C{
+
+    [Spec : Ensures( result == Trivial )]
+    TrivialType trivialSuccess(WrapTrivialType wtt){
+        return wt(wtt);
+    }
+
+    [Spec : Requires( wc(p) != ComplexB )]
+    [Spec : Ensures( result == DataA )]
+    DataType caseSimpleSuccess(WrapComplexType p){
+        DataType res = Default;
+        case wc(p){
+            ComplexA => res = DataA;
+            ComplexB => res = DataB;
+            _        => skip;
+        }
+        return res;
+    }
+
+    [Spec : Requires( wc(p) != ComplexB )]
+    [Spec : Ensures( result == DataB )]
+    DataType caseSimpleFail(WrapComplexType p){
+        DataType res = Default;
+        case wc(p){
+            ComplexA => res = DataA;
+            ComplexB => res = DataB;
+            _        => skip;
+        }
+        return res;
+    }
+
+    [Spec : Ensures( result == Default )]
+    DataType caseFail(WrapComplexType p){
+        DataType res = Default;
+        case wc(p){
+            ComplexA => res = DataA;
+            ComplexB => res = DataB;
+            _        => skip;
+        }
+        return res;
+    }
+
+    [Spec : Ensures( wc(result) == ComplexA )]
+    WrapComplexType constFunctSuccess(){
+        return WrapComplex(ComplexA);
+    }
+
+    [Spec : Ensures( wc(result) != ComplexA )]
+    WrapComplexType varReturnSuccess(){
+        WrapComplexType wpt = WrapComplex(ComplexB);
+        return wpt;
+    }
+
+    [Spec : Ensures( wpc0(result) == wpc1(result) )]
+    WrapPairComplexType comparisonEqConstFunct(){
+        WrapPairComplexType wpc = WrapPairComplex(ComplexA, ComplexA);
+        return wpc;
+    }
+
+    [Spec : Ensures( wpc0(result) != wpc1(result) )]
+    WrapPairComplexType comparisonUneqConstFunct(){
+        WrapPairComplexType wpc = WrapPairComplex(ComplexA, ComplexB);
+        return wpc;
+    }
+
+
+    [Spec : Ensures( wd(result) != DataB )]
+    WrapDataType whileSuccess(Int i){
+        WrapDataType res = WrapData(Default);
+        Int j = i;
+        [Spec : WhileInv( res != WrapData(DataB))]
+        while( j >= 0 ){
+            res = WrapData(DataA);
+        }
+        return res;
+    }
+
+    [Spec : Ensures( wd(result) != DataB )]
+    WrapDataType whileFuncInvSuccess(Int i){
+        WrapDataType res = WrapData(Default);
+        Int j = i;
+        [Spec : WhileInv( wd(res) != DataB)]
+        while( j >= 0 ){
+            res = WrapData(DataA);
+        }
+        return res;
+    }
+
+    [Spec : Requires( t(p) == Type3 && p != Type1(Type3) )]
+    [Spec : Ensures( result == Type2(Type3))]
+    Type somethingSimpleFail(Type p){
+        return p;
+    }
+
+    [Spec : Requires( p != Type3 && t(p) == Type3 && p != Type1(Type3) )]
+    [Spec : Ensures( result == Type2(Type3))]
+    Type somethingSimpleSuccess(Type p){
+        return p;
+    }
+
+    [Spec : Requires( p == Type1(Type2(Type3)) )]
+    [Spec : Ensures( t(t(result)) == Type3)]
+    Type doubleFuncAppTrivialSuccess(Type p){
+        return p;
+    }
+
+    [Spec : Requires( p == Type2(Type1(Type3)) )]
+    [Spec : Ensures( t(t(result)) == Type3)]
+    Type doubleFuncAppTrivial2Success(Type p){
+        return p;
+    }
+
+}
+
+
+
+[Spec : ObjInv( this.f != WrapData(Default) )]
+class D(Int fi, Type p){
+    WrapDataType f = WrapData(DataA);
+    WrapComplexType fc = WrapComplex(complexA());
+
+
+    [Spec : Requires( wd(this.f) == p) ]
+    [Spec : Ensures( wd(result) == wd(old(this.f)) )]
+    WrapDataType simpleOldSuccess(DataType p){
+        return WrapData(p);
+    }
+
+
+    [Spec : Requires( wd(this.f) != p )]
+    [Spec : Ensures( result == old(this.f) )]
+    WrapDataType simpleOldFail(DataType p){
+        return WrapData(p);
+    }
+
+    [Spec : Ensures( wc(last(this.fc)) == ComplexA )]
+    Unit simpleLastSuccess(DataType p){
+        await this.fc != WrapComplex (complexB());
+    }
+
+    [Spec : Ensures( wd(last(this.f)) == DataA )]
+    Unit simpleLastFail(DataType p){
+        DataType res = DataA;
+        await this.f != WrapData(res);
+    }
+
+
+    [Spec : Ensures( result != WrapData(DataB) )]
+    WrapDataType whileSuccess(Int i){
+        WrapDataType res = WrapData(Default);
+        Int j = i;
+
+        [Spec : WhileInv( wd(res) != DataB && wd(this.f) != Default)]
+        while( j >= 0 ){
+            res = WrapData(DataA);
+        }
+        return res;
+    }
+
+    [Spec : Ensures( result != WrapData(Default) )]
+    WrapDataType awaitWhileSuccess(ComplexType p, Int i){
+        WrapDataType res = WrapData(DataB);
+        Int j = i;
+        [Spec : WhileInv( wd(res) != Default && wd(this.f) != Default )]
+        while( j >= 0 ){
+                await this.fi >= 0;
+                res = this.f;
+        }
+        return res;
+    }
+
+    [Spec : Requires( t(this.p) == Type3 && this.p != Type1(Type3) )]
+    [Spec : Ensures( result == Type2(Type3))]
+    Type somethingSimpleFail(){
+        return p;
+    }
+
+    [Spec : Requires( this.p != Type3 && t(this.p) == Type3 && this.p != Type1(Type3) )]
+    [Spec : Ensures( result == Type2(Type3))]
+    Type somethingSimpleSuccess(){
+        return p;
+    }
+
+
+    [Spec : Requires( this.p == Type1(Type2(Type3)) )]
+    [Spec : Ensures( t(t(result)) == Type3)]
+    Type doubleFuncAppTrivialSuccess(){
+        return this.p;
+    }
+
+}
+
+{}

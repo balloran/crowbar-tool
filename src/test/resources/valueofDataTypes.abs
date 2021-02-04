@@ -1,0 +1,62 @@
+module Values;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+
+data Type = Type1 | Type2 | Type3;
+
+interface I1 {
+	[Spec : Ensures(result == Type1)]
+	Type success();
+	[Spec : Ensures(result == Type1)]
+	Type fail();
+
+	[Spec : Requires(valueOf(ff) == Type1)]
+	[Spec : Ensures(result == Type1)]
+	Type internal(Fut<Type> ff);
+
+
+	[Spec : Ensures(result == Type1)]
+	Type one();
+}
+
+interface I2 {
+	[Spec : Ensures(result == Type1)]
+	Type g();
+	[Spec : Ensures(result == Type2)]
+	Type h();
+}
+
+[Spec : Requires(o != null)]
+[Spec : ObjInv(o != null)]
+class C(I2 o) implements I1 {
+
+	Type success() {
+		Fut<Type> fi = o!g();
+		Fut<Type> fType = this!internal(fi);
+		Type i = fType.get;
+		return i;
+	}
+
+	Type fail() {
+		Fut<Type> fi = o!h();
+		Fut<Type> fType = this!internal(fi);
+		Type i = fType.get;
+		return i;
+	}
+
+	Type internal(Fut<Type> ff){
+		Type i = ff.get;
+		return i;
+	}
+
+	Type one() { return Type1; }
+
+	[Spec : Ensures(result == Type1)]
+    Type callOneOnThis() {
+        Fut<Type> f1 = this!one();
+        await f1?;
+        return  f1.get;
+    }
+}
+
+{}
