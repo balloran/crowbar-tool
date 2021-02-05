@@ -7,6 +7,7 @@ import antlr.crowbar.gen.LocalSessionParser.And_type_formulaContext
 import antlr.crowbar.gen.LocalSessionParser.Binary_type_termContext
 import antlr.crowbar.gen.LocalSessionParser.Boolean_type_formulaContext
 import antlr.crowbar.gen.LocalSessionParser.Call_local_typeContext
+import antlr.crowbar.gen.LocalSessionParser.Constant_type_termContext
 import antlr.crowbar.gen.LocalSessionParser.Field_type_termContext
 import antlr.crowbar.gen.LocalSessionParser.Function_type_termContext
 import antlr.crowbar.gen.LocalSessionParser.Get_local_typeContext
@@ -14,7 +15,6 @@ import antlr.crowbar.gen.LocalSessionParser.Nested_local_typeContext
 import antlr.crowbar.gen.LocalSessionParser.Not_type_formulaContext
 import antlr.crowbar.gen.LocalSessionParser.Or_local_typeContext
 import antlr.crowbar.gen.LocalSessionParser.Or_type_formulaContext
-import antlr.crowbar.gen.LocalSessionParser.Predicate_type_formulaContext
 import antlr.crowbar.gen.LocalSessionParser.Put_local_typeContext
 import antlr.crowbar.gen.LocalSessionParser.Rep_local_typeContext
 import antlr.crowbar.gen.LocalSessionParser.Seq_local_typeContext
@@ -41,15 +41,29 @@ import org.abs_models.crowbar.data.Predicate
 import org.abs_models.crowbar.data.Term
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
+import org.antlr.v4.runtime.BaseErrorListener
+import org.antlr.v4.runtime.RecognitionException
+import org.antlr.v4.runtime.Recognizer
 
 object LocalTypeParser : LocalSessionBaseVisitor<LocalType>() {
     fun parse(localTypeExp: String): LocalType {
         val stream = CharStreams.fromString(localTypeExp)
+
         val lexer = LocalSessionLexer(stream)
+        lexer.removeErrorListeners()
+        lexer.addErrorListener(ThrowingErrorListener)
+
         val tokens = CommonTokenStream(lexer)
         val parser = LocalSessionParser(tokens)
+        parser.removeErrorListeners()
+        parser.addErrorListener(ThrowingErrorListener)
 
-        return parser.local().accept(this)
+        try {
+            return parser.local().accept(this)
+        }
+        catch(e: LocalTypeParsingException) {
+            throw Exception("Could not parse local type expression '$localTypeExp':\n${e.message}")
+        }
     }
 
     override fun visitCall_local_type(ctx: Call_local_typeContext): LocalType {
@@ -119,11 +133,6 @@ object LocalTypeFormulaConverter : LocalSessionBaseVisitor<LogicElement>() {
         return Not(ctx.formula().accept(this) as Formula)
     }
 
-    override fun visitPredicate_type_formula(ctx: Predicate_type_formulaContext): Formula {
-        val args = ctx.termlist().term().map { it.accept(this) as Term }
-        return Predicate(ctx.STRING().getText(), args)
-    }
-
     override fun visitAnd_type_formula(ctx: And_type_formulaContext): Formula {
         val left = ctx.formula(0).accept(this) as Formula
         val right = ctx.formula(1).accept(this) as Formula
@@ -137,7 +146,7 @@ object LocalTypeFormulaConverter : LocalSessionBaseVisitor<LogicElement>() {
     }
 
     override fun visitBinary_type_term(ctx: Binary_type_termContext): Term {
-        val op = ctx.STRING().getText()
+        val op = ctx.binop().getText()
         val left = ctx.term(0).accept(this) as Term
         val right = ctx.term(1).accept(this) as Term
         return Function(op, listOf(left, right))
@@ -145,5 +154,17 @@ object LocalTypeFormulaConverter : LocalSessionBaseVisitor<LogicElement>() {
 
     override fun visitField_type_term(ctx: Field_type_termContext): Term {
         return Field(ctx.STRING().getText(), "<UNKNOWN>")
+    }
+
+    override fun visitConstant_type_term(ctx: Constant_type_termContext): Term {
+        return Function(ctx.STRING().getText())
+    }
+}
+
+class LocalTypeParsingException(msg: String) : Exception(msg)
+
+object ThrowingErrorListener: BaseErrorListener() {
+    override fun syntaxError(recognizer: Recognizer<*, *>, offendingSymbol: Any?, line: Int, charPositionInLine: Int, msg: String, e: RecognitionException?) {
+        throw LocalTypeParsingException("Error at position $line:$charPositionInLine $msg");
     }
 }
