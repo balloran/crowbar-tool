@@ -10,6 +10,8 @@ interface LocalType : Anything {
     // E.g. in (a+b).c, a and b would be possible starting elements
     fun matches(pattern: LTPattern): Boolean
 
+    fun getMatch(pattern: LTPattern): LocalType
+
     // Return a LocalType expression describing all possible runs _after_ reading the LTPattern
     // E.g. for ((a.b) + (c.d)), possible runs after reading a would be "b"
     fun readTransform(pattern: LTPattern): LocalType
@@ -18,6 +20,12 @@ interface LocalType : Anything {
 abstract class SingleLT : LocalType {
     override val couldSkip = false
     override val isSkip = false
+
+    override fun getMatch(pattern: LTPattern): LocalType {
+        if(!matches(pattern))
+            throw Exception("Cannot match local type pattern '$pattern' to local type expression '${this.prettyPrint()}'")
+        return this
+    }
 
     override fun readTransform(pattern: LTPattern): LocalType {
         if (!matches(pattern))
@@ -40,6 +48,13 @@ data class LTSeq(val first: LocalType, val second: LocalType) : LocalType {
             first.matches(pattern)
     }
 
+    override fun getMatch(pattern: LTPattern): LocalType {
+        return if(first.couldSkip && !first.matches(pattern))
+            second.getMatch(pattern)
+        else
+            first.getMatch(pattern)
+    }
+
     override fun readTransform(pattern: LTPattern): LocalType {
         if (first.couldSkip && !first.matches(pattern))
             return second.readTransform(pattern)
@@ -60,6 +75,7 @@ data class LTNest(val inner: LocalType) : LocalType {
         get() = inner.isSkip
 
     override fun matches(pattern: LTPattern) = inner.matches(pattern)
+    override fun getMatch(pattern: LTPattern) = inner.getMatch(pattern)
     override fun readTransform(pattern: LTPattern) = inner.readTransform(pattern)
 
     override fun prettyPrint(): String {
@@ -74,6 +90,13 @@ data class LTOpt(val first: LocalType, val second: LocalType) : LocalType {
         get() = first.isSkip && second.isSkip
 
     override fun matches(pattern: LTPattern) = first.matches(pattern) || second.matches(pattern)
+
+    override fun getMatch(pattern: LTPattern): LocalType {
+        return if(first.matches(pattern))
+            first.getMatch(pattern)
+        else
+            second.getMatch(pattern)
+    }
 
     override fun readTransform(pattern: LTPattern): LocalType {
         // We choose to match the first branch if possible, even if both options match
@@ -95,6 +118,13 @@ data class LTRep(val inner: LocalType, val formula: Formula) : LocalType {
         get() = inner.isSkip
 
     override fun matches(pattern: LTPattern) = if (pattern == LTPatternRep) true else inner.matches(pattern)
+
+    override fun getMatch(pattern: LTPattern): LocalType {
+        return if(pattern == LTPatternRep)
+            this
+        else
+            inner.getMatch(pattern)
+    }
 
     override fun readTransform(pattern: LTPattern): LocalType {
         // If we are looking for a repetition, just remove the repetition
