@@ -21,7 +21,7 @@ abstract class SingleLT : LocalType {
 
     override fun readTransform(pattern: LTPattern): LocalType {
         if (!matches(pattern))
-            throw Exception("Cannot match local type pattern '$pattern' to local type expression '$this'")
+            throw Exception("Cannot match local type pattern '$pattern' to local type expression '${this.prettyPrint()}'")
         return LTSkip
     }
 }
