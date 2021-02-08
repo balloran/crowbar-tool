@@ -1,0 +1,23 @@
+module Nullable;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+
+interface I {
+    [Spec : Ensures(result > 0)]
+    Int m();
+}
+
+class C implements I {
+    Int m() {
+        return 4;
+    }
+}
+
+class K {
+    [Spec : Ensures(result > 0)]
+    Int m([NonNull] I i) {
+        Fut<Int> f = i!m();
+        Int n = f.get;
+        return n;
+    }
+}

@@ -15,31 +15,7 @@ import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.rule.FreshGenerator
 import org.abs_models.crowbar.rule.MatchCondition
 import org.abs_models.crowbar.rule.Rule
-import org.abs_models.crowbar.tree.InfoAwaitUse
-import org.abs_models.crowbar.tree.InfoBranch
-import org.abs_models.crowbar.tree.InfoCallAssign
-import org.abs_models.crowbar.tree.InfoClassPrecondition
-import org.abs_models.crowbar.tree.InfoGetAssign
-import org.abs_models.crowbar.tree.InfoIfElse
-import org.abs_models.crowbar.tree.InfoIfThen
-import org.abs_models.crowbar.tree.InfoInvariant
-import org.abs_models.crowbar.tree.InfoLocAssign
-import org.abs_models.crowbar.tree.InfoLoopInitial
-import org.abs_models.crowbar.tree.InfoLoopPreserves
-import org.abs_models.crowbar.tree.InfoLoopUse
-import org.abs_models.crowbar.tree.InfoMethodPrecondition
-import org.abs_models.crowbar.tree.InfoNullCheck
-import org.abs_models.crowbar.tree.InfoObjAlloc
-import org.abs_models.crowbar.tree.InfoReturn
-import org.abs_models.crowbar.tree.InfoScopeClose
-import org.abs_models.crowbar.tree.InfoSkip
-import org.abs_models.crowbar.tree.InfoSkipEnd
-import org.abs_models.crowbar.tree.InfoSyncCallAssign
-import org.abs_models.crowbar.tree.LogicNode
-import org.abs_models.crowbar.tree.NodeInfo
-import org.abs_models.crowbar.tree.StaticNode
-import org.abs_models.crowbar.tree.SymbolicNode
-import org.abs_models.crowbar.tree.SymbolicTree
+import org.abs_models.crowbar.tree.*
 import org.abs_models.frontend.ast.*
 import kotlin.system.exitProcess
 
@@ -333,6 +309,8 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
 
         val notNullCondition = Not(Predicate("=", listOf(callee,Function("0", emptyList()))))
 
+        val absExp = calleeExpr.absExp
+        val isNonNull = absExp?.nonNull() ?: false
         val nonenull = LogicNode(
             input.condition,
             UpdateOnFormula(input.update, notNullCondition),
@@ -376,7 +354,7 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
                                             And(input.condition, UpdateOnFormula(input.update,UpdateOnFormula(updateNew,subst(postCond, substPostMap) as Formula))),
                                             input.update,
                                             InfoCallAssign(lhs, calleeExpr, call, freshFut.name))
-
+        if (isNonNull) return listOf(pre, next)
         return listOf(nonenull,pre,next)
     }
 }
