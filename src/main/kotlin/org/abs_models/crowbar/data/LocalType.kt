@@ -112,7 +112,7 @@ data class LTOpt(val first: LocalType, val second: LocalType) : LocalType {
     }
 }
 
-data class LTRep(val inner: LocalType, val formula: Formula) : LocalType {
+data class LTRep(val inner: LocalType, val formula: Expr) : LocalType {
     override val couldSkip = true
     override val isSkip: Boolean
         get() = inner.isSkip
@@ -146,7 +146,7 @@ data class LTRep(val inner: LocalType, val formula: Formula) : LocalType {
     }
 }
 
-data class LTSusp(val formula: Formula) : SingleLT() {
+data class LTSusp(val formula: Expr) : SingleLT() {
     override fun matches(pattern: LTPattern) = (pattern == LTPatternSusp)
 
     override fun prettyPrint(): String {
@@ -154,7 +154,7 @@ data class LTSusp(val formula: Formula) : SingleLT() {
     }
 }
 
-data class LTPut(val formula: Formula) : SingleLT() {
+data class LTPut(val formula: Expr) : SingleLT() {
     override fun matches(pattern: LTPattern) = (pattern == LTPatternPut)
 
     override fun prettyPrint(): String {
@@ -162,7 +162,7 @@ data class LTPut(val formula: Formula) : SingleLT() {
     }
 }
 
-data class LTGet(val term: Term) : SingleLT() {
+data class LTGet(val term: Expr) : SingleLT() {
     override fun matches(pattern: LTPattern) = (pattern == LTPatternGet)
 
     override fun prettyPrint(): String {
@@ -170,7 +170,7 @@ data class LTGet(val term: Term) : SingleLT() {
     }
 }
 
-data class LTCall(val role: String, val method: String, val formula: Formula) : SingleLT() {
+data class LTCall(val role: String, val method: String, val formula: Expr) : SingleLT() {
     override fun matches(pattern: LTPattern) = (pattern is LTPatternCall && pattern.method == method)
     override fun prettyPrint(): String {
         return "$role!$method[${formula.prettyPrint()}]"
@@ -186,10 +186,10 @@ object LTSkip : SingleLT() {
 
 interface LTPattern
 object LTPatternSkip : LTPattern { override fun toString() = "Skip" }
-object LTPatternGet : LTPattern { override fun toString() = "Get" }
-object LTPatternPut : LTPattern { override fun toString() = "Put" }
+object LTPatternGet  : LTPattern { override fun toString() = "Get" }
+object LTPatternPut  : LTPattern { override fun toString() = "Put" }
 object LTPatternSusp : LTPattern { override fun toString() = "Susp" }
-object LTPatternRep : LTPattern { override fun toString() = "<any>*" }
+object LTPatternRep  : LTPattern { override fun toString() = "<any>*" }
 
 // TODO: No role information here so far
 data class LTPatternCall(val method: String) : LTPattern {

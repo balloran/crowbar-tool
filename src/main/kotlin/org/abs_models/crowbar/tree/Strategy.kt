@@ -36,12 +36,14 @@ class DefaultStrategy(private val rules: List<Rule>) : Strategy{
 
 fun getStrategy(clazz: KClass<out DeductType>, repos: Repository) : Strategy{
     return when(clazz){
-        PostInvType::class -> nextPITStrategy(repos)
-        RegAccType::class  -> nextRAStrategy()
-        else               -> throw Exception("unsupported type $clazz")
+        PostInvType::class   -> nextPITStrategy(repos)
+        RegAccType::class    -> nextRAStrategy()
+        LocalTypeType::class -> nextLTTStrategy(repos)
+        else                 -> throw Exception("unsupported type $clazz")
     }
 }
 
 
 fun nextRAStrategy(): Strategy = DefaultStrategy(listOf(RAReturn, RAFieldAssign, RAVarAssign, RASkip, RASkipSkip))
 fun nextPITStrategy(repos: Repository) : Strategy = DefaultStrategy(listOf(PITBranch, PITSyncAssign(repos), PITLocAssign(repos), PITAllocAssign(repos), PITCallAssign(repos), PITSyncCallAssign(repos), PITReturn, PITSkip, PITIf, PITAwait, PITSkipSkip, PITWhile, PITScopeSkip))
+fun nextLTTStrategy(repos: Repository) : Strategy = DefaultStrategy(listOf(LTTBranch, LTTSyncAssign(repos), LTTLocAssign(repos), LTTAllocAssign(repos), LTTCallAssign(repos), LTTReturn, LTTSkip, LTTIf, LTTAwait, LTTSkipSkip, LTTWhile, LTTScopeSkip))

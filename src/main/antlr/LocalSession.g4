@@ -33,7 +33,7 @@ OR : '||';
 //Strings
 // TODO: Identifiers could contain other chars
 //       esp. for binary operators
-STRING : [a-zA-Z0-9/\-_]+ ;
+STRING : [a-zA-Z0-9/\-_=<>]+ ;
 
 //Entry point
 local : local DOT local                               # seq_local_type
@@ -63,4 +63,4 @@ termlist : term (COMMA term)*;
 
 role : STRING;
 
-binop : STRING | AST | ALTERNATIVE;
+binop : STRING | AST | ALTERNATIVE | BANG '=';
