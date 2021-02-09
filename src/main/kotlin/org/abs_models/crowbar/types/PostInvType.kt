@@ -40,6 +40,8 @@ import org.abs_models.crowbar.tree.NodeInfo
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.SymbolicTree
 import org.abs_models.frontend.ast.*
+import org.abs_models.frontend.typechecker.DataTypeType
+import org.abs_models.frontend.typechecker.Type
 import kotlin.system.exitProcess
 
 
@@ -67,8 +69,8 @@ interface PostInvType : DeductType{
         val metpre: Formula?
         val body: Stmt?
         try {
-            objInv = extractSpec(classDecl, "ObjInv", "<UNKNOWN>")
-            metpost = extractSpec(mDecl, "Ensures", mDecl.type.qualifiedName)
+            objInv = extractSpec(classDecl, "ObjInv", UnknownType)
+            metpost = extractSpec(mDecl, "Ensures", mDecl.type)
             metpre = extractInheritedSpec(mDecl.methodSig, "Requires")
             body = getNormalizedStatement(mDecl.block)
         } catch (e: Exception) {
@@ -88,8 +90,8 @@ interface PostInvType : DeductType{
         var body = getNormalizedStatement(classDecl.initBlock)
         for (fieldDecl in classDecl.fields){
             if(fieldDecl.hasInitExp()){
-                val nextBody = AssignStmt(Field(fieldDecl.name+"_f", fieldDecl.type.qualifiedName),
-                        translateABSExpToSymExpr(fieldDecl.initExp,"<UNKNOWN>"))
+                val nextBody = AssignStmt(Field(fieldDecl.name+"_f", fieldDecl.type.qualifiedName, fieldDecl.type),
+                        translateABSExpToSymExpr(fieldDecl.initExp,UnknownType))
                 body = SeqStmt(nextBody,body)
             }
         }
@@ -98,8 +100,8 @@ interface PostInvType : DeductType{
         val objInv: Formula?
         val objPre: Formula?
         try {
-            objInv = extractSpec(classDecl, "ObjInv", "<UNKNOWN>")
-            objPre = extractSpec(classDecl, "Requires","<UNKNOWN>")
+            objInv = extractSpec(classDecl, "ObjInv", UnknownType)
+            objPre = extractSpec(classDecl, "Requires",UnknownType)
         } catch (e: Exception) {
             e.printStackTrace()
             System.err.println("error during translation, aborting")
@@ -130,13 +132,13 @@ interface PostInvType : DeductType{
         val funpre: Formula?
         var body: Stmt? = null
         try {
-            funpre = extractSpec(fDecl, "Requires", fDecl.type.qualifiedName)
-            funpost = extractSpec(fDecl, "Ensures", fDecl.type.qualifiedName)
+            funpre = extractSpec(fDecl, "Requires", fDecl.type)
+            funpost = extractSpec(fDecl, "Ensures", fDecl.type)
             val fDef = fDecl.functionDef
             if(fDef is BuiltinFunctionDef){
                 throw Exception("error during translation, cannot handle builtin yet")
             }else if(fDef is ExpFunctionDef){
-                body = ReturnStmt(translateABSExpToSymExpr(fDef.rhs, fDecl.type.qualifiedName))
+                body = ReturnStmt(translateABSExpToSymExpr(fDef.rhs, fDecl.type))
             }
         }catch (e: Exception) {
             e.printStackTrace()
@@ -244,7 +246,7 @@ class PITAllocAssign(repos: Repository) : PITAssign(repos, Modality(
         val targetDecl = repos.classReqs[classNameExpr.name]!!.second
         val substMap = mutableMapOf<LogicElement,LogicElement>()
         for(i in 0 until targetDecl.numParam){
-            val pName = select(Field(targetDecl.getParam(i).name+"_f", targetDecl.getParam(i).type.qualifiedName))
+            val pName = select(Field(targetDecl.getParam(i).name+"_f", targetDecl.getParam(i).type.qualifiedName, targetDecl.getParam(i).type))
             val pValue = nextRhs.params[i]
             substMap[pName] = pValue
         }
@@ -298,7 +300,7 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val targetDecl = repos.methodReqs.getValue(call.met).second
         val substMap = mutableMapOf<LogicElement,LogicElement>()
         for(i in 0 until targetDecl.numParam){
-            val pName = ProgVar(targetDecl.getParam(i).name,targetDecl.getParam(i).type.qualifiedName)
+            val pName = ProgVar(targetDecl.getParam(i).name,targetDecl.getParam(i).type.qualifiedName, targetDecl.getParam(i).type)
             val pValue = exprToTerm(call.e[i])
             substMap[pName] = pValue
         }
@@ -309,19 +311,19 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
             info = InfoMethodPrecondition(precondSubst)
         )
 
-        val freshFut = FreshGenerator.getFreshFuture(targetDecl.type.qualifiedName)
+        val freshFut = FreshGenerator.getFreshFuture(targetDecl.type)
         val read = repos.methodEnss[call.met]
         val postCond = read?.first ?: True
 
         val targetPostDecl = read!!.second
         val substPostMap = mutableMapOf<LogicElement,LogicElement>()
         for(i in 0 until targetDecl.numParam){
-            val pName = ProgVar(targetPostDecl.getParam(i).name,targetPostDecl.getParam(i).type.qualifiedName)
+            val pName = ProgVar(targetPostDecl.getParam(i).name,targetPostDecl.getParam(i).type.qualifiedName, targetPostDecl.getParam(i).type)
             val pValue = exprToTerm(call.e[i])
             substPostMap[pName] = pValue
         }
 
-        val updateNew = ElementaryUpdate(ReturnVar(targetDecl.type.qualifiedName),valueOfFunc(freshFut))
+        val updateNew = ElementaryUpdate(ReturnVar(targetDecl.type.qualifiedName, targetDecl.type),valueOfFunc(freshFut))
 
         val next = symbolicNext(lhs,
                                             freshFut,
@@ -352,9 +354,9 @@ class PITSyncCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val precond = repos.syncMethodReqs.getValue(call.met).first //Todo: objInv
         val targetPreDecl = repos.syncMethodReqs.getValue(call.met).second
 
-        val freshVar = FreshGenerator.getFreshProgVar(targetPreDecl.type.qualifiedName)//ASK<<
+        val freshVar = FreshGenerator.getFreshProgVar(targetPreDecl.type)//ASK<<
 
-        val updateNew = ElementaryUpdate(ReturnVar(targetPreDecl.type.qualifiedName), freshVar)
+        val updateNew = ElementaryUpdate(ReturnVar(targetPreDecl.type.qualifiedName, targetPreDecl.type), freshVar)
 
         val substPreMap = mapSubstPar(call, targetPreDecl)
         val precondSubst = subst(precond, substPreMap) as Formula
@@ -373,7 +375,7 @@ class PITSyncCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val anon = ElementaryUpdate(Heap, anon(Heap))
 
         //XXX handle  last here as well
-        val someHeap = FreshGenerator.getFreshProgVar(Heap.dType)
+        val someHeap = FreshGenerator.getFreshProgVar(Heap.concrType)
         val heapUpdate = ChainUpdate(ElementaryUpdate(OldHeap,Heap), ElementaryUpdate(LastHeap,someHeap))
 
         val updateLeftNext = ChainUpdate(input.update, ChainUpdate(heapUpdate, ChainUpdate(anon, updateNew)))
@@ -402,7 +404,7 @@ fun mapSubstPar(callExpr: SyncCallExpr, targetDecl: MethodSig): MutableMap<Logic
     val substMap = mutableMapOf<LogicElement, LogicElement>()
 
     for (i in 0 until targetDecl.numParam) {
-        val pName = ProgVar(targetDecl.getParam(i).name, targetDecl.getParam(i).type.qualifiedName)
+        val pName = ProgVar(targetDecl.getParam(i).name, targetDecl.getParam(i).type.qualifiedName, targetDecl.getParam(i).type)
         val pValue = exprToTerm(callExpr.e[i])
         substMap[pName] = pValue
 
@@ -462,7 +464,7 @@ object PITReturn : Rule(Modality(
         val res = LogicNode(
             input.condition,
             And(
-                    UpdateOnFormula(ChainUpdate(input.update, ElementaryUpdate(ReturnVar(typeReturn), ret)), targetPost),
+                    UpdateOnFormula(ChainUpdate(input.update, ElementaryUpdate(ReturnVar(typeReturn.qualifiedName,typeReturn), ret)), targetPost),
                     UpdateOnFormula(input.update, target)
             ),
             info = InfoReturn(retExpr, targetPost, target, input.update)
@@ -600,28 +602,28 @@ object PITBranch : Rule(Modality(
     }
 }
 
-fun getReturnType(term: Term) : String{
+fun getReturnType(term: Term) : Type {
     if(term is ProgVar){
-        return term.dType
+        return term.concrType
     }
     else if(term is DataTypeConst){
-        return term.dType
+        return term.concrType!!
     }
     else if (term is Function) {booleanFunction
         if ( term.name in intFunction || term.name.toIntOrNull() != null)
-            return "ABS.StdLib.Int"
+            return ADTRepos.model!!.intType
         if (term.name == "valueOf")
-            return (term.params[0] as ProgVar).dType
+            return ((term.params[0] as ProgVar).concrType as DataTypeType).getTypeArg(0)
         if (term.name in booleanFunction)
-            return "ABS.StdLib.Bool"
+            return ADTRepos.model!!.boolType
         return when (term.name) {
-            "Unit" -> "ABS.StdLib.Unit"
+            "Unit" -> ADTRepos.model!!.unitType
             "ite" -> getReturnType(term.params[1])
-            "select" -> (term.params[1] as Field).dType
+            "select" -> (term.params[1] as Field).concrType
             else -> {
                 val fName = term.name.replace("-",".")
                 if(FunctionRepos.isKnown(fName))
-                    return FunctionRepos.get(fName).type.qualifiedName
+                    return FunctionRepos.get(fName).type
                 else
                     throw Exception("Function $fName not defined")
             }
