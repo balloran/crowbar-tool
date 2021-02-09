@@ -60,7 +60,7 @@ interface RegAccType : DeductType{
 		val metpre: Formula?
 		val body: Stmt?
 		try {
-			objInv = extractSpec(classDecl, "ObjInv", "<UNKNOWN>")
+			objInv = extractSpec(classDecl, "ObjInv", UnknownType)
 			metpre = extractInheritedSpec(mDecl.methodSig, "Requires")
 			body = getNormalizedStatement(mDecl.block)
 		} catch (e: Exception) {

@@ -10,6 +10,7 @@ import org.abs_models.crowbar.tree.StaticNode
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.getStrategy
 import org.abs_models.frontend.ast.*
+import org.abs_models.frontend.typechecker.Type
 import sun.reflect.generics.tree.ReturnType
 import java.io.File
 import java.nio.file.Path
@@ -57,7 +58,7 @@ fun load(paths : List<Path>) : Pair<Model,Repository> {
 
 fun extractInheritedSpec(iDecl : InterfaceTypeUse, expectedSpec : String, mSig: MethodSig, default:Formula) : Formula? {
     for( miSig in iDecl.decl.findChildren(MethodSig::class.java)){
-        if(miSig.matches(mSig)) return extractSpec(miSig, expectedSpec,mSig.type.qualifiedName, default)
+        if(miSig.matches(mSig)) return extractSpec(miSig, expectedSpec,mSig.type, default)
     }
     if(iDecl.decl.getChild(1) !is org.abs_models.frontend.ast.List<*>) throw Exception("Invalid specification AST ${iDecl.decl}")
 
@@ -71,7 +72,7 @@ fun extractInheritedSpec(iDecl : InterfaceTypeUse, expectedSpec : String, mSig: 
 }
 
 fun extractInheritedSpec(mSig : MethodSig, expectedSpec : String, default:Formula = True) : Formula {
-    val direct = extractSpec(mSig, expectedSpec, mSig.type.qualifiedName,default)
+    val direct = extractSpec(mSig, expectedSpec, mSig.type,default)
     val conDecl = mSig.contextDecl
     if(conDecl is ClassDecl){
         for( iDecl in conDecl.implementedInterfaceUses){
@@ -82,7 +83,7 @@ fun extractInheritedSpec(mSig : MethodSig, expectedSpec : String, default:Formul
     return direct
 }
 
-fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : String, returnType: String, default:Formula = True, multipleAllowed:Boolean = true) : Formula {
+fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : String, returnType: Type, default:Formula = True, multipleAllowed:Boolean = true) : Formula {
     var ret : Formula? = null
     //TODO: this seems to be a problem with annotations in the functional layer in the ABS AST
     //TODO: refactor the code duplication
@@ -94,7 +95,7 @@ fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : 
             }
             val annotated = annotation.value as DataConstructorExp
             if(annotated.constructor != expectedSpec) continue
-            val next = exprToForm(translateABSExpToSymExpr(annotated.getParam(0) as Exp,decl.type.qualifiedName))
+            val next = exprToForm(translateABSExpToSymExpr(annotated.getParam(0) as Exp,decl.type))
             ret = if(ret == null) next else And(ret, next)
             if(!multipleAllowed) break
         }

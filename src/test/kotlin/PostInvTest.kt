@@ -4,7 +4,6 @@ import io.kotlintest.specs.StringSpec
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.types.PostInvType
 import java.nio.file.Paths
-import kotlin.system.exitProcess
 
 class PostInvTest : StringSpec ({
 	val postInv = PostInvType::class
@@ -423,6 +422,15 @@ class PostInvTest : StringSpec ({
 			executeNode(res, repos, postInv) shouldBe true
 			res = classDecl.extractMethodNode(postInv,"m2", repos)
 			executeNode(res, repos, postInv) shouldBe false
+		}
+
+		"$smt nullable"{
+			smtPath = smt
+			val (model, repos) = load(listOf(Paths.get("src/test/resources/nullable.abs")))
+			val classDecl = model.extractClassDecl("Nullable", "K", repos)
+
+			var res = classDecl.extractMethodNode(postInv,"m", repos)
+			executeNode(res, repos, postInv) shouldBe true
 		}
 	}
 })

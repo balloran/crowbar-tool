@@ -4,6 +4,7 @@ import org.abs_models.crowbar.interfaces.createWildCard
 import org.abs_models.crowbar.interfaces.refreshWildCard
 import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.frontend.ast.DataTypeDecl
+import org.abs_models.frontend.typechecker.Type
 
 interface ProofElement: Anything {
     fun toSMT(indent:String="") : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
@@ -217,7 +218,7 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
     }
 }
 
-data class DataTypeConst(val name : String, val dType : String, val params : List<Term> = emptyList()) : Term {
+data class DataTypeConst(val name : String, val dType : String, val concrType: Type?, val params : List<Term> = emptyList()) : Term {
     override fun prettyPrint(): String {
         return name + ":" + dType+"("+params.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
     }
@@ -399,9 +400,40 @@ object False : Formula {
 
 val specialHeapKeywords = mapOf(OldHeap.name to OldHeap, LastHeap.name to LastHeap)
 
-object Heap : ProgVar("heap","Heap")
-object OldHeap : ProgVar("old","Heap")
-object LastHeap : ProgVar("last","Heap")
+data class HeapType(val name: String) : Type() {
+    override fun copy(): Type {
+        return this
+    }
+    override fun getSimpleName(): String {
+        return name
+    }
+
+}
+
+object UnknownType : Type() {
+    const val name = "UnknownType"
+
+    override fun hashCode(): Int {
+        return name.hashCode()
+    }
+
+    override fun copy(): Type {
+        return this
+    }
+    override fun getSimpleName(): String {
+        return name
+    }
+
+    override fun isUnknownType(): Boolean {
+        return true
+    }
+
+
+}
+
+object Heap : ProgVar("heap","Heap", HeapType("Heap"))
+object OldHeap : ProgVar("old","Heap",HeapType("Heap"))
+object LastHeap : ProgVar("last","Heap",HeapType("Heap"))
 
 fun store(field: Field, value : Term) : Function = Function("store", listOf(Heap, field, value))
 fun select(field : Field) : Function = Function("select", listOf(Heap, field))
@@ -434,7 +466,7 @@ fun exprToTerm(input : Expr, specialKeyword : String="NONE") : Term {//todo: add
             Function(input.op, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
         }
         is DataTypeExpr -> {
-            DataTypeConst(input.name, input.dType, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
+            DataTypeConst(input.name, input.dType, input.concrType, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
         }
         is CaseExpr -> {
             val match =exprToTerm(input.match)
@@ -501,7 +533,7 @@ fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicEleme
             return ChainUpdate(subst(input.left, map) as UpdateElement, subst(input.right, map) as UpdateElement)
         }
 //        is DataTypeConst -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
-        is DataTypeConst -> return DataTypeConst(input.name, input.dType, input.params.map { p -> subst(p, map) as Term })
+        is DataTypeConst -> return DataTypeConst(input.name, input.dType, input.concrType, input.params.map { p -> subst(p, map) as Term })
 //        is Case -> return Case(subst(input.match, map) as Term, input.expectedType, input.branches.map { p -> subst(p, map) as BranchTerm }, input.freeVars)
         is Function -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
         is Predicate -> return Predicate(input.name, input.params.map { p -> subst(p, map) as Term })

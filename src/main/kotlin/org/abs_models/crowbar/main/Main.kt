@@ -15,6 +15,7 @@ import com.github.ajalt.clikt.parameters.types.path
 import com.github.ajalt.clikt.parameters.types.restrictTo
 import org.abs_models.crowbar.data.Formula
 import org.abs_models.crowbar.data.True
+import org.abs_models.crowbar.data.UnknownType
 import org.abs_models.crowbar.interfaces.filterAtomic
 import org.abs_models.crowbar.types.PostInvType
 import org.abs_models.crowbar.types.RegAccType
@@ -56,7 +57,7 @@ data class Repository(private val model : Model?,
             if(moduleDecl.name.startsWith("ABS.")) continue
             for (decl in moduleDecl.decls) {
                 if (decl is ClassDecl) {
-                    val spec = extractSpec(decl,"Requires", "<UNKNOWN>")
+                    val spec = extractSpec(decl,"Requires", UnknownType)
                     classReqs[decl.name] = Pair(spec,decl) //todo: use fully qualified name here
                 }
             }
@@ -68,8 +69,8 @@ data class Repository(private val model : Model?,
             for (decl in moduleDecl.decls) {
                 if (decl is InterfaceDecl) {
                     for (mDecl in decl.allMethodSigs) {
-                        val spec = extractSpec(mDecl, "Requires", mDecl.type.qualifiedName)
-                        val spec2 = extractSpec(mDecl, "Ensures", mDecl.type.qualifiedName)
+                        val spec = extractSpec(mDecl, "Requires", mDecl.type)
+                        val spec2 = extractSpec(mDecl, "Ensures", mDecl.type)
                         methodReqs[decl.qualifiedName+"."+mDecl.name] = Pair(spec, mDecl)
                         methodEnss[decl.qualifiedName+"."+mDecl.name] = Pair(spec2, mDecl)
                     }
@@ -77,8 +78,8 @@ data class Repository(private val model : Model?,
                 if(decl is ClassDecl){
                     for(mImpl in decl.methods){
                         val iUse = getDeclaration(mImpl.methodSig,mImpl.contextDecl as ClassDecl)
-                        val syncSpecReq = extractSpec(mImpl, "Requires", mImpl.type.qualifiedName)
-                        val syncSpecEns = extractSpec(mImpl, "Ensures", mImpl.type.qualifiedName)
+                        val syncSpecReq = extractSpec(mImpl, "Requires", mImpl.type)
+                        val syncSpecEns = extractSpec(mImpl, "Ensures", mImpl.type)
                         syncMethodReqs[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(syncSpecReq, mImpl.methodSig)
                         syncMethodEnss[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(syncSpecEns, mImpl.methodSig)
                         if(iUse == null){
@@ -86,10 +87,10 @@ data class Repository(private val model : Model?,
                             methodEnss[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(True, mImpl.methodSig)
                         } else {
                             val spec = extractSpec(iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }, "Requires",
-                                    iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }.type.qualifiedName)
+                                    iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }.type)
                             methodReqs[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(spec, mImpl.methodSig)
                             val spec2 = extractSpec(iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }, "Ensures",
-                                    iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }.type.qualifiedName)
+                                    iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }.type)
                             methodEnss[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(spec2, mImpl.methodSig)
                         }
                     }
