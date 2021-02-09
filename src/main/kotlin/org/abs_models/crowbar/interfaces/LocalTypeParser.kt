@@ -36,6 +36,7 @@ import org.abs_models.crowbar.data.LocalType
 import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.crowbar.data.ReturnVar
 import org.abs_models.crowbar.data.SExpr
+import org.abs_models.crowbar.data.UnknownType
 import org.antlr.v4.runtime.BaseErrorListener
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -159,8 +160,8 @@ object LocalTypeFormulaConverter : LocalSessionBaseVisitor<Expr>() {
             "this" -> Const("1")
             "true" -> Const("true")
             "false" -> Const("false")
-            "result" -> ReturnVar("<UNKNOWN>")
-            else -> ProgVar(text, "<UNKNOWN>")
+            "result" -> ReturnVar("<UNKNOWN>", UnknownType)
+            else -> ProgVar(text, "<UNKNOWN>", UnknownType)
         }
     }
 }

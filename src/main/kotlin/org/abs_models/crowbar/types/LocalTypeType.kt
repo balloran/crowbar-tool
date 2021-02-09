@@ -58,6 +58,7 @@ import org.abs_models.crowbar.data.SymbolicState
 import org.abs_models.crowbar.data.SyncStmt
 import org.abs_models.crowbar.data.Term
 import org.abs_models.crowbar.data.True
+import org.abs_models.crowbar.data.UnknownType
 import org.abs_models.crowbar.data.UpdateElement
 import org.abs_models.crowbar.data.UpdateOnFormula
 import org.abs_models.crowbar.data.WhileStmt
@@ -122,7 +123,7 @@ interface LocalTypeType : DeductType {
         val body: Stmt?
 
         try {
-            objInv = extractSpec(classDecl, "ObjInv", "<UNKNOWN>")
+            objInv = extractSpec(classDecl, "ObjInv", UnknownType)
             ltexp = extractLocalTypeSpec(mDecl)
             metpre = extractInheritedSpec(mDecl.methodSig, "Requires")
             body = getNormalizedStatement(mDecl.block)
@@ -309,7 +310,7 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
         val newTarget = LocalTypeTarget(ltexp.readTransform(callPattern), target.invariant, target.showInvariant)
 
         val targetDecl = repos.methodReqs.getValue(call.met).second
-        val freshFut = FreshGenerator.getFreshFuture(targetDecl.type.qualifiedName)
+        val freshFut = FreshGenerator.getFreshFuture(targetDecl.type)
         val read = repos.methodEnss[call.met]
         val postCond = read?.first ?: True
 
@@ -321,7 +322,7 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
             substPostMap[pName] = pValue
         }
         val substPostCond = subst(postCond, substPostMap) as Formula
-        val updateNew = ElementaryUpdate(ReturnVar(targetDecl.type.qualifiedName), valueOfFunc(freshFut))
+        val updateNew = ElementaryUpdate(ReturnVar(targetDecl.type.qualifiedName, targetDecl.type), valueOfFunc(freshFut))
 
         // Side condition: Show that specified formula holds after call
         val formulaHolds = LogicNode(
@@ -414,7 +415,7 @@ object LTTReturn : Rule(Modality(
 
         val post = LogicNode(
             input.condition,
-            UpdateOnFormula(ChainUpdate(input.update, ElementaryUpdate(ReturnVar(typeReturn), ret)), targetFormula),
+            UpdateOnFormula(ChainUpdate(input.update, ElementaryUpdate(ReturnVar(typeReturn.qualifiedName, typeReturn), ret)), targetFormula),
             info = InfoReturn(retExpr, targetFormula, True, input.update)
         )
 
