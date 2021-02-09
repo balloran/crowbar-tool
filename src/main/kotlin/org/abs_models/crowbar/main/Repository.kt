@@ -4,12 +4,13 @@ import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.interfaces.*
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.frontend.ast.*
-import org.abs_models.frontend.typechecker.Type
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 
 
 object ADTRepos {
+
+	var model:Model? = null
 
 	private val dtypeMap: MutableMap<String,  HeapDecl> = mutableMapOf()
 	val dTypesDecl = mutableListOf<DataTypeDecl>()
@@ -48,9 +49,10 @@ object ADTRepos {
 		dtypeMap["Int"] = HeapDecl("Int")
 		dtypeMap["Bool"] = HeapDecl("Bool")
 	}
-	fun init(model: Model){
+	fun init(parModel: Model){
+		model = parModel
 		initStdLib()
-		for(moduleDecl in model.moduleDecls){
+		for(moduleDecl in parModel.moduleDecls){
 			if(moduleDecl.name.startsWith("ABS.")) continue
 			for(decl in moduleDecl.decls){
 				if(decl is DataTypeDecl && decl.name != "Spec"){
@@ -98,8 +100,8 @@ object FunctionRepos{
 
 			    val callParams = params.joinToString(" ") { it.name }
 
-			    val funpre = extractSpec(pair.value, "Requires", pair.value.type.qualifiedName)
-			    val funpost = extractSpec(pair.value, "Ensures", pair.value.type.qualifiedName)
+			    val funpre = extractSpec(pair.value, "Requires", pair.value.type)
+			    val funpost = extractSpec(pair.value, "Ensures", pair.value.type)
 
 				val paramsTyped = params.joinToString(" ") { "(${it.name} ${ADTRepos.libPrefix(it.type.qualifiedName)})" }
 				if(params.count() > 0) {
@@ -123,7 +125,7 @@ object FunctionRepos{
 				    val eDef: ExpFunctionDef = pair.value.functionDef as ExpFunctionDef
 				    val def = eDef.rhs
 					sigs += "\t(${pair.key.replace(".", "-")} (${params.fold("",{ acc, nx -> "$acc (${nx.name} ${ADTRepos.libPrefix(nx.type.qualifiedName)})" })})  ${ADTRepos.libPrefix(def.type.qualifiedName)})\n"
-					defs += "\t${exprToTerm(translateABSExpToSymExpr(def, "<UNKNOWN>")).toSMT()}\n"
+					defs += "\t${exprToTerm(translateABSExpToSymExpr(def, UnknownType)).toSMT()}\n"
 			    }
 				ret += "\n(define-funs-rec(\n$sigs)(\n$defs))"
 		    }
