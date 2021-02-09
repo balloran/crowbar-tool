@@ -410,30 +410,10 @@ data class HeapType(val name: String) : Type() {
 
 }
 
-object UnknownType : Type() {
-    const val name = "UnknownType"
 
-    override fun hashCode(): Int {
-        return name.hashCode()
-    }
-
-    override fun copy(): Type {
-        return this
-    }
-    override fun getSimpleName(): String {
-        return name
-    }
-
-    override fun isUnknownType(): Boolean {
-        return true
-    }
-
-
-}
-
-object Heap : ProgVar("heap","Heap", HeapType("Heap"))
-object OldHeap : ProgVar("old","Heap",HeapType("Heap"))
-object LastHeap : ProgVar("last","Heap",HeapType("Heap"))
+object Heap : ProgVar("heap", "Heap", HeapType("Heap"))
+object OldHeap : ProgVar("old", "Heap", HeapType("Heap"))
+object LastHeap : ProgVar("last", "Heap", HeapType("Heap"))
 
 fun store(field: Field, value : Term) : Function = Function("store", listOf(Heap, field, value))
 fun select(field : Field) : Function = Function("select", listOf(Heap, field))

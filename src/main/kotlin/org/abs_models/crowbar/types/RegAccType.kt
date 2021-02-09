@@ -14,6 +14,7 @@ import org.abs_models.crowbar.tree.SymbolicTree
 import org.abs_models.frontend.ast.ClassDecl
 import org.abs_models.frontend.ast.FunctionDecl
 import org.abs_models.frontend.ast.Model
+import org.abs_models.frontend.typechecker.UnknownType
 import kotlin.system.exitProcess
 
 
@@ -60,7 +61,7 @@ interface RegAccType : DeductType{
 		val metpre: Formula?
 		val body: Stmt?
 		try {
-			objInv = extractSpec(classDecl, "ObjInv", UnknownType)
+			objInv = extractSpec(classDecl, "ObjInv", UnknownType.INSTANCE)
 			metpre = extractInheritedSpec(mDecl.methodSig, "Requires")
 			body = getNormalizedStatement(mDecl.block)
 		} catch (e: Exception) {
