@@ -27,6 +27,7 @@ import org.abs_models.crowbar.tree.NoInfo
 import org.abs_models.crowbar.tree.NodeInfo
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.SymbolicTree
+import org.abs_models.frontend.typechecker.Type
 
 object CounterexampleGenerator {
 
@@ -147,8 +148,8 @@ object CounterexampleGenerator {
         val reservedVarNames = allTypes.map { tpe -> reservedVarNameStems.map { stem -> "${stem}_${tpe.replace(".","_")}" } }.flatten() + functionNames + listOf("Unit")
 
         // Collect types of fields and variables from leaf node
-        val fieldTypes = ((leaf.ante.iterate { it is Field } + leaf.succ.iterate { it is Field }) as Set<Field>).associate { Pair(it.name, it.dType) }
-        val varTypes = ((leaf.ante.iterate { it is ProgVar } + leaf.succ.iterate { it is ProgVar }) as Set<ProgVar>).filter { !reservedVarNames.contains(it.name) }.associate { Pair(it.name, it.dType) }
+        val fieldTypes = ((leaf.ante.iterate { it is Field } + leaf.succ.iterate { it is Field }) as Set<Field>).associate { Pair(it.name, it.concrType) }
+        val varTypes = ((leaf.ante.iterate { it is ProgVar } + leaf.succ.iterate { it is ProgVar }) as Set<ProgVar>).filter { !reservedVarNames.contains(it.name) }.associate { Pair(it.name, it.concrType) }
 
         // Collect conjunctively joined sub-obligation parts
         val subObligationMap = collectSubObligations(deupdatify(leaf.succ) as Formula).associate { Pair(it.toSMT(), it) }
@@ -203,7 +204,7 @@ object CounterexampleGenerator {
             if (varTypes[it.name] == null) {
                 output("Investigator: model contains unknown variable \"${it.name}\", ignoring. Generated counterexample might be faulty.")
             } else {
-                val variable = ProgVar(it.name, varTypes[it.name]!!)
+                val variable = ProgVar(it.name, varTypes[it.name]!!.qualifiedName, varTypes[it.name]!!)
                 initialAssignments.add(Pair(variable, it.value))
             }
         }
@@ -226,7 +227,7 @@ object CounterexampleGenerator {
         return Model(initialAssignments, heapAssignments, futLookup, objLookup, smtExprs, subObligationValues, oldHeapExpr.toSMT())
     }
 
-    private fun getHeapMap(heapExpressions: List<Term>, fields: List<ModelConstant>, fieldTypes: Map<String, String>): Map<String, List<Pair<Field, ModelValue>>> {
+    private fun getHeapMap(heapExpressions: List<Term>, fields: List<ModelConstant>, fieldTypes: Map<String, Type>): Map<String, List<Pair<Field, ModelValue>>> {
         if (heapExpressions.size == 0)
             return mapOf()
 
@@ -241,9 +242,9 @@ object CounterexampleGenerator {
                 val fieldType = fieldTypes[field.name]!!
                 // By looking up the value in the sub-heap of the right type
                 // (ADTRepos.libPrefix maps ABS types to SMT types)
-                val subheapID = ADTRepos.libPrefix(fieldType)
+                val subheapID = ADTRepos.libPrefix(fieldType.qualifiedName)
                 val value = parsedHeaps[subheapID]!![index].getValue((field.value as MvInteger).value)
-                Pair(Field(field.name, fieldType), value)
+                Pair(Field(field.name, fieldType.qualifiedName, fieldType), value)
             }
 
             Pair(exp.toSMT(), heapContents)
