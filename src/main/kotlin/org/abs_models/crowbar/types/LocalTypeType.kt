@@ -99,12 +99,7 @@ import org.abs_models.crowbar.tree.StaticNode
 import org.abs_models.crowbar.tree.NodeInfo
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.SymbolicTree
-import org.abs_models.frontend.ast.ClassDecl
-import org.abs_models.frontend.ast.DataConstructorExp
-import org.abs_models.frontend.ast.FunctionDecl
-import org.abs_models.frontend.ast.MethodImpl
-import org.abs_models.frontend.ast.Model
-import org.abs_models.frontend.ast.StringLiteral
+import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.Type
 
 // Declaration
@@ -126,6 +121,7 @@ interface LocalTypeType : DeductType {
         val body: Stmt?
 
         val context = getParseContext(mDecl, classDecl)
+        val roleMapping = extractRoleMapping(classDecl)
 
         try {
             objInv = extractSpec(classDecl, "ObjInv", UnknownType)
@@ -145,8 +141,12 @@ interface LocalTypeType : DeductType {
         if (ltexp == null)
             return emptySymNode()
 
+        val roleEquivalences = roleMapping.map {
+            Predicate("hasRole", listOf(exprToTerm(it.second), Function("\"${it.first}\"")))
+        }.fold(True as Formula, { acc, elem -> And(acc, elem) })
+
         val updateOldHeap = ChainUpdate(ElementaryUpdate(LastHeap, Heap), ElementaryUpdate(OldHeap, Heap))
-        symb = SymbolicState(And(objInv, metpre), updateOldHeap, Modality(body, LocalTypeTarget(ltexp, objInv)))
+        symb = SymbolicState(And(And(objInv, metpre), roleEquivalences), updateOldHeap, Modality(body, LocalTypeTarget(ltexp, objInv)))
 
         return SymbolicNode(symb, listOf(usedSpec, SymbolicNode(symb, emptyList())))
     }
@@ -163,8 +163,23 @@ interface LocalTypeType : DeductType {
         return Pair(returnType, mapping)
     }
 
-    fun extractRoleMapping(classDecl: ClassDecl): List<Pair<Field,String>> {
-        return listOf()
+    fun extractRoleMapping(classDecl: ClassDecl): List<Pair<String, Field>> {
+        return classDecl.annotations.filter {
+            it.type.toString()
+                .endsWith(".Spec") && it.value is DataConstructorExp && (it.value as DataConstructorExp).constructor == "Role"
+        }.map {
+            val roleAnnotation = it.value as DataConstructorExp
+
+            if (roleAnnotation.getParam(0) !is StringLiteral)
+                throw Exception("First argument of Role annotation should be role name as string")
+            if (roleAnnotation.getParam(1) !is FieldUse)
+                throw Exception("Second argument of Role annotation should be a field use")
+
+            val roleString = (roleAnnotation.getParam(0) as StringLiteral).content
+            val fieldUse = (roleAnnotation.getParam(1) as FieldUse)
+            val field = Field(fieldUse.name + "_f", fieldUse.type.qualifiedName, fieldUse.type)
+            Pair(roleString, field)
+        }
     }
 
     fun extractLocalTypeSpec(mDecl: MethodImpl, context: Pair<Type,Map<String,Type>>?): LocalType? {
@@ -321,10 +336,9 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
         val remainder = cond.map[StmtAbstractVar("CONT")] as Stmt
         val target = cond.map[LocalTypeAbstractTarget("TYPE")] as LocalTypeTarget
 
+        // Check that receiving object is non-null
+        val isNonNull = calleeExpr.absExp?.nonNull() ?: false // call might already be non-null asserted by typechecker
         val notNullCondition = Not(Predicate("=", listOf(callee,Function("0", emptyList()))))
-
-        val absExp = calleeExpr.absExp
-        val isNonNull = absExp?.nonNull() ?: false
         val nonenull = LogicNode(
             input.condition,
             UpdateOnFormula(input.update, notNullCondition),
@@ -341,7 +355,10 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
 
         // Side condition: Show that the role of the callee matches the specified role
         val matchedCall = ltexp.getMatch(callPattern) as LTCall
-        val rolesMatch = LogicNode(True, True) // TODO: How do we do this?
+        val rolesMatch = LogicNode(
+            input.condition,
+            apply(input.update, Predicate("hasRole", listOf(callee, Function("\"${matchedCall.role}\"")))) as Formula
+        )
 
         val newTarget = LocalTypeTarget(ltexp.readTransform(callPattern), target.invariant, target.showInvariant)
 

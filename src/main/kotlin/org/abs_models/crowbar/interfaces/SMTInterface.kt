@@ -13,7 +13,8 @@ import java.util.concurrent.TimeUnit
 val smtHeader = """
     ; static header
     (set-logic ALL)
-    (declare-fun   valueOf_Int (Int) Int)
+    (declare-fun valueOf_Int (Int) Int)
+    (declare-fun hasRole (Int String) Bool)
     (declare-const Unit Int)
     (assert (= Unit 0))
     ${DefineSortSMT("Field", "Int").toSMT("\n")}
