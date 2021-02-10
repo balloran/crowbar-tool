@@ -36,8 +36,8 @@ import org.abs_models.crowbar.data.LocalType
 import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.crowbar.data.ReturnVar
 import org.abs_models.crowbar.data.SExpr
-import org.abs_models.crowbar.data.UnknownType
 import org.abs_models.frontend.typechecker.Type
+import org.abs_models.frontend.typechecker.UnknownType
 import org.antlr.v4.runtime.BaseErrorListener
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -46,7 +46,7 @@ import org.antlr.v4.runtime.Recognizer
 
 object LocalTypeParser : LocalSessionBaseVisitor<LocalType>() {
 
-    private val noContext = Pair(UnknownType, mapOf<String, Type>())
+    private val noContext = Pair(UnknownType.INSTANCE, mapOf<String, Type>())
     private var formulaConverter: LocalTypeFormulaConverter = LocalTypeFormulaConverter(noContext)
 
     fun parse(localTypeExp: String, context: Pair<Type, Map<String, Type>>?): LocalType {
@@ -160,7 +160,7 @@ class LocalTypeFormulaConverter(context: Pair<Type, Map<String, Type>>) : LocalS
 
     override fun visitField_type_term(ctx: Field_type_termContext): Expr {
         val name = ctx.STRING().text
-        val type = fieldTypeMapping[name] ?: UnknownType
+        val type = fieldTypeMapping[name] ?: UnknownType.INSTANCE
         return Field(name + "_f", type.qualifiedName, type)
     }
 
@@ -171,7 +171,7 @@ class LocalTypeFormulaConverter(context: Pair<Type, Map<String, Type>>) : LocalS
             "true"   -> Const("true")
             "false"  -> Const("false")
             "result" -> ReturnVar(methodReturnType.qualifiedName, methodReturnType)
-            else -> if (text matches Regex("[0-9]+")) Const(text) else ProgVar(text, "<UNKNOWN>", UnknownType)
+            else -> if (text matches Regex("[0-9]+")) Const(text) else ProgVar(text, "<UNKNOWN>", UnknownType.INSTANCE)
         }
     }
 }

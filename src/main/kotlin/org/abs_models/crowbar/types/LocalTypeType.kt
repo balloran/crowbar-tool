@@ -58,7 +58,7 @@ import org.abs_models.crowbar.data.SymbolicState
 import org.abs_models.crowbar.data.SyncStmt
 import org.abs_models.crowbar.data.Term
 import org.abs_models.crowbar.data.True
-import org.abs_models.crowbar.data.UnknownType
+import org.abs_models.frontend.typechecker.UnknownType
 import org.abs_models.crowbar.data.UpdateElement
 import org.abs_models.crowbar.data.UpdateOnFormula
 import org.abs_models.crowbar.data.WhileStmt
@@ -124,7 +124,7 @@ interface LocalTypeType : DeductType {
         val roleMapping = extractRoleMapping(classDecl)
 
         try {
-            objInv = extractSpec(classDecl, "ObjInv", UnknownType)
+            objInv = extractSpec(classDecl, "ObjInv", UnknownType.INSTANCE)
             ltexp = extractLocalTypeSpec(mDecl, context)
             metpre = extractInheritedSpec(mDecl.methodSig, "Requires")
             body = getNormalizedStatement(mDecl.block)
