@@ -16,7 +16,7 @@ import org.abs_models.frontend.ast.Stmt
 import org.abs_models.frontend.ast.WhileStmt
 import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
-import kotlin.system.exitProcess
+import org.abs_models.frontend.typechecker.UnknownType
 
 fun translateABSExpToSymExpr(input: Exp, returnType: Type) : Expr {
 
@@ -45,10 +45,10 @@ fun translateABSExpToSymExpr(input: Exp, returnType: Type) : Expr {
                 ReturnVar(returnType.qualifiedName,returnType)
             } else {
                 if (input.type.isFutureType) {
-                    ProgVar(input.name, (input.type as DataTypeType).getTypeArg(0).qualifiedName, input.type,true)
+                    ProgVar(input.name, (input.type as DataTypeType).getTypeArg(0).qualifiedName, input.type)
                 }
                 else
-                    ProgVar(input.name, input.type.qualifiedName,input.type)
+                    ProgVar(input.name, input.type.qualifiedName, input.type)
             }
         }
         is Binary -> {
@@ -133,7 +133,7 @@ fun translateABSStmtToSymStmt(input: Stmt?) : org.abs_models.crowbar.data.Stmt {
             if(input.contextMethod != null)
                 input.contextMethod.type
             else
-                UnknownType
+                UnknownType.INSTANCE
     when(input){
         is org.abs_models.frontend.ast.SkipStmt -> return SkipStmt
         is ExpressionStmt ->{
@@ -149,7 +149,7 @@ fun translateABSStmtToSymStmt(input: Stmt?) : org.abs_models.crowbar.data.Stmt {
                 }
         }
         is VarDeclStmt -> {
-            val loc = ProgVar(input.varDecl.name, input.varDecl.type.qualifiedName,input.varDecl.type)
+            val loc = ProgVar(input.varDecl.name, input.varDecl.type.qualifiedName, input.varDecl.type)
             return when(val exp = input.varDecl.initExp ?: NullExp()) {
                 is GetExp       -> SyncStmt(loc, translateABSExpToSymExpr(exp, returnType))
                 is NewExp       -> AllocateStmt(loc, translateABSExpToSymExpr(exp, returnType))
@@ -160,7 +160,11 @@ fun translateABSStmtToSymStmt(input: Stmt?) : org.abs_models.crowbar.data.Stmt {
         }
         is AssignStmt -> {
             val loc:Location = if(input.varNoTransform is FieldUse) Field(input.varNoTransform.name+"_f", input.varNoTransform.type.qualifiedName,input.varNoTransform.type)
-                               else ProgVar(input.varNoTransform.name, input.varNoTransform.type.qualifiedName,input.varNoTransform.type)
+                               else ProgVar(
+                input.varNoTransform.name,
+                input.varNoTransform.type.qualifiedName,
+                input.varNoTransform.type
+            )
             return when(val exp = input.valueNoTransform) {
                 is GetExp       -> SyncStmt(loc, translateABSExpToSymExpr(exp, returnType))
                 is NewExp       -> AllocateStmt(loc, translateABSExpToSymExpr(exp, returnType))
@@ -227,8 +231,8 @@ fun translateABSGuardToSymExpr(input: Guard, returnType: Type) : Expr =
 
 fun translateABSPatternToSymExpr(pattern : Pattern, overrideType : Type, returnType:Type) : Expr =
     when (pattern) {
-        is PatternVarUse -> ProgVar(pattern.name, pattern.type.qualifiedName,pattern.type)
-        is PatternVar -> ProgVar(pattern.`var`.name, pattern.type.qualifiedName,pattern.type)
+        is PatternVarUse -> ProgVar(pattern.name, pattern.type.qualifiedName, pattern.type)
+        is PatternVar -> ProgVar(pattern.`var`.name, pattern.type.qualifiedName, pattern.type)
         is LiteralPattern -> translateABSExpToSymExpr(pattern.literal, returnType)
         is UnderscorePattern ->  FreshGenerator.getFreshProgVar(overrideType)
         is ConstructorPattern -> DataTypeExpr(typeWithModule(pattern.constructor, pattern.moduleDecl.name),pattern.type.qualifiedName,pattern.type,pattern.params.map { translateABSPatternToSymExpr(it,it.inhType, returnType) })

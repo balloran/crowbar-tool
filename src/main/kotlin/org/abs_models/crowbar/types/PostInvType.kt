@@ -19,6 +19,7 @@ import org.abs_models.crowbar.tree.*
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
+import org.abs_models.frontend.typechecker.UnknownType
 import kotlin.system.exitProcess
 
 
@@ -49,7 +50,7 @@ interface PostInvType : DeductType{
         var succeedsSet : String? = null
         val hasPre = hasHeapPre(mDecl)
         try {
-            objInv = extractSpec(classDecl, "ObjInv", UnknownType)
+            objInv = extractSpec(classDecl, "ObjInv", UnknownType.INSTANCE)
             metpost = extractSpec(mDecl, "Ensures", mDecl.type)
             metpre = extractInheritedSpec(mDecl.methodSig, "Requires")
             body = getNormalizedStatement(mDecl.block)
@@ -113,7 +114,7 @@ interface PostInvType : DeductType{
         for (fieldDecl in classDecl.fields){
             if(fieldDecl.hasInitExp()){
                 val nextBody = AssignStmt(Field(fieldDecl.name+"_f", fieldDecl.type.qualifiedName, fieldDecl.type),
-                        translateABSExpToSymExpr(fieldDecl.initExp,UnknownType))
+                        translateABSExpToSymExpr(fieldDecl.initExp, UnknownType.INSTANCE))
                 body = SeqStmt(nextBody,body)
             }
         }
@@ -122,8 +123,8 @@ interface PostInvType : DeductType{
         val objInv: Formula?
         val objPre: Formula?
         try {
-            objInv = extractSpec(classDecl, "ObjInv", UnknownType)
-            objPre = extractSpec(classDecl, "Requires",UnknownType)
+            objInv = extractSpec(classDecl, "ObjInv", UnknownType.INSTANCE)
+            objPre = extractSpec(classDecl, "Requires",UnknownType.INSTANCE)
         } catch (e: Exception) {
             e.printStackTrace()
             System.err.println("error during translation, aborting")
@@ -324,7 +325,11 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val targetDecl = repos.methodReqs.getValue(call.met).second
         val substMap = mutableMapOf<LogicElement,LogicElement>()
         for(i in 0 until targetDecl.numParam){
-            val pName = ProgVar(targetDecl.getParam(i).name,targetDecl.getParam(i).type.qualifiedName, targetDecl.getParam(i).type)
+            val pName = ProgVar(
+                targetDecl.getParam(i).name,
+                targetDecl.getParam(i).type.qualifiedName,
+                targetDecl.getParam(i).type
+            )
             val pValue = exprToTerm(call.e[i])
             substMap[pName] = pValue
         }
@@ -342,7 +347,11 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val targetPostDecl = read!!.second
         val substPostMap = mutableMapOf<LogicElement,LogicElement>()
         for(i in 0 until targetDecl.numParam){
-            val pName = ProgVar(targetPostDecl.getParam(i).name,targetPostDecl.getParam(i).type.qualifiedName, targetPostDecl.getParam(i).type)
+            val pName = ProgVar(
+                targetPostDecl.getParam(i).name,
+                targetPostDecl.getParam(i).type.qualifiedName,
+                targetPostDecl.getParam(i).type
+            )
             val pValue = exprToTerm(call.e[i])
             substPostMap[pName] = pValue
         }
@@ -428,7 +437,11 @@ fun mapSubstPar(callExpr: SyncCallExpr, targetDecl: MethodSig): MutableMap<Logic
     val substMap = mutableMapOf<LogicElement, LogicElement>()
 
     for (i in 0 until targetDecl.numParam) {
-        val pName = ProgVar(targetDecl.getParam(i).name, targetDecl.getParam(i).type.qualifiedName, targetDecl.getParam(i).type)
+        val pName = ProgVar(
+            targetDecl.getParam(i).name,
+            targetDecl.getParam(i).type.qualifiedName,
+            targetDecl.getParam(i).type
+        )
         val pValue = exprToTerm(callExpr.e[i])
         substMap[pName] = pValue
 

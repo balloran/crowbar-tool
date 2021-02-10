@@ -4,6 +4,7 @@ import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.interfaces.*
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.frontend.ast.*
+import org.abs_models.frontend.typechecker.UnknownType
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 
@@ -125,7 +126,7 @@ object FunctionRepos{
 				    val eDef: ExpFunctionDef = pair.value.functionDef as ExpFunctionDef
 				    val def = eDef.rhs
 					sigs += "\t(${pair.key.replace(".", "-")} (${params.fold("",{ acc, nx -> "$acc (${nx.name} ${ADTRepos.libPrefix(nx.type.qualifiedName)})" })})  ${ADTRepos.libPrefix(def.type.qualifiedName)})\n"
-					defs += "\t${exprToTerm(translateABSExpToSymExpr(def, UnknownType)).toSMT()}\n"
+					defs += "\t${exprToTerm(translateABSExpToSymExpr(def, UnknownType.INSTANCE)).toSMT()}\n"
 			    }
 				ret += "\n(define-funs-rec(\n$sigs)(\n$defs))"
 		    }

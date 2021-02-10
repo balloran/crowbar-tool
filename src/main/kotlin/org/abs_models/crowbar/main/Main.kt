@@ -15,12 +15,12 @@ import com.github.ajalt.clikt.parameters.types.path
 import com.github.ajalt.clikt.parameters.types.restrictTo
 import org.abs_models.crowbar.data.Formula
 import org.abs_models.crowbar.data.True
-import org.abs_models.crowbar.data.UnknownType
 import org.abs_models.crowbar.interfaces.filterAtomic
 import org.abs_models.crowbar.types.PostInvType
 import org.abs_models.crowbar.types.RegAccType
 import org.abs_models.crowbar.types.LocalTypeType
 import org.abs_models.frontend.ast.*
+import org.abs_models.frontend.typechecker.UnknownType
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 
@@ -57,7 +57,7 @@ data class Repository(private val model : Model?,
             if(moduleDecl.name.startsWith("ABS.")) continue
             for (decl in moduleDecl.decls) {
                 if (decl is ClassDecl) {
-                    val spec = extractSpec(decl,"Requires", UnknownType)
+                    val spec = extractSpec(decl,"Requires", UnknownType.INSTANCE)
                     classReqs[decl.name] = Pair(spec,decl) //todo: use fully qualified name here
                 }
             }
