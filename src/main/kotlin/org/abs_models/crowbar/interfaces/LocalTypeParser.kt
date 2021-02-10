@@ -37,6 +37,7 @@ import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.crowbar.data.ReturnVar
 import org.abs_models.crowbar.data.SExpr
 import org.abs_models.crowbar.data.UnknownType
+import org.abs_models.frontend.typechecker.Type
 import org.antlr.v4.runtime.BaseErrorListener
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -44,7 +45,13 @@ import org.antlr.v4.runtime.RecognitionException
 import org.antlr.v4.runtime.Recognizer
 
 object LocalTypeParser : LocalSessionBaseVisitor<LocalType>() {
-    fun parse(localTypeExp: String): LocalType {
+
+    private val noContext = Pair(UnknownType, mapOf<String, Type>())
+    private var formulaConverter: LocalTypeFormulaConverter = LocalTypeFormulaConverter(noContext)
+
+    fun parse(localTypeExp: String, context: Pair<Type, Map<String, Type>>?): LocalType {
+        formulaConverter = LocalTypeFormulaConverter(context ?: noContext)
+
         val stream = CharStreams.fromString(localTypeExp)
 
         val lexer = LocalSessionLexer(stream)
@@ -64,20 +71,20 @@ object LocalTypeParser : LocalSessionBaseVisitor<LocalType>() {
     }
 
     override fun visitCall_local_type(ctx: Call_local_typeContext): LocalType {
-        val role = ctx.role().STRING().getText()
-        val method = ctx.STRING().getText()
-        val formula = ctx.formula().accept(LocalTypeFormulaConverter) as Expr
+        val role = ctx.role().STRING().text
+        val method = ctx.STRING().text
+        val formula = ctx.formula().accept(formulaConverter) as Expr
         return LTCall(role, method, formula)
     }
 
     override fun visitRep_local_type(ctx: Rep_local_typeContext): LocalType {
         val inner = ctx.local().accept(this)
-        val formula = ctx.formula().accept(LocalTypeFormulaConverter) as Expr
-        return LTRep(inner, formula)
+        // val formula = ctx.formula().accept(formulaConverter) as Expr
+        return LTRep(inner)
     }
 
     override fun visitPut_local_type(ctx: Put_local_typeContext): LocalType {
-        val formula = ctx.formula().accept(LocalTypeFormulaConverter) as Expr
+        val formula = ctx.formula().accept(formulaConverter) as Expr
         return LTPut(formula)
     }
 
@@ -96,12 +103,12 @@ object LocalTypeParser : LocalSessionBaseVisitor<LocalType>() {
     }
 
     override fun visitGet_local_type(ctx: Get_local_typeContext): LocalType {
-        val term = ctx.term().accept(LocalTypeFormulaConverter) as Expr
+        val term = ctx.term().accept(formulaConverter) as Expr
         return LTGet(term)
     }
 
     override fun visitSusp_local_type(ctx: Susp_local_typeContext): LocalType {
-        val formula = ctx.formula().accept(LocalTypeFormulaConverter) as Expr
+        val formula = ctx.formula().accept(formulaConverter) as Expr
         return LTSusp(formula)
     }
 
@@ -113,7 +120,9 @@ object LocalTypeParser : LocalSessionBaseVisitor<LocalType>() {
 }
 
 // Sub-converter for terms and formulas in local type expressions
-object LocalTypeFormulaConverter : LocalSessionBaseVisitor<Expr>() {
+class LocalTypeFormulaConverter(context: Pair<Type, Map<String, Type>>) : LocalSessionBaseVisitor<Expr>() {
+    private val methodReturnType = context.first
+    private val fieldTypeMapping = context.second
 
     override fun visitOr_type_formula(ctx: Or_type_formulaContext): SExpr {
         val left = ctx.formula(0).accept(this) as Expr
@@ -137,31 +146,32 @@ object LocalTypeFormulaConverter : LocalSessionBaseVisitor<Expr>() {
     }
 
     override fun visitFunction_type_term(ctx: Function_type_termContext): Expr {
-        val name = ctx.STRING().getText()
+        val name = ctx.STRING().text
         val args = ctx.termlist().term().map { it.accept(this) as Expr }
         return SExpr(name, args)
     }
 
     override fun visitBinary_type_term(ctx: Binary_type_termContext): Expr {
-        val op = ctx.binop().getText()
+        val op = ctx.binop().text
         val left = ctx.term(0).accept(this) as Expr
         val right = ctx.term(1).accept(this) as Expr
         return SExpr(op, listOf(left, right))
     }
 
     override fun visitField_type_term(ctx: Field_type_termContext): Expr {
-        return Field(ctx.STRING().getText() + "_f", "<UNKNOWN>")
+        val name = ctx.STRING().text
+        val type = fieldTypeMapping[name] ?: UnknownType
+        return Field(name + "_f", type.qualifiedName, type)
     }
 
     override fun visitConstant_type_term(ctx: Constant_type_termContext): Expr {
-        val text = ctx.STRING().getText()
-        return when (text) {
-            "null" -> Const("0")
-            "this" -> Const("1")
-            "true" -> Const("true")
-            "false" -> Const("false")
-            "result" -> ReturnVar("<UNKNOWN>", UnknownType)
-            else -> ProgVar(text, "<UNKNOWN>", UnknownType)
+        return when (val text = ctx.STRING().text) {
+            "null"   -> Const("0")
+            "this"   -> Const("1")
+            "true"   -> Const("true")
+            "false"  -> Const("false")
+            "result" -> ReturnVar(methodReturnType.qualifiedName, methodReturnType)
+            else -> if (text matches Regex("[0-9]+")) Const(text) else ProgVar(text, "<UNKNOWN>", UnknownType)
         }
     }
 }

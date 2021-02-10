@@ -112,7 +112,7 @@ data class LTOpt(val first: LocalType, val second: LocalType) : LocalType {
     }
 }
 
-data class LTRep(val inner: LocalType, val formula: Expr) : LocalType {
+data class LTRep(val inner: LocalType) : LocalType {
     override val couldSkip = true
     override val isSkip: Boolean
         get() = inner.isSkip
@@ -142,7 +142,8 @@ data class LTRep(val inner: LocalType, val formula: Expr) : LocalType {
     }
 
     override fun prettyPrint(): String {
-        return "(${inner.prettyPrint()})*[${formula.prettyPrint()}]"
+        //return "(${inner.prettyPrint()})*[${formula.prettyPrint()}]"
+        return "(${inner.prettyPrint()})*"
     }
 }
 

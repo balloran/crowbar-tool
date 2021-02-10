@@ -93,7 +93,9 @@ import org.abs_models.crowbar.tree.InfoObjAlloc
 import org.abs_models.crowbar.tree.InfoReturn
 import org.abs_models.crowbar.tree.InfoScopeClose
 import org.abs_models.crowbar.tree.InfoSkip
+import org.abs_models.crowbar.tree.InfoNullCheck
 import org.abs_models.crowbar.tree.LogicNode
+import org.abs_models.crowbar.tree.StaticNode
 import org.abs_models.crowbar.tree.NodeInfo
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.SymbolicTree
@@ -103,6 +105,7 @@ import org.abs_models.frontend.ast.FunctionDecl
 import org.abs_models.frontend.ast.MethodImpl
 import org.abs_models.frontend.ast.Model
 import org.abs_models.frontend.ast.StringLiteral
+import org.abs_models.frontend.typechecker.Type
 
 // Declaration
 interface LocalTypeType : DeductType {
@@ -122,9 +125,11 @@ interface LocalTypeType : DeductType {
         val metpre: Formula?
         val body: Stmt?
 
+        val context = getParseContext(mDecl, classDecl)
+
         try {
             objInv = extractSpec(classDecl, "ObjInv", UnknownType)
-            ltexp = extractLocalTypeSpec(mDecl)
+            ltexp = extractLocalTypeSpec(mDecl, context)
             metpre = extractInheritedSpec(mDecl.methodSig, "Requires")
             body = getNormalizedStatement(mDecl.block)
         } catch (e: Exception) {
@@ -134,6 +139,8 @@ interface LocalTypeType : DeductType {
         }
         output("Crowbar-v: method local type expression: ${ltexp?.prettyPrint() ?: "null"}", Verbosity.V)
 
+        val usedSpec = StaticNode("Using specification of ${classDecl.qualifiedName}.$name:\nObject Invariant: ${objInv.prettyPrint()}\nRequires: ${metpre.prettyPrint()}")
+
         // We have nothing to show if the method has no LocalType annotation
         if (ltexp == null)
             return emptySymNode()
@@ -141,24 +148,47 @@ interface LocalTypeType : DeductType {
         val updateOldHeap = ChainUpdate(ElementaryUpdate(LastHeap, Heap), ElementaryUpdate(OldHeap, Heap))
         symb = SymbolicState(And(objInv, metpre), updateOldHeap, Modality(body, LocalTypeTarget(ltexp, objInv)))
 
-        return SymbolicNode(symb, emptyList())
+        return SymbolicNode(symb, listOf(usedSpec, SymbolicNode(symb, emptyList())))
     }
 
-    fun extractLocalTypeSpec(mDecl: MethodImpl): LocalType? {
+    fun getParseContext(mDecl: MethodImpl, cDecl: ClassDecl): Pair<Type,Map<String,Type>> {
+        val returnType = mDecl.type
+        val fields = cDecl.fields.map {
+            Pair(it.name, it.type)
+        }
+        val params = cDecl.params.map {
+            Pair(it.name, it.type)
+        }
+        val mapping = (fields + params).associate { it }
+        return Pair(returnType, mapping)
+    }
+
+    fun extractRoleMapping(classDecl: ClassDecl): List<Pair<Field,String>> {
+        return listOf()
+    }
+
+    fun extractLocalTypeSpec(mDecl: MethodImpl, context: Pair<Type,Map<String,Type>>?): LocalType? {
         val annotations = mDecl.nodeAnnotations.filter {
-            it.type.toString().endsWith(".Spec") && it.value is DataConstructorExp && (it.value as DataConstructorExp).constructor == "LocalType"
+            it.type.toString().endsWith(".Spec") && it.value is DataConstructorExp && (it.value as DataConstructorExp).constructor == "Local"
         }.map { it.value as DataConstructorExp }
 
         return when (annotations.size) {
             0 -> null
-            1 -> LocalTypeParser.parse((annotations[0].getParam(0) as StringLiteral).content)
-            else -> throw Exception("Cannot have more than one LocalType annotation per method (at method ${mDecl.methodSig.name})")
+            1 -> LocalTypeParser.parse((annotations[0].getParam(0) as StringLiteral).content, context)
+            else -> throw Exception("Cannot have more than one Local annotation per method (at method ${mDecl.methodSig.name})")
         }
     }
 
     override fun extractInitialNode(classDecl: ClassDecl): SymbolicNode {
-        // TODO: return static node
-        return emptySymNode()
+        // Collect all local type annotations
+        val methods = classDecl.methods.map {
+            val lte = extractLocalTypeSpec(it, null)
+            "${classDecl.name}.${it.methodSig.name}: ${lte?.prettyPrint() ?: "no local type annotation"}"
+        }.joinToString("\n")
+
+        val emptySymState = SymbolicState(True, EmptyUpdate, Modality(SkipStmt, LocalTypeTarget(LTSkip)))
+
+        return SymbolicNode(emptySymState, listOf(StaticNode("Expected projection result:\n$methods")))
     }
 
     override fun exctractMainNode(model: Model) = emptySymNode()
@@ -237,11 +267,7 @@ class LTTSyncAssign(repos: Repository) : LTTAssign(repos, Modality(
         // Side condition: Show that the term we sync on is equivalent to the specified one
         val matchedGet = ltexp.getMatch(LTPatternGet) as LTGet
         val rhsTerm = exprToTerm(rhsExpr.e[0]) // rhsExpr is valueOf(<get term>)
-        println(rhsExpr.e[0].prettyPrint())
-        println(rhsTerm.prettyPrint())
-        println(matchedGet.term.prettyPrint())
-        // val termsEqual = LogicNode(input.condition, UpdateOnFormula(input.update, Predicate("=", listOf(matchedGet.term, rhsTerm))))
-        val termsEqual = LogicNode(True, True) // TODO
+        val termsEqual = LogicNode(input.condition, UpdateOnFormula(input.update, Predicate("=", listOf(exprToTerm(matchedGet.term), rhsTerm))))
 
         val newTarget = LocalTypeTarget(ltexp.readTransform(LTPatternGet), target.invariant, target.showInvariant)
 
@@ -290,10 +316,20 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
     override fun transform(cond: MatchCondition, input: SymbolicState): List<SymbolicTree> {
         val lhs = cond.map[LocationAbstractVar("LHS")] as Location
         val calleeExpr = cond.map[ExprAbstractVar("CALLEE")] as Expr
-        // val callee = exprToTerm(calleeExpr)
+        val callee = exprToTerm(calleeExpr)
         val call = cond.map[CallExprAbstractVar("CALL")] as CallExpr
         val remainder = cond.map[StmtAbstractVar("CONT")] as Stmt
         val target = cond.map[LocalTypeAbstractTarget("TYPE")] as LocalTypeTarget
+
+        val notNullCondition = Not(Predicate("=", listOf(callee,Function("0", emptyList()))))
+
+        val absExp = calleeExpr.absExp
+        val isNonNull = absExp?.nonNull() ?: false
+        val nonenull = LogicNode(
+            input.condition,
+            UpdateOnFormula(input.update, notNullCondition),
+            info = InfoNullCheck(notNullCondition)
+        )
 
         // We're executing a call here which has to match the local type specification
         val ltexp = target.lte
@@ -338,7 +374,10 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
                                 input.update,
                                 InfoCallAssign(lhs, calleeExpr, call, freshFut.name))
 
-        return listOf(rolesMatch, formulaHolds, next)
+        return if(isNonNull)
+                listOf(rolesMatch, formulaHolds, next)
+            else
+                listOf(nonenull, rolesMatch, formulaHolds, next)
     }
 }
 
@@ -511,24 +550,25 @@ object LTTWhile : Rule(Modality(
         val guard = exprToForm(guardExpr)
         val body = cond.map[StmtAbstractVar("BODY")] as Stmt
         val cont = cond.map[StmtAbstractVar("CONT")] as Stmt
+        val invariant = cond.map[FormulaAbstractVar("INV")] as Formula
         val target = cond.map[LocalTypeAbstractTarget("TARGET")] as LocalTypeTarget
 
         // We're executing a loop here which has to match the local type specification
         val ltexp = target.lte
-        var invariant: Formula
-        var useTarget: LocalTypeTarget
-        var preservesTarget: LocalTypeTarget
+        //var invariant: Formula
+        val useTarget: LocalTypeTarget
+        val preservesTarget: LocalTypeTarget
 
         // Side condition: Show that the specified invariant holds
         if (ltexp.matches(LTPatternRep)) {
             val matchedRep = ltexp.getMatch(LTPatternRep) as LTRep
-            invariant = exprToForm(matchedRep.formula)
+            //invariant = exprToForm(matchedRep.formula)
             useTarget = LocalTypeTarget(ltexp.readTransform(LTPatternRep), target.invariant, target.showInvariant)
             preservesTarget = LocalTypeTarget(matchedRep.inner, invariant, true)
         }
         // If no repetition could be matched, the proof might still succeed if the loop does nothing
         else {
-            invariant = True
+            //invariant = True
             useTarget = LocalTypeTarget(ltexp, target.invariant, target.showInvariant)
             preservesTarget = LocalTypeTarget(LTSkip, True, true)
         }

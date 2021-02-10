@@ -39,7 +39,7 @@ STRING : [a-zA-Z0-9/\-_=<>]+ ;
 local : local DOT local                               # seq_local_type
       | OPARAN local CPARAN                           # nested_local_type
       | local ALTERNATIVE local                       # or_local_type
-      | OPARAN local CPARAN AST OPARAN formula CPARAN # rep_local_type
+      | OPARAN local CPARAN AST                       # rep_local_type
       | SKIP_S                                        # skip_local_type
       | PUT OPARAN formula CPARAN                     # put_local_type
       | SUSP OPARAN formula CPARAN                    # susp_local_type
