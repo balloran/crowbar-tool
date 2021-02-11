@@ -437,7 +437,8 @@ fun exprToTerm(input : Expr, specialKeyword : String="NONE") : Term {//todo: add
                 else
                     throw Exception("Special keyword ${input.op} must have one argument, actual arguments size:" + input.e.size)
             }
-            Function(input.op, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
+            else
+                Function(input.op, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
         }
         is DataTypeExpr -> {
             DataTypeConst(input.name, input.dType, input.concrType, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
