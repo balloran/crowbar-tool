@@ -155,7 +155,7 @@ class LocalTypeFormulaConverter(context: Pair<Type, Map<String, Type>>) : LocalS
         val op = ctx.binop().text
         val left = ctx.term(0).accept(this) as Expr
         val right = ctx.term(1).accept(this) as Expr
-        return SExpr(op, listOf(left, right))
+        return SExpr(if (op == "==") "=" else op, listOf(left, right))
     }
 
     override fun visitField_type_term(ctx: Field_type_termContext): Expr {
@@ -171,6 +171,7 @@ class LocalTypeFormulaConverter(context: Pair<Type, Map<String, Type>>) : LocalS
             "true"   -> Const("true")
             "false"  -> Const("false")
             "result" -> ReturnVar(methodReturnType.qualifiedName, methodReturnType)
+            // TODO: This does not support data types, and ProgVars are only kind of supported - sometimes the unknown type causes issues
             else -> if (text matches Regex("[0-9]+")) Const(text) else ProgVar(text, "<UNKNOWN>", UnknownType.INSTANCE)
         }
     }

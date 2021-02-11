@@ -63,4 +63,4 @@ termlist : term (COMMA term)*;
 
 role : STRING;
 
-binop : STRING | AST | ALTERNATIVE | BANG '=';
+binop : STRING | AST | ALTERNATIVE | BANG '=' | '==' | '=';
