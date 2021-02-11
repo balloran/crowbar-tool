@@ -432,14 +432,8 @@ fun exprToTerm(input : Expr, specialKeyword : String="NONE") : Term {//todo: add
         is Const -> Function(input.name)
         is SExpr -> {
             if (specialHeapKeywords.containsKey(input.op)) {
-                val op =
-                    if(specialKeyword != "NONE")
-                        input.op
-                    else
-                        "NONE"
-                    //throw Exception("Cannot apply a special keyword ($specialKeyword) to another keyword (${input.op})")
                 if (input.e.size == 1)
-                        Function(input.op, input.e.map { ex -> exprToTerm(ex, op) })
+                    exprToTerm(input.e[0], input.op)
                 else
                     throw Exception("Special keyword ${input.op} must have one argument, actual arguments size:" + input.e.size)
             }
@@ -465,11 +459,9 @@ fun exprToForm(input : Expr, specialKeyword : String="NONE") : Formula {//todo: 
 
     if(input is SExpr){
         if (specialHeapKeywords.containsKey(input.op)){//todo: fix for last
-            if(specialKeyword != "NONE")
-                throw Exception("Cannot apply a special keyword ($specialKeyword) to another keyword (${input.op})")
             if(input.e.size == 1) {
                 return exprToForm(input.e[0], input.op)
-            }else
+            } else
                 throw Exception("Special keywords must have one argument, actual arguments size:" + input.e.size)
         }
         return Predicate(input.op, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
