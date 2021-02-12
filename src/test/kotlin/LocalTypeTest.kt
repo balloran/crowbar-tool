@@ -30,37 +30,39 @@ class LocalTypeTest : StringSpec() {
             assert(!exp2.matches(LTPatternRep))
         }
 
+        val fakeCallCtx = LTCallContext(True, EmptyUpdate, Const("sth"), mapOf())
+
         "transform" {
             var exp = LocalTypeParser.parse("(role!a(true).role!b(true) + (role!c(true))*).skip.role!d(true).role!e(true)", null)
-            exp = exp.readTransform(LTPatternCall("a"))
-            exp = exp.readTransform(LTPatternCall("b"))
-            exp = exp.readTransform(LTPatternCall("d"))
-            exp = exp.readTransform(LTPatternCall("e"))
-            exp shouldBe LTSkip
+            exp = exp.readTransform(LTPatternCall("a"), fakeCallCtx)
+            exp = exp.readTransform(LTPatternCall("b"), fakeCallCtx)
+            exp = exp.readTransform(LTPatternCall("d"), fakeCallCtx)
+            exp = exp.readTransform(LTPatternCall("e"), fakeCallCtx)
+            assert(exp.isSkip)
 
             exp = LocalTypeParser.parse("(role!a(true).role!b(true) + (role!c(true))*).skip.role!d(true).role!e(true)", null)
-            exp = exp.readTransform(LTPatternCall("c"))
-            exp = exp.readTransform(LTPatternCall("c"))
-            exp = exp.readTransform(LTPatternCall("c"))
-            exp = exp.readTransform(LTPatternCall("d"))
-            exp = exp.readTransform(LTPatternCall("e"))
-            exp shouldBe LTSkip
+            exp = exp.readTransform(LTPatternCall("c"), fakeCallCtx)
+            exp = exp.readTransform(LTPatternCall("c"), fakeCallCtx)
+            exp = exp.readTransform(LTPatternCall("c"), fakeCallCtx)
+            exp = exp.readTransform(LTPatternCall("d"), fakeCallCtx)
+            exp = exp.readTransform(LTPatternCall("e"), fakeCallCtx)
+            assert(exp.isSkip)
 
             exp = LocalTypeParser.parse("(role!a(true).role!b(true) + (role!c(true))*).skip.role!d(true).role!e(true)", null)
-            exp = exp.readTransform(LTPatternCall("d"))
-            exp = exp.readTransform(LTPatternCall("e"))
-            exp shouldBe LTSkip
+            exp = exp.readTransform(LTPatternCall("d"), fakeCallCtx)
+            exp = exp.readTransform(LTPatternCall("e"), fakeCallCtx)
+            assert(exp.isSkip)
         }
 
         "transform-fail" {
             var exp = LocalTypeParser.parse("(role!a(true).role!b(true) + (role!c(true))*).skip.role!d(true).role!e(true)", null)
-            exp = exp.readTransform(LTPatternCall("a"))
-            shouldThrow<Exception>{ exp.readTransform(LTPatternCall("c")) }
+            exp = exp.readTransform(LTPatternCall("a"), fakeCallCtx)
+            shouldThrow<Exception>{ exp.readTransform(LTPatternCall("c"), fakeCallCtx) }
 
             exp = LocalTypeParser.parse("(role!a(true).role!b(true) + (role!c(true))*).skip.role!d(true).role!e(true)", null)
-            exp = exp.readTransform(LTPatternCall("c"))
-            shouldThrow<Exception>{ exp.readTransform(LTPatternCall("a")) }
-            shouldThrow<Exception>{ exp.readTransform(LTPatternCall("e")) }
+            exp = exp.readTransform(LTPatternCall("c"), fakeCallCtx)
+            shouldThrow<Exception>{ exp.readTransform(LTPatternCall("a"), fakeCallCtx) }
+            shouldThrow<Exception>{ exp.readTransform(LTPatternCall("e"), fakeCallCtx) }
         }
 
         val cvc: String = System.getenv("CVC") ?: "cvc"
@@ -96,6 +98,8 @@ class LocalTypeTest : StringSpec() {
                 testMethod(classDecl, "loopHeadDuplication", repos, true)
                 //testMethod(classDecl, "loopTailDuplication", repos, true) // Supporting this is counterproductive as long as we dont have proper matching
                 testMethod(classDecl, "nestedRepetition", repos, true)
+                testMethod(classDecl, "sideconditionInLoop", repos, true)
+                testMethod(classDecl, "sideconditionInLoopFail", repos, false)
                 //testMethod(classDecl, "singleRepMultiLoop", repos, true) // Special case of loop tail duplication
             }
 

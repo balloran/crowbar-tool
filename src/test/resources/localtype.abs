@@ -248,6 +248,32 @@ class C(Server s, Client c, Database d) {
             a = a + 1;
         }
     }
+
+    [Spec:Local("database!reset(true).(server!a(a > 3))*.Put(true)")]
+    Unit sideconditionInLoop() {
+
+        Fut<Int> sth = this.d!reset();
+        Int a = 10;
+        
+        [Spec: WhileInv(this.s != null && hasRole(this.s, "server"))]
+        while(a > 5) {
+            sth = this.s!a();
+            a = a - 1;
+        }
+    }
+
+    [Spec:Local("database!reset(true).(server!a(a == 3))*.Put(true)")]
+    Unit sideconditionInLoopFail() {
+
+        Fut<Int> sth = this.d!reset();
+        Int a = 10;
+        
+        [Spec: WhileInv(this.s != null && hasRole(this.s, "server"))]
+        while(a > 5) {
+            sth = this.s!a();
+            a = a - 1;
+        }
+    }
 }
 
 {}

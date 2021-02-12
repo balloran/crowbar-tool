@@ -24,17 +24,16 @@ import org.abs_models.crowbar.data.FormulaAbstractVar
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.Heap
 import org.abs_models.crowbar.data.IfStmt
-import org.abs_models.crowbar.data.LTCall
-import org.abs_models.crowbar.data.LTGet
+import org.abs_models.crowbar.data.LTCallContext
+import org.abs_models.crowbar.data.LTCommonContext
+import org.abs_models.crowbar.data.LTGetContext
 import org.abs_models.crowbar.data.LTPatternCall
 import org.abs_models.crowbar.data.LTPatternGet
 import org.abs_models.crowbar.data.LTPatternPut
 import org.abs_models.crowbar.data.LTPatternRep
 import org.abs_models.crowbar.data.LTPatternSusp
-import org.abs_models.crowbar.data.LTPut
 import org.abs_models.crowbar.data.LTRep
 import org.abs_models.crowbar.data.LTSkip
-import org.abs_models.crowbar.data.LTSusp
 import org.abs_models.crowbar.data.LastHeap
 import org.abs_models.crowbar.data.LocalType
 import org.abs_models.crowbar.data.Location
@@ -58,7 +57,6 @@ import org.abs_models.crowbar.data.SymbolicState
 import org.abs_models.crowbar.data.SyncStmt
 import org.abs_models.crowbar.data.Term
 import org.abs_models.crowbar.data.True
-import org.abs_models.frontend.typechecker.UnknownType
 import org.abs_models.crowbar.data.UpdateElement
 import org.abs_models.crowbar.data.UpdateOnFormula
 import org.abs_models.crowbar.data.WhileStmt
@@ -82,6 +80,7 @@ import org.abs_models.crowbar.rule.Rule
 import org.abs_models.crowbar.tree.*
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.Type
+import org.abs_models.frontend.typechecker.UnknownType
 
 // Declaration
 interface LocalTypeType : DeductType {
@@ -129,13 +128,13 @@ interface LocalTypeType : DeductType {
 
         val usedSpec = StaticNode("Using specification of ${classDecl.qualifiedName}.$name:\nObject Invariant: ${objInv.prettyPrint()}\nRequires: ${metpre.prettyPrint()}")
 
-        return if(objInv != True || metpre != True)
+        return if (objInv != True || metpre != True)
                 SymbolicNode(symb, listOf(usedSpec, SymbolicNode(symb, emptyList())))
             else
                 SymbolicNode(symb, listOf())
     }
 
-    fun getParseContext(mDecl: MethodImpl, cDecl: ClassDecl): Pair<Type,Map<String,Type>> {
+    fun getParseContext(mDecl: MethodImpl, cDecl: ClassDecl): Pair<Type, Map<String, Type>> {
         val returnType = mDecl.type
         val fields = cDecl.fields.map {
             Pair(it.name, it.type)
@@ -166,7 +165,7 @@ interface LocalTypeType : DeductType {
         }
     }
 
-    fun extractLocalTypeSpec(mDecl: MethodImpl, context: Pair<Type,Map<String,Type>>?): LocalType? {
+    fun extractLocalTypeSpec(mDecl: MethodImpl, context: Pair<Type, Map<String, Type>>?): LocalType? {
         val annotations = mDecl.nodeAnnotations.filter {
             it.type.toString().endsWith(".Spec") && it.value is DataConstructorExp && (it.value as DataConstructorExp).constructor == "Local"
         }.map { it.value as DataConstructorExp }
@@ -263,18 +262,19 @@ class LTTSyncAssign(repos: Repository) : LTTAssign(repos, Modality(
             return listOf()
         }
 
-        // Side condition: Show that the term we sync on is equivalent to the specified one
-        val matchedGet = ltexp.getMatch(LTPatternGet) as LTGet
-        val rhsTerm = exprToTerm(rhsExpr.e[0]) // rhsExpr is valueOf(<get term>)
-        val termsEqual = LogicNode(input.condition, UpdateOnFormula(input.update, Predicate("=", listOf(exprToTerm(matchedGet.term), rhsTerm))))
-
-        val newTarget = LocalTypeTarget(ltexp.readTransform(LTPatternGet), target.invariant, target.showInvariant)
+        // Side condition: Show that the term we sync on is equivalent to the specified one (handled in readTransform)
+        val context = LTGetContext(input.condition, input.update, rhsExpr.e[0]) // rhsExpr is valueOf(<get term>)
+        val newTarget = LocalTypeTarget(
+            ltexp.readTransform(LTPatternGet, context),
+            target.invariant,
+            target.showInvariant
+        )
 
         // Generate SMT representation of the future expression to get its model value later
         val futureSMTExpr = apply(input.update, rhs) as Term
         val info = InfoGetAssign(lhs, rhsExpr, futureSMTExpr)
 
-        return listOf(symbolicNext(lhs, rhs, remainder, newTarget, input.condition, input.update, info), termsEqual)
+        return listOf(symbolicNext(lhs, rhs, remainder, newTarget, input.condition, input.update, info))
     }
 }
 
@@ -322,7 +322,7 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
 
         // Check that receiving object is non-null
         val isNonNull = calleeExpr.absExp?.nonNull() ?: false // call might already be non-null asserted by typechecker
-        val notNullCondition = Not(Predicate("=", listOf(callee,Function("0", emptyList()))))
+        val notNullCondition = Not(Predicate("=", listOf(callee, Function("0", emptyList()))))
         val nonenull = LogicNode(
             input.condition,
             UpdateOnFormula(input.update, notNullCondition),
@@ -337,19 +337,10 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
             return listOf()
         }
 
-        // Side condition: Show that the role of the callee matches the specified role
-        val matchedCall = ltexp.getMatch(callPattern) as LTCall
-        val rolesMatch = LogicNode(
-            input.condition,
-            apply(input.update, Predicate("hasRole", listOf(callee, Function("\"${matchedCall.role}\"")))) as Formula
-        )
-
-        val newTarget = LocalTypeTarget(ltexp.readTransform(callPattern), target.invariant, target.showInvariant)
-
-        // Side condition: Show that specified call precondition is met
+        // Collect mapping from parameter names to instantiated expressions
         val targetDecl = repos.methodReqs.getValue(call.met).second
-        val substMap = mutableMapOf<LogicElement,LogicElement>()
-        for(i in 0 until targetDecl.numParam){
+        val substMap = mutableMapOf<LogicElement, LogicElement>()
+        for (i in 0 until targetDecl.numParam) {
             val pName = ProgVar(
                 targetDecl.getParam(i).name,
                 targetDecl.getParam(i).type.qualifiedName,
@@ -358,11 +349,15 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
             val pValue = exprToTerm(call.e[i])
             substMap[pName] = pValue
         }
-        val precond = subst(exprToForm(matchedCall.formula), substMap) as Formula
-        val formulaHolds = LogicNode(
-            input.condition,
-            UpdateOnFormula(input.update, precond),
-            info = InfoMethodPrecondition(precond)
+
+        // Side conditions handled in readTransform:
+        // - Show that role of callee matches specified role
+        // - Show that specified call precondition is met
+        val context = LTCallContext(input.condition, input.update, calleeExpr, substMap)
+        val newTarget = LocalTypeTarget(
+            ltexp.readTransform(callPattern, context),
+            target.invariant,
+            target.showInvariant
         )
 
         val freshFut = FreshGenerator.getFreshFuture(targetDecl.type)
@@ -387,15 +382,15 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
                                 input.update,
                                 InfoCallAssign(lhs, calleeExpr, call, freshFut.name))
 
-        val children = mutableListOf<SymbolicTree>(rolesMatch, formulaHolds, next)
+        val children = mutableListOf<SymbolicTree>(next)
 
-        if(!isNonNull)
+        if (!isNonNull)
             children.add(nonenull)
 
         // Create static node if we used a non-trivial postcondition
-        if(postCond != True)
+        if (postCond != True)
             children.add(StaticNode("Using postcondition of method ${call.met}: ${postCond.prettyPrint()}"))
-        
+
         return children
     }
 }
@@ -408,14 +403,18 @@ object LTTSkip : Rule(Modality(SkipStmt, LocalTypeAbstractTarget("TARGET"))) {
         // There's nothing left to execute.
         // If the remaining local type expression does not require any further actions,
         // the proof was successful. If not, it failed.
-        return if (target.lte.couldSkip && target.showInvariant)
-            listOf(LogicNode(input.condition, apply(input.update, target.invariant) as Formula)) // We may have to show an invariant here (e.g. for loop invariant preservation)
-        else if (target.lte.couldSkip)
-            listOf(LogicNode(True, True)) // No need to show anything if we don't have to show the invariant holds
-        else {
+        if (!target.lte.couldSkip) {
             output("Crowbar  : Bailing out, program execution completed but expected actions remain: ${target.prettyPrint()}")
-            listOf()
+            return listOf()
         }
+
+        val sideconditions = target.lte.sideConditions.toMutableList()
+
+        // We may have to show an invariant here (e.g. for loop invariant preservation)
+        if (target.showInvariant)
+            sideconditions.add(LogicNode(input.condition, apply(input.update, target.invariant) as Formula))
+
+        return sideconditions
     }
 }
 
@@ -454,30 +453,32 @@ object LTTReturn : Rule(Modality(
         val typeReturn = getReturnType(ret)
 
         // We're executing a return statement here which has to match the local type specification
-        // Specifically, we have to be able to match a Put _and_ the rest of the expression must be skippable
         val ltexp = target.lte
-        if (!ltexp.matches(LTPatternPut) || !ltexp.readTransform(LTPatternPut).couldSkip) {
+        if (!ltexp.matches(LTPatternPut)) {
             output("Crowbar  : Bailing out, could not match return to ${target.prettyPrint()}")
             return listOf()
         }
 
-        // Side condition: Show that the postcondition of the Put holds
-        val matchedPut = ltexp.getMatch(LTPatternPut) as LTPut
+        // Sidecondition handled in readTransform: specified postcondition must hold
+        val newUpdate = ChainUpdate(input.update, ElementaryUpdate(ReturnVar(typeReturn.qualifiedName, typeReturn), ret))
+        val context = LTCommonContext(input.condition, newUpdate)
+        val newTargetExp = ltexp.readTransform(LTPatternPut, context)
+
+        // We can't have un-matched parts of the local type expression remaining when finishing execution
+        if (!newTargetExp.couldSkip) {
+            output("Crowbar  : Bailing out, finished execution but pattern is not skippable: ${target.prettyPrint()}")
+            return listOf()
+        }
+
+        // Collect all used sideconditions
+        val sideconditions = newTargetExp.sideConditions.toMutableList()
 
         // Show the target invariant as well if requested
         // I don't think this is ever used for return statements, but we might as well support it
-        val targetFormula = if (target.showInvariant)
-                And(exprToForm(matchedPut.formula), target.invariant)
-            else
-                exprToForm(matchedPut.formula)
+        if (target.showInvariant)
+            sideconditions.add(LogicNode(input.condition, UpdateOnFormula(newUpdate, target.invariant)))
 
-        val post = LogicNode(
-            input.condition,
-            UpdateOnFormula(ChainUpdate(input.update, ElementaryUpdate(ReturnVar(typeReturn.qualifiedName, typeReturn), ret)), targetFormula),
-            info = InfoReturn(retExpr, targetFormula, True, input.update)
-        )
-
-        return listOf(post)
+        return sideconditions
     }
 }
 
@@ -532,22 +533,24 @@ object LTTAwait : Rule(Modality(
                         )
                     )
 
-        // We're executing a return statement here which has to match the local type specification
+        // We're executing an await statement here which has to match the local type specification
         val ltexp = target.lte
         if (!ltexp.matches(LTPatternSusp)) {
             output("Crowbar  : Bailing out, could not match suspend to ${target.prettyPrint()}")
             return listOf()
         }
 
-        // Side condition: Show that the precondition of the Susp holds
-        val matchedSusp = ltexp.getMatch(LTPatternSusp) as LTSusp
-        val suspPre = LogicNode(input.condition, UpdateOnFormula(input.update, exprToForm(matchedSusp.formula)))
-
-        val newTarget = LocalTypeTarget(ltexp.readTransform(LTPatternSusp), target.invariant, target.showInvariant)
+        // Sidecondition handled in readTransform: specified precondition has to hold
+        val context = LTCommonContext(input.condition, input.update)
+        val newTarget = LocalTypeTarget(
+            ltexp.readTransform(LTPatternSusp, context),
+            target.invariant,
+            target.showInvariant
+        )
 
         val sState = SymbolicState(newInputCondition, newUpdate, Modality(cont, newTarget))
 
-        return listOf(suspPre, SymbolicNode(sState, info = InfoAwaitUse(guardExpr, anonHeapExpr)))
+        return listOf(SymbolicNode(sState, info = InfoAwaitUse(guardExpr, anonHeapExpr)))
     }
 }
 
@@ -574,20 +577,22 @@ object LTTWhile : Rule(Modality(
 
         // We're executing a loop here which has to match the local type specification
         val ltexp = target.lte
-        //var invariant: Formula
         val useTarget: LocalTypeTarget
         val preservesTarget: LocalTypeTarget
 
         // Side condition: Show that the specified invariant holds
         if (ltexp.matches(LTPatternRep)) {
             val matchedRep = ltexp.getMatch(LTPatternRep) as LTRep
-            //invariant = exprToForm(matchedRep.formula)
-            useTarget = LocalTypeTarget(ltexp.readTransform(LTPatternRep), target.invariant, target.showInvariant)
             preservesTarget = LocalTypeTarget(matchedRep.inner, invariant, true)
+
+            useTarget = LocalTypeTarget(
+                ltexp.readTransform(LTPatternRep),
+                target.invariant,
+                target.showInvariant
+            )
         }
         // If no repetition could be matched, the proof might still succeed if the loop does nothing
         else {
-            //invariant = True
             useTarget = LocalTypeTarget(ltexp, target.invariant, target.showInvariant)
             preservesTarget = LocalTypeTarget(LTSkip, True, true)
         }
