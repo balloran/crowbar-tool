@@ -165,6 +165,9 @@ class Main : CliktCommand() {
         investigate = invFlag
         conciseProofs = conciseProofsFlag
 
+        if(investigate && deductType != PostInvType::class)
+            output("Crowbar  : Counterexamples for types other than PostInv are not supported and may produce unexpected output", Verbosity.SILENT)
+
         val (model, repos) = load(filePath)
         //todo: check all VarDecls and Field Decls here
         //      no 'result', no 'heap', no '_f' suffix

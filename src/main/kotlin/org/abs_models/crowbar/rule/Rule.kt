@@ -18,7 +18,6 @@ object FreshGenerator {
         return PPId(count++)
     }
     fun getFreshFuture(dType : Type) : ProgVar {
-        println(dType)
         return ProgVar("fut_"+ (count++), dType.qualifiedName, ADTRepos.model!!.getFutType(dType))
     }
     fun getFreshFunction() : Function {
