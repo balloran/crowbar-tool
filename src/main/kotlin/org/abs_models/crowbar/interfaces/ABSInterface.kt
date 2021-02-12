@@ -93,6 +93,11 @@ fun translateABSExpToSymExpr(input: Exp, returnType: Type) : Expr {
         is FnApp ->
             if (input.name == "valueOf")
                 readFut(translateABSExpToSymExpr(input.params.getChild(0), returnType))
+            else if (input.name == "hasRole") {
+                val roleConst = Const("\"${(input.params.getChild(1) as StringLiteral).content}\"")
+                val field = translateABSExpToSymExpr(input.params.getChild(0), returnType)
+                SExpr("hasRole", listOf(field, roleConst))
+            }
             else if (input.decl is UnknownDecl) {
                 if (specialHeapKeywords.containsKey(input.name))
                     SExpr(input.name, input.params.map { translateABSExpToSymExpr(it, returnType) })

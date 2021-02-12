@@ -79,26 +79,7 @@ import org.abs_models.crowbar.main.output
 import org.abs_models.crowbar.rule.FreshGenerator
 import org.abs_models.crowbar.rule.MatchCondition
 import org.abs_models.crowbar.rule.Rule
-import org.abs_models.crowbar.tree.InfoAwaitUse
-import org.abs_models.crowbar.tree.InfoBranch
-import org.abs_models.crowbar.tree.InfoCallAssign
-import org.abs_models.crowbar.tree.InfoGetAssign
-import org.abs_models.crowbar.tree.InfoIfElse
-import org.abs_models.crowbar.tree.InfoIfThen
-import org.abs_models.crowbar.tree.InfoLocAssign
-import org.abs_models.crowbar.tree.InfoLoopInitial
-import org.abs_models.crowbar.tree.InfoLoopPreserves
-import org.abs_models.crowbar.tree.InfoLoopUse
-import org.abs_models.crowbar.tree.InfoObjAlloc
-import org.abs_models.crowbar.tree.InfoReturn
-import org.abs_models.crowbar.tree.InfoScopeClose
-import org.abs_models.crowbar.tree.InfoSkip
-import org.abs_models.crowbar.tree.InfoNullCheck
-import org.abs_models.crowbar.tree.LogicNode
-import org.abs_models.crowbar.tree.StaticNode
-import org.abs_models.crowbar.tree.NodeInfo
-import org.abs_models.crowbar.tree.SymbolicNode
-import org.abs_models.crowbar.tree.SymbolicTree
+import org.abs_models.crowbar.tree.*
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.Type
 
@@ -135,8 +116,6 @@ interface LocalTypeType : DeductType {
         }
         output("Crowbar-v: method local type expression: ${ltexp?.prettyPrint() ?: "null"}", Verbosity.V)
 
-        val usedSpec = StaticNode("Using specification of ${classDecl.qualifiedName}.$name:\nObject Invariant: ${objInv.prettyPrint()}\nRequires: ${metpre.prettyPrint()}")
-
         // We have nothing to show if the method has no LocalType annotation
         if (ltexp == null)
             return emptySymNode()
@@ -148,7 +127,12 @@ interface LocalTypeType : DeductType {
         val updateOldHeap = ChainUpdate(ElementaryUpdate(LastHeap, Heap), ElementaryUpdate(OldHeap, Heap))
         symb = SymbolicState(And(And(objInv, metpre), roleEquivalences), updateOldHeap, Modality(body, LocalTypeTarget(ltexp, objInv)))
 
-        return SymbolicNode(symb, listOf(usedSpec, SymbolicNode(symb, emptyList())))
+        val usedSpec = StaticNode("Using specification of ${classDecl.qualifiedName}.$name:\nObject Invariant: ${objInv.prettyPrint()}\nRequires: ${metpre.prettyPrint()}")
+
+        return if(objInv != True || metpre != True)
+                SymbolicNode(symb, listOf(usedSpec, SymbolicNode(symb, emptyList())))
+            else
+                SymbolicNode(symb, listOf())
     }
 
     fun getParseContext(mDecl: MethodImpl, cDecl: ClassDecl): Pair<Type,Map<String,Type>> {
@@ -362,7 +346,25 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
 
         val newTarget = LocalTypeTarget(ltexp.readTransform(callPattern), target.invariant, target.showInvariant)
 
+        // Side condition: Show that specified call precondition is met
         val targetDecl = repos.methodReqs.getValue(call.met).second
+        val substMap = mutableMapOf<LogicElement,LogicElement>()
+        for(i in 0 until targetDecl.numParam){
+            val pName = ProgVar(
+                targetDecl.getParam(i).name,
+                targetDecl.getParam(i).type.qualifiedName,
+                targetDecl.getParam(i).type
+            )
+            val pValue = exprToTerm(call.e[i])
+            substMap[pName] = pValue
+        }
+        val precond = subst(exprToForm(matchedCall.formula), substMap) as Formula
+        val formulaHolds = LogicNode(
+            input.condition,
+            UpdateOnFormula(input.update, precond),
+            info = InfoMethodPrecondition(precond)
+        )
+
         val freshFut = FreshGenerator.getFreshFuture(targetDecl.type)
         val read = repos.methodEnss[call.met]
         val postCond = read?.first ?: True
@@ -377,12 +379,6 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
         val substPostCond = subst(postCond, substPostMap) as Formula
         val updateNew = ElementaryUpdate(ReturnVar(targetDecl.type.qualifiedName, targetDecl.type), valueOfFunc(freshFut))
 
-        // Side condition: Show that specified formula holds after call
-        val formulaHolds = LogicNode(
-            And(input.condition, UpdateOnFormula(input.update, UpdateOnFormula(updateNew, substPostCond))),
-            apply(input.update, exprToForm(matchedCall.formula)) as Formula
-        )
-
         val next = symbolicNext(lhs,
                                 freshFut,
                                 remainder,
@@ -391,10 +387,16 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
                                 input.update,
                                 InfoCallAssign(lhs, calleeExpr, call, freshFut.name))
 
-        return if(isNonNull)
-                listOf(rolesMatch, formulaHolds, next)
-            else
-                listOf(nonenull, rolesMatch, formulaHolds, next)
+        val children = mutableListOf<SymbolicTree>(rolesMatch, formulaHolds, next)
+
+        if(!isNonNull)
+            children.add(nonenull)
+
+        // Create static node if we used a non-trivial postcondition
+        if(postCond != True)
+            children.add(StaticNode("Using postcondition of method ${call.met}: ${postCond.prettyPrint()}"))
+        
+        return children
     }
 }
 
