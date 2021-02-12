@@ -1,7 +1,6 @@
 package org.abs_models.crowbar.main
 
 import org.abs_models.crowbar.data.*
-import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.Stmt
 import org.abs_models.crowbar.interfaces.translateABSExpToSymExpr
 import org.abs_models.crowbar.investigator.CounterexampleGenerator
@@ -11,7 +10,6 @@ import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.getStrategy
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.Type
-import sun.reflect.generics.tree.ReturnType
 import java.io.File
 import java.nio.file.Path
 import kotlin.reflect.KClass
@@ -119,7 +117,7 @@ fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : 
         if(verbosity >= Verbosity.VVV)
             println("Crowbar-v: Could not extract $expectedSpec specification, using ${default.prettyPrint()}")
     }
-    return specialKeyHeapExtract(ret) as Formula //Todo: add warning for old and last in precondition
+    return ret //Todo: add warning for old and last in precondition
 }
 
 
@@ -216,15 +214,19 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
     output("Crowbar  : closing open branches....")
     var closed = true
     for(l in node.collectLeaves()){
-        if(l is LogicNode){
-            output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
-            closed = closed && l.evaluate()
-            output("Crowbar-v: verified? ${l.evaluate()}", Verbosity.V)
-        } else if(l is StaticNode){
-            output("Crowbar: open static leaf ${l.str}", Verbosity.SILENT)
-        } else {
-            System.err.println("Crowbar-v: non-logical analysis nodes not supported")
-            throw Exception("Crowbar-v: non-logical analysis nodes not supported")
+        when (l) {
+            is LogicNode -> {
+                output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
+                closed = closed && l.evaluate()
+                output("Crowbar-v: verified? ${l.evaluate()}", Verbosity.V)
+            }
+            is StaticNode -> {
+                output("Crowbar: open static leaf ${l.str}", Verbosity.SILENT)
+            }
+            else -> {
+                System.err.println("Crowbar-v: non-logical analysis nodes not supported")
+                throw Exception("Crowbar-v: non-logical analysis nodes not supported")
+            }
         }
 
     }
@@ -288,42 +290,4 @@ fun getIDeclaration(mSig: MethodSig, iDecl : InterfaceDecl): InterfaceDecl?{
         if(ret != null) return ret
     }
     return null
-}
-
-fun specialKeyHeapExtract(input: LogicElement) : LogicElement {
-    return when(input){
-        is Function -> {
-            if (specialHeapKeywords.containsKey(input.name)){
-                if(input.params.size == 1) {
-                    return specialKeyHeapExtract(input.params[0], input.name)
-                }else
-                    throw Exception("Special keyword old must have one argument, actual arguments size:" + input.params.size)
-            }
-            return Function(input.name, input.params.map { p -> specialKeyHeapExtract(p) as Term })
-        }
-        is Predicate -> Predicate(input.name, input.params.map { p -> specialKeyHeapExtract(p) as Term })
-        is Impl -> Impl(specialKeyHeapExtract(input.left) as Formula, specialKeyHeapExtract(input.right) as Formula)
-        is And -> And(specialKeyHeapExtract(input.left) as Formula, specialKeyHeapExtract(input.right) as Formula)
-        is Or -> Or(specialKeyHeapExtract(input.left) as Formula, specialKeyHeapExtract(input.right) as Formula)
-        is Not -> Not(specialKeyHeapExtract(input.left) as Formula)
-        else                -> input
-    }
-}
-
-fun specialKeyHeapExtract(input: LogicElement, specialHeap : String) : LogicElement {
-    return when(input){
-        is Function     -> Function(input.name, input.params.map { p -> specialKeyHeapExtract(p,specialHeap) as Term })
-        is Predicate    -> Predicate(input.name, input.params.map { p -> specialKeyHeapExtract(p,specialHeap) as Term })
-        is Impl -> Impl(specialKeyHeapExtract(input.left,specialHeap) as Formula, specialKeyHeapExtract(input.right,specialHeap) as Formula)
-        is And  -> And(specialKeyHeapExtract(input.left,specialHeap) as Formula, specialKeyHeapExtract(input.right,specialHeap) as Formula)
-        is Or   -> Or(specialKeyHeapExtract(input.left,specialHeap) as Formula, specialKeyHeapExtract(input.right,specialHeap) as Formula)
-        is Not  -> Not(specialKeyHeapExtract(input.left,specialHeap) as Formula)
-        is Heap -> {
-            if(specialHeapKeywords.containsKey(specialHeap))
-                specialHeapKeywords[specialHeap] as LogicElement
-            else
-                throw Exception("The special heap keyword $specialHeap is not supported")
-        }
-        else    -> input
-    }
 }
