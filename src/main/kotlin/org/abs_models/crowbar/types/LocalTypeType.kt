@@ -539,15 +539,15 @@ object LTTAwait : Rule(Modality(
             return listOf()
         }
 
-        // Side condition: Show that the postcondition of the Susp holds
+        // Side condition: Show that the precondition of the Susp holds
         val matchedSusp = ltexp.getMatch(LTPatternSusp) as LTSusp
-        val suspPost = LogicNode(newInputCondition, UpdateOnFormula(newUpdate, exprToForm(matchedSusp.formula)))
+        val suspPre = LogicNode(input.condition, UpdateOnFormula(input.update, exprToForm(matchedSusp.formula)))
 
         val newTarget = LocalTypeTarget(ltexp.readTransform(LTPatternSusp), target.invariant, target.showInvariant)
 
         val sState = SymbolicState(newInputCondition, newUpdate, Modality(cont, newTarget))
 
-        return listOf(suspPost, SymbolicNode(sState, info = InfoAwaitUse(guardExpr, anonHeapExpr)))
+        return listOf(suspPre, SymbolicNode(sState, info = InfoAwaitUse(guardExpr, anonHeapExpr)))
     }
 }
 
