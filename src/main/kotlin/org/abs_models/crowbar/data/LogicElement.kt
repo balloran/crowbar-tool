@@ -156,32 +156,29 @@ fun filterHeapTypes(term : Term, dtype: String) : String{
     val smtdType = ADTRepos.getSMTDType(dtype)
     if (term is Function ) {
         // Remove stores that do not change the sub-heap for type dType
-        if(term.name == "store") {
+        return if(term.name == "store") {
             if (ADTRepos.libPrefix((term.params[1] as Field).dType) == dtype)
-                return "(store " +
+                "(store " +
                         "${filterHeapTypes(term.params[0], dtype)} " +
                         "${term.params[1].toSMT()} " +
                         "${term.params[2].toSMT()})"
             else
-                return filterHeapTypes(term.params[0], dtype)
-        // Rewrite generic anon to correctly typed anon function
-        }
-        else if (term.name == "anon")
-            return "(${smtdType.anon} ${filterHeapTypes(term.params[0], dtype)})"
+                filterHeapTypes(term.params[0], dtype)
+            // Rewrite generic anon to correctly typed anon function
+        } else if (term.name == "anon")
+            "(${smtdType.anon} ${filterHeapTypes(term.params[0], dtype)})"
         else
             throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
 
     }
     // Rewrite generic heap variables to correctly typed sub-heap variables
     else if(term is ProgVar && term.dType == "Heap"){
-        if(term is OldHeap)
-            return smtdType.old
-        else if(term is LastHeap)
-            return smtdType.last
-        else if(term is Heap)
-            return smtdType.heap
-        else
-            return term.name
+        return when (term) {
+            is OldHeap -> smtdType.old
+            is LastHeap -> smtdType.last
+            is Heap -> smtdType.heap
+            else -> term.name
+        }
     }
     else
         throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
@@ -416,7 +413,7 @@ object OldHeap : ProgVar("old", "Heap", HeapType("Heap"))
 object LastHeap : ProgVar("last", "Heap", HeapType("Heap"))
 
 fun store(field: Field, value : Term) : Function = Function("store", listOf(Heap, field, value))
-fun select(field : Field) : Function = Function("select", listOf(Heap, field))
+fun select(field : Field, heap: ProgVar = Heap) : Function = Function("select", listOf(heap, field))
 fun anon(heap : Term) : Function = Function("anon", listOf(heap))
 fun poll(term : Term) : Function = Function("poll", listOf(term))
 fun readFut(term : Expr) : Expr = SExpr("valueOf", listOf(term))
@@ -424,9 +421,12 @@ fun exprToTerm(input : Expr, specialKeyword : String="NONE") : Term {//todo: add
     return when(input){
         is ProgVar -> input
         is Field -> {
-            if(specialKeyword != "NONE")
-                return Function(specialKeyword, listOf(select(input)))
-            return select(input)
+            if(specialKeyword != "NONE" && specialHeapKeywords.containsKey(specialKeyword))
+                select(input, specialHeapKeywords[specialKeyword] as ProgVar)
+            else if(specialKeyword != "NONE")
+                throw Exception("The special heap keyword $specialKeyword is not supported")
+            else
+                select(input)
         }
         is PollExpr -> poll(exprToTerm(input.e1))
         is Const -> Function(input.name)
@@ -437,7 +437,8 @@ fun exprToTerm(input : Expr, specialKeyword : String="NONE") : Term {//todo: add
                 else
                     throw Exception("Special keyword ${input.op} must have one argument, actual arguments size:" + input.e.size)
             }
-            Function(input.op, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
+            else
+                Function(input.op, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
         }
         is DataTypeExpr -> {
             DataTypeConst(input.name, input.dType, input.concrType, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
