@@ -1,0 +1,253 @@
+module LocalTypeTest;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool) | Local(String) | Role(String, Object);
+
+interface Server {
+    Int a();
+    Int b();
+    Int c();
+}
+
+interface Client {
+    Int a();
+    Int b();
+    Int c();
+    Int arg(Int i);
+}
+
+interface Database {
+    Int a();
+    Int b();
+    Int c();
+    Int reset();
+}
+
+[Spec:Role("server", this.s)]
+[Spec:Role("client", this.c)]
+[Spec:Role("database", this.d)]
+[Spec:ObjInv(this.s != null && this.c != null && this.d != null)]
+class C(Server s, Client c, Database d) {
+    Fut<Int> futfield;
+
+    // Return var spec
+    [Spec:Local("Put(result == 0)")]
+    Int returnVarSpec() {
+        return 0;
+    }
+
+    // Return var spec fail
+    [Spec:Local("Put(result == 0)")]
+    Int returnVarSpecFail(Int a) {
+        return a;
+    }
+
+    // Return old spec
+    [Spec:Local("Put(this.s == old(this.s))")]
+    Unit returnOldSpec(Int a) {
+        this.c = null;
+    }
+
+    // Return old spec fail
+    [Spec:Local("Put(this.s == old(this.s))")]
+    Unit returnOldSpecFail(Int a) {
+        this.s = null;
+    }
+
+    // Basic options
+    [Spec:Local("(client!b(true) + client!a(true)).Put(true)")]
+    Unit basicOption(Bool flag) {
+        if(flag) {
+            Fut<Int> sth = this.c!a();
+        }
+        else {
+            Fut<Int> sth = this.c!b();
+        }
+    }
+
+    // Greedy option fail
+    [Spec:Local("(client!b(true).server!a(true) + client!b(true).client!c(true)).Put(true)")]
+    Unit greedyOptionFail() {
+        Fut<Int> sth = this.c!a();
+        sth = this.c!c();
+    }
+
+    // Get exp aliasing
+    [Spec:Local("client!a(true).Get(this.futfield).Put(true)")]
+    Unit getExpAliasing() {
+        this.futfield = this.c!a();
+        Fut<Int> f = this.futfield;
+        Int a = f.get;
+    }
+
+    // Get exp local var
+    [Spec:Local("client!a(true).Get(f).Put(true)")]
+    Unit getExpLocalAliasing() {
+        Fut<Int> f = this.c!a();
+        Fut<Int> sth = f;
+        Int a = sth.get;
+    }
+
+    // Get exp local var fail
+    [Spec:Local("(client!a(true))*.Get(f).Put(true)")]
+    Unit getExpLocalAliasingFail() {
+        Fut<Int> f = this.c!a();
+        Fut<Int> g = this.c!a();
+        Int a = g.get;
+    }
+
+    // Get exp fail
+    [Spec:Local("(client!a(true))*.Get(this.futfield).Put(true)")]
+    Unit getExpFail() {
+        this.futfield = this.c!a();
+        Fut<Int> sth = this.c!a();
+        Int a = sth.get;
+    }
+
+    // Call precond
+    [Spec:Local("client!arg(i == 10).Put(true)")]
+    Unit callPrecond() {
+        Int a = 10;
+        Fut<Int> sth = this.c!arg(a);
+    }
+
+    // Call precond fail
+    [Spec:Local("client!arg(i == 10).Put(true)")]
+    Unit callPrecondFail() {
+        Int a = 5;
+        Fut<Int> sth = this.c!arg(a);
+    }
+
+    // Susp precond
+    [Spec:Local("Susp(a == 10).Put(true)")]
+    Unit suspPrecond() {
+        Int a = 10;
+        await this.futfield?;
+    }
+
+    // Susp precond fail
+    [Spec:Local("Susp(a == 10).Put(true)")]
+    Unit suspPrecondFail() {
+        Int a = 5;
+        await this.futfield?;
+    }
+
+    // Role field aliasing
+    [Spec:Local("database!reset(true).Put(true)")]
+    Unit roleFieldAliasing() {
+        Database localdb = this.d;
+        Int a = 10;
+        if(a > 5) {
+            a = 0;
+        }
+        else {
+            a = 7;
+        }
+        this.d = null;
+        Fut<Int> sth = localdb!reset();
+    }
+
+    // Role field anonymization fail
+    [Spec:Local("Susp(true).server!a(true).Put(true)")]
+    Unit roleFieldAnonFail() {
+        await this.futfield?;
+        Fut<Int> sth = this.s!a();
+    }
+
+    // Unspecified loop
+    [Spec:Local("server!a(true).Put(true)")]
+    Unit unspecifiedLoop() {
+        Int a = 10;
+        [Spec: WhileInv(this.s != null && hasRole(this.s, "server"))]
+        while(a > 5) {
+            a = a - 1;
+        }
+        Fut<Int> sth = this.s!a();
+        while(a < 10) {
+            a = a + 1;
+        }
+    }
+
+    // Loop head duplication
+    [Spec:Local("database!reset(true).(server!a(true).client!b(true).client!c(true))*.Put(true)")]
+    Unit loopHeadDuplication() {
+
+        Fut<Int> sth = this.d!reset();
+        Int a = 10;
+
+        sth = this.s!a();
+        sth = this.c!b();
+        sth = this.c!c();
+        
+        [Spec: WhileInv(this.s != null && this.c != null && hasRole(this.c, "client") && hasRole(this.s, "server"))]
+        while(a > 5) {
+            sth = this.s!a();
+            sth = this.c!b();
+            sth = this.c!c();
+            a = a - 1;
+        }
+    }
+
+    // Loop tail duplication
+    [Spec:Local("database!reset(true).(server!a(true).client!b(true).client!c(true))*.Put(true)")]
+    Unit loopTailDuplication() {
+
+        Fut<Int> sth = this.d!reset();
+        Int a = 10;
+        
+        [Spec: WhileInv(this.s != null && this.c != null && hasRole(this.s, "server") && hasRole(this.c, "client"))]
+        while(a > 5) {
+            sth = this.s!a();
+            sth = this.c!b();
+            sth = this.c!c();
+            a = a - 1;
+        }
+
+        sth = this.s!a();
+        sth = this.c!b();
+        sth = this.c!c();
+    }
+
+    [Spec:Local("(server!a(true).(client!b(true) + client!a(true))*.client!c(true))*.Put(true)")]
+    Unit nestedRepetition() {
+
+        Int a = 10;
+        
+        [Spec: WhileInv(this.s != null && this.c != null && hasRole(this.c, "client") && hasRole(this.s, "server"))]
+        while(a > 5) {
+            Fut<Int> sth = this.s!a();
+
+            sth = this.c!b();
+            sth = this.c!a();
+            sth = this.c!b();
+            sth = this.c!a();
+            sth = this.c!a();
+
+            sth = this.c!c();
+            a = a - 1;
+        }
+    }
+
+    [Spec:Local("(server!a(true).client!b(true).client!c(true))*.Put(true)")]
+    Unit singleRepMultiLoop() {
+
+        Int a = 10;
+        
+        [Spec: WhileInv(this.s != null && this.c != null && hasRole(this.s, "server") && hasRole(this.c, "client"))]
+        while(a > 5) {
+            Fut<Int> sth = this.s!a();
+            sth = this.c!b();
+            sth = this.c!c();
+            a = a - 1;
+        }
+
+        [Spec: WhileInv(this.s != null && this.c != null && hasRole(this.s, "server") && hasRole(this.c, "client"))]
+        while(a < 10) {
+            Fut<Int> sth = this.s!a();
+            sth = this.c!b();
+            sth = this.c!c();
+            a = a + 1;
+        }
+    }
+}
+
+{}
