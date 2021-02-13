@@ -170,6 +170,8 @@ class LocalTypeFormulaConverter(context: Pair<Type, Map<String, Type>>) : LocalS
             "this"   -> Const("1")
             "true"   -> Const("true")
             "false"  -> Const("false")
+            "True"   -> Const("true")
+            "False"  -> Const("false")
             "result" -> ReturnVar(methodReturnType.qualifiedName, methodReturnType)
             // TODO: This does not support data types, and ProgVars are only kind of supported - sometimes the unknown type causes issues
             else -> if (text matches Regex("[0-9]+")) Const(text) else ProgVar(text, "<UNKNOWN>", UnknownType.INSTANCE)
