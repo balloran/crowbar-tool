@@ -1,6 +1,7 @@
 package org.abs_models.crowbar.tree
 
 import org.abs_models.crowbar.data.Formula
+import org.abs_models.crowbar.data.Impl
 import org.abs_models.crowbar.data.SymbolicState
 import org.abs_models.crowbar.interfaces.evaluateSMT
 import org.abs_models.crowbar.rule.containsAbstractVar
@@ -46,6 +47,8 @@ data class LogicNode(
         isEvaluated = true
         return isValid
     }
+
+    fun toFormula() : Formula = Impl(ante, succ)
 
     override fun finishedExecution() : Boolean = true
     override fun debugString(steps : Int) : String = "\t".repeat(steps)+ante.prettyPrint()+" --> "+succ.prettyPrint()+"\n"

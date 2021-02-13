@@ -120,8 +120,8 @@ interface LocalTypeType : DeductType {
             return emptySymNode()
 
         val roleEquivalences = roleMapping.map {
-            Predicate("hasRole", listOf(exprToTerm(it.second), Function("\"${it.first}\"")))
-        }.fold(True as Formula, { acc, elem -> And(acc, elem) })
+            Predicate("hasRole", listOf(exprToTerm(it.second), Function("\"${it.first}\""))) as Formula
+        }.reduce { acc, elem -> And(acc, elem) }
 
         val updateOldHeap = ChainUpdate(ElementaryUpdate(LastHeap, Heap), ElementaryUpdate(OldHeap, Heap))
         symb = SymbolicState(And(And(objInv, metpre), roleEquivalences), updateOldHeap, Modality(body, LocalTypeTarget(ltexp, objInv)))

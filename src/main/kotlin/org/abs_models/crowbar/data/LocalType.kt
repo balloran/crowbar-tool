@@ -74,11 +74,19 @@ data class LTSeq(val first: LocalType, val second: LocalType) : LocalType {
     }
 
     override fun readTransform(pattern: LTPattern, context: LTContext): LocalType {
-        if (first.couldSkip && !first.matches(pattern))
-            return LTSeq(LTSideCondition(first.sideConditions, "seq-agg"), second.readTransform(pattern, context))
+        val firstMatches = first.matches(pattern)
+        val secondMatches = second.matches(pattern)
 
-        val transformed = first.readTransform(pattern, context)
-        return if (transformed == LTSkip) second else LTSeq(transformed, second)
+        // If both expressions could be matched, we simulate execution of both in a new option
+        return if(firstMatches && secondMatches && first.couldSkip)
+            LTOpt(
+                LTSeq(first.readTransform(pattern, context), second), // Path executing the first expression
+                LTSeq(LTSideCondition(first.sideConditions, "seq-agg"), second.readTransform(pattern, context)) // Path executing the second expression
+            )
+        else if (!firstMatches && first.couldSkip)
+            LTSeq(LTSideCondition(first.sideConditions, "seq-agg"), second.readTransform(pattern, context))
+        else
+            LTSeq(first.readTransform(pattern, context), second)
     }
 
     override fun prettyPrint(): String {
@@ -108,8 +116,21 @@ data class LTOpt(val first: LocalType, val second: LocalType) : LocalType {
         get() = first.couldSkip || second.couldSkip
     override val isSkip: Boolean
         get() = first.isSkip && second.isSkip
+
+    // This is sub-optimal, but in some cases we might have two valid matching paths through the expression
+    // that only differ in their sideconditions
+    // So here we squash the sidecondtions of each branch into a single formula and then show that one of the branches
+    // is universally true
     override val sideConditions: List<LogicNode>
-        get() = first.sideConditions + second.sideConditions // TODO: Rewrite to or? Warn?
+        get() : List<LogicNode> {
+            if(first.sideConditions.isEmpty() || second.sideConditions.isEmpty())
+                return emptyList()
+
+            // This is a linear reduction, a binary-tree like thing would arguably be nicer
+            val firstAggNode = first.sideConditions.map{ it.toFormula() }.reduce{ acc, form -> And(acc, form) }
+            val secondAggNode = second.sideConditions.map{ it.toFormula() }.reduce{ acc, form -> And(acc, form) }
+            return listOf(LogicNode(True, Or(firstAggNode, secondAggNode)))
+        }
 
     override fun matches(pattern: LTPattern) = first.matches(pattern) || second.matches(pattern)
 
@@ -121,12 +142,14 @@ data class LTOpt(val first: LocalType, val second: LocalType) : LocalType {
     }
 
     override fun readTransform(pattern: LTPattern, context: LTContext): LocalType {
-        // We choose to match the first branch if possible, even if both options match
-        // This is not optimal in all cases, especially for complex expressions
-        return if (first.matches(pattern))
-            first.readTransform(pattern, context)
-        else
-            second.readTransform(pattern, context)
+        return when {
+            // If both branches match, we simulate execution in both branches and keep the option
+            first.matches(pattern) && second.matches(pattern) -> 
+                LTOpt(first.readTransform(pattern, context), second.readTransform(pattern, context))
+            // If only one branch matches, we can throw the other away, including sideconditions
+            first.matches(pattern) -> first.readTransform(pattern, context)
+            else -> second.readTransform(pattern, context)
+        }
     }
 
     override fun prettyPrint(): String {
@@ -151,18 +174,11 @@ data class LTRep(val inner: LocalType) : LocalType {
     }
 
     override fun readTransform(pattern: LTPattern, context: LTContext): LocalType {
-        // If we are looking for a repetition, just remove the repetition
-        // If the patter doesn't match the inner exp, also remove the repetition
-        if (pattern == LTPatternRep || !inner.matches(pattern))
-            return LTSkip
-
-        // We match the repetition as long as possible, regardless of what follows it
-        // This is not optimal in all cases
-        val transformed = inner.readTransform(pattern, context)
-        return if (transformed == LTSkip)
-            this
-        else
-            LTSeq(transformed, this)
+        return when {
+            pattern == LTPatternRep -> this // Leave the repetition in to allow tail duplication (ie statements outside the program loop still matching the repetition)
+            !inner.matches(pattern) -> LTSkip
+            else -> LTSeq(inner.readTransform(pattern, context), this) // Start matching one repetition body, keep repetition around
+        }
     }
 
     override fun prettyPrint(): String {

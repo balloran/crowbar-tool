@@ -64,11 +64,28 @@ class C(Server s, Client c, Database d) {
         }
     }
 
-    // Greedy option fail
     [Spec:Local("(client!b(true).server!a(true) + client!b(true).client!c(true)).Put(true)")]
-    Unit greedyOptionFail() {
-        Fut<Int> sth = this.c!a();
+    Unit greedyOptionTrap() {
+        Fut<Int> sth = this.c!b();
         sth = this.c!c();
+    }
+
+    [Spec:Local("(client!a(true) + skip).client!a(true).Put(true)")]
+    Unit greedySeqTrap() {
+        Fut<Int> sth = this.c!a();
+    }
+
+    [Spec:Local("(client!a(true))*.client!a(true).Put(true)")]
+    Unit greedyLoopTrap() {
+        Int a = 10;
+
+        [Spec: WhileInv(this.c != null && hasRole(this.c, "client"))]
+        while(a > 5) {
+            a = a - 1;
+            Fut<Int> sth = this.c!a();
+        }
+
+        Fut<Int> sth = this.c!a();
     }
 
     // Get exp aliasing
@@ -273,6 +290,16 @@ class C(Server s, Client c, Database d) {
             sth = this.s!a();
             a = a - 1;
         }
+    }
+
+    [Spec:Local("(client!arg(i == 0) + client!arg(i != 0)).Put(true)")]
+    Unit multipathSidecondtion(Int something) {
+        Fut<Int> sth = this.c!arg(something);
+    }
+
+    [Spec:Local("(client!arg(i == 0) + client!arg(i == 1)).Put(true)")]
+    Unit multipathSidecondtionFail(Int something) {
+        Fut<Int> sth = this.c!arg(something);
     }
 }
 

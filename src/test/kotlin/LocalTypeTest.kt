@@ -96,11 +96,12 @@ class LocalTypeTest : StringSpec() {
 
                 testMethod(classDecl, "unspecifiedLoop", repos, true)
                 testMethod(classDecl, "loopHeadDuplication", repos, true)
-                //testMethod(classDecl, "loopTailDuplication", repos, true) // Supporting this is counterproductive as long as we dont have proper matching
+                testMethod(classDecl, "loopTailDuplication", repos, true)
                 testMethod(classDecl, "nestedRepetition", repos, true)
                 testMethod(classDecl, "sideconditionInLoop", repos, true)
                 testMethod(classDecl, "sideconditionInLoopFail", repos, false)
-                //testMethod(classDecl, "singleRepMultiLoop", repos, true) // Special case of loop tail duplication
+                testMethod(classDecl, "singleRepMultiLoop", repos, true)
+                testMethod(classDecl, "greedyLoopTrap", repos, true)
             }
 
             "$smt local type aliasing and sideconditions"{
@@ -114,10 +115,10 @@ class LocalTypeTest : StringSpec() {
                 testMethod(classDecl, "getExpLocalAliasingFail", repos, false)
                 testMethod(classDecl, "roleFieldAliasing", repos, true)
                 testMethod(classDecl, "roleFieldAnonFail", repos, false)
-                // The last test doesn't work with our current approach to matching
-                // also leaving it in causes the test runner to crash because crowbar terminates the process
-                // when bailing out of symbolic execution early
-                //testMethod(classDecl, "greedyOptionFail", repos, true)
+                testMethod(classDecl, "greedyOptionTrap", repos, true)
+                testMethod(classDecl, "greedySeqTrap", repos, true)
+                testMethod(classDecl, "multipathSidecondtion", repos, true)
+                testMethod(classDecl, "multipathSidecondtionFail", repos, false)
             }
         }
     }
