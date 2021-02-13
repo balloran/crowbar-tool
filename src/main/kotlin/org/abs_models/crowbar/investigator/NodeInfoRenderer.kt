@@ -57,7 +57,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         val oldHeap = model.oldHeap
         // Do not render assignments for fields that do not change value from their declared values
         val initAssign = model.initState.filter { it.first is ProgVar || (it.first is Field && !oldHeap.contains(it)) }.map { renderModelAssignment(it.first, it.second) }
-        val res = if (initAssign.size > 0)
+        val res = if (initAssign.isNotEmpty())
                 "// Assume the following pre-state:\n${initAssign.joinToString("\n")}\n// End of setup\n"
             else
                 ""
@@ -112,8 +112,6 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         if (info.guard is Const && info.guard.name == "true")
             return indent("\n// suspend;\n$assignmentBlock\n")
 
-        println(info.guard.prettyPrint())
-
         val isFutureGuard = info.guard.absExp!!.type.simpleName == "Fut"
         val maybeQuestionmark = if (isFutureGuard) "?" else ""
 
@@ -140,7 +138,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         scopeLevel += 1
         res = res + indent("${renderExp(info.pattern)} => {") + "\n"
         scopeLevel += 1
-        res = res + indent("// Known from previous negated patterns:\n" +
+        res += indent("// Known from previous negated patterns:\n" +
                     "// ${renderFormula(info.previousConditions)}")
 
         return res
@@ -335,13 +333,13 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
     }
 
     private fun renderHeapAssignmentBlock(postHeap: List<Pair<Field, ModelValue>>?): String {
-        return if (postHeap == null)
-            "// No heap modification info available at this point"
-        else if (postHeap.size == 0)
-            "// Heap remains unchanged here"
-        else {
-            val assignments = postHeap.map { renderModelAssignment(it.first, it.second) }.joinToString("\n")
-            "// Assume the following assignments while blocked:\n$assignments\n// End assignments"
+        return when {
+            postHeap == null -> "// No heap modification info available at this point"
+            postHeap.isEmpty() -> "// Heap remains unchanged here"
+            else -> {
+                val assignments = postHeap.map { renderModelAssignment(it.first, it.second) }.joinToString("\n")
+                "// Assume the following assignments while blocked:\n$assignments\n// End assignments"
+            }
         }
     }
 
@@ -419,7 +417,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
 
     private fun renderExp(e: Expr): String {
         // Keep track of fields referenced in expressions for field declarations
-        usedFields.addAll(collectBaseExpressions(e).filter { it is Field }.map { it as Field })
+        usedFields.addAll(collectBaseExpressions(e).filterIsInstance<Field>())
         return renderExpression(e, varRemaps)
     }
 

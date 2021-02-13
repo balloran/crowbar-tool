@@ -30,7 +30,7 @@ import org.abs_models.crowbar.tree.SymbolicTree
 
 object CounterexampleGenerator {
 
-    var fileIndex = 1
+    private var fileIndex = 1
 
     fun investigateAll(node: SymbolicNode, snippetID: String) {
         val uncloseable = node.collectLeaves().filter { it is LogicNode && !it.evaluate() }.map { it as LogicNode }
@@ -85,7 +85,7 @@ object CounterexampleGenerator {
         val miscExpressions = miscExpressionTerms.filter { collectUsedDefinitions(it).minus(availableDefs).isEmpty() }.map { it.toSMT() }
 
         output("Investigator: collecting object allocation expressions....", Verbosity.V)
-        val newExpressions = infoNodes.filter { it is InfoObjAlloc }.map { (it as InfoObjAlloc).newSMTExpr }
+        val newExpressions = infoNodes.filterIsInstance<InfoObjAlloc>().map { it.newSMTExpr }
 
         output("Investigator: parsing model....", Verbosity.V)
         val model = getModel(uncloseable, heapExpressions, newExpressions, miscExpressions, oldHeapExpr)
@@ -151,13 +151,13 @@ object CounterexampleGenerator {
         val varTypes = ((leaf.ante.iterate { it is ProgVar } + leaf.succ.iterate { it is ProgVar }) as Set<ProgVar>).filter { !reservedVarNames.contains(it.name) }.associate { Pair(it.name, it.dType) }
 
         // Collect conjunctively joined sub-obligation parts
-        val subObligationMap = collectSubObligations(deupdatify(leaf.succ) as Formula).associate { Pair(it.toSMT(), it) }
+        val subObligationMap = collectSubObligations(deupdatify(leaf.succ) as Formula).associateBy { it.toSMT() }
         val subObligations = subObligationMap.keys.toList()
 
         // Build model command
         var baseModel = "(get-model)\n"
 
-        if (heapExpressions.size > 0) {
+        if (heapExpressions.isNotEmpty()) {
             // We have to multiplex heap expressions here to get expressions for all types used in the SMT input
             // The result is a map of generic heap expressions to maps of types to corresponding types heap expressions
             usedTypes.forEach { dtype ->
@@ -166,15 +166,15 @@ object CounterexampleGenerator {
                 baseModel += "(get-value (${typedHeapExpressions.joinToString(" ")}))\n"
             }
         }
-        if (newExpressions.size > 0) {
+        if (newExpressions.isNotEmpty()) {
             baseModel += "; Object creation expressions\n"
             baseModel += "(get-value (${newExpressions.joinToString(" ")}))\n"
         }
-        if (miscExpressions.size > 0) {
+        if (miscExpressions.isNotEmpty()) {
             baseModel += "; Future & return expression evaluation, misc expressions\n"
             baseModel += "(get-value (${miscExpressions.joinToString(" ")}))\n"
         }
-        if (subObligationMap.keys.size > 0) {
+        if (subObligationMap.keys.isNotEmpty()) {
             baseModel += "; Proof sub-obligations\n"
             baseModel += "(get-value (${subObligations.joinToString(" ")}))\n"
         }
@@ -192,7 +192,7 @@ object CounterexampleGenerator {
         ModelParser.loadSMT(solverResponse)
 
         val parsed = ModelParser.parseModel()
-        val constants = parsed.filter { it is ModelConstant }.map { it as ModelConstant }
+        val constants = parsed.filterIsInstance<ModelConstant>()
         val vars = constants.filter { !(it.name matches Regex("(.*_f|fut_.*|NEW\\d.*|(f)?_(\\d)+|)") || reservedVarNames.contains(it.name)) }
         val fields = constants.filter { it.name matches Regex(".*_f") }
         val futLookup = constants.filter { it.name.startsWith("fut_") }.associate { Pair((it.value as MvInteger).value, it.name) }
@@ -227,7 +227,7 @@ object CounterexampleGenerator {
     }
 
     private fun getHeapMap(heapExpressions: List<Term>, fields: List<ModelConstant>, fieldTypes: Map<String, String>): Map<String, List<Pair<Field, ModelValue>>> {
-        if (heapExpressions.size == 0)
+        if (heapExpressions.isEmpty())
             return mapOf()
 
         // This got a bit tricky with the introduction of multiple sub-heaps
@@ -253,17 +253,16 @@ object CounterexampleGenerator {
     }
 
     private fun getExpressionMap(expressions: List<String>): Map<String, ModelValue> {
-        if (expressions.size == 0)
+        if (expressions.isEmpty())
             return mapOf()
 
         val parsed = ModelParser.parseScalarValues()
-        val expMap = expressions.zip(parsed).associate { it }
 
-        return expMap
+        return expressions.zip(parsed).associate { it }
     }
 
     private fun getObjectMap(newExpressions: List<String>): Map<Int, String> {
-        if (newExpressions.size == 0)
+        if (newExpressions.isEmpty())
             return mapOf()
 
         val parsed = ModelParser.parseScalarValues().map { (it as MvInteger).value }
@@ -312,7 +311,7 @@ object CounterexampleGenerator {
         val oblString = obligations.map { "// ${it.first}: ${NodeInfoRenderer.renderFormula(it.second)}" }.joinToString("\n")
 
         // Evaluation of obligations by the solver can fail if the obligations contain quantifiers
-        val subOblString = if (model.subObligations.size == 0) {
+        val subOblString = if (model.subObligations.isEmpty()) {
             "\n// Sub-obligation analysis unavailable - solver evaluation failed"
         } else {
             "\n// Failed to show the following sub-obligations:\n" +
@@ -358,18 +357,18 @@ object CounterexampleGenerator {
 class Model(
     val initState: List<Pair<Location, ModelValue>>,
     val heapMap: Map<String, List<Pair<Field, ModelValue>>>,
-    val futLookup: Map<Int, String>,
+    private val futLookup: Map<Int, String>,
     val objLookup: Map<Int, String>,
     val smtExprs: Map<String, ModelValue>,
     val subObligations: Map<Formula, Boolean>,
-    val oldHeapKey: String
+    private val oldHeapKey: String
 ) {
     // The SMT solver may reference futures that were not defined in the program
     // we'll mark these with a questionmark and give the underlying integer id from the solver
     fun futNameById(id: Int) = if (futLookup.containsKey(id)) futLookup[id]!! else "fut_?($id)"
 
     val oldHeap: List<Pair<Field, ModelValue>>
-        get() = heapMap[oldHeapKey] ?: listOf<Pair<Field, ModelValue>>()
+        get() = heapMap[oldHeapKey] ?: listOf()
 }
 
 val EmptyModel = Model(listOf(), mapOf(), mapOf(), mapOf(), mapOf(), mapOf(), "")

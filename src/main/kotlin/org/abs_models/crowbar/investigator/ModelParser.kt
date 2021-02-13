@@ -2,7 +2,7 @@ package org.abs_models.crowbar.investigator
 
 object ModelParser {
 
-    var tokens: MutableList<Token> = mutableListOf()
+    private var tokens: MutableList<Token> = mutableListOf()
 
     fun loadSMT(smtString: String) {
         tokens.clear()
@@ -85,7 +85,7 @@ object ModelParser {
         // Heap definitions of Array type can get complex once counterexamples reach a certain size
         // So we will only parse simple constant definitions here
         // Parsing of heaps and relevant functions is handled elsewhere
-        if (args.size == 0 && (type == Type.INT || type == Type.COMPLEX))
+        if (args.isEmpty() && (type == Type.INT || type == Type.COMPLEX))
             value = parseValue(type)
         else {
             ignore()
@@ -94,7 +94,7 @@ object ModelParser {
 
         consume(RParen())
 
-        return if (args.size == 0)
+        return if (args.isEmpty())
             ModelConstant(name, type, value)
         else
             ModelFunction(name, type, args, value)
@@ -122,24 +122,25 @@ object ModelParser {
     }
 
     private fun parseType(): Type {
-        if (tokens[0] is LParen) {
-            consume()
-            consume(Identifier("Array"))
-            parseType()
-            parseType()
-            consume(RParen())
-            return Type.ARRAY
-        } else if (tokens[0] is Identifier) {
-            val typeid = tokens[0].spelling
-            consume()
-            return if (typeid == "Int")
-                Type.INT
-            else if (typeid == "Bool")
-                Type.BOOL
-            else
-                Type.COMPLEX
-        } else {
-            throw Exception("Expected scalar or array type but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+        when (tokens[0]) {
+            is LParen -> {
+                consume()
+                consume(Identifier("Array"))
+                parseType()
+                parseType()
+                consume(RParen())
+                return Type.ARRAY
+            }
+            is Identifier -> {
+                val typeid = tokens[0].spelling
+                consume()
+                return when (typeid) {
+                    "Int" -> Type.INT
+                    "Bool" -> Type.BOOL
+                    else -> Type.COMPLEX
+                }
+            }
+            else -> throw Exception("Expected scalar or array type but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
         }
     }
 
@@ -173,25 +174,28 @@ object ModelParser {
     }
 
     private fun parseIntExp(): MvInteger {
-        if (tokens[0] is ConcreteValue) {
-            val value = (tokens[0] as ConcreteValue).value
-            consume()
-            return MvInteger(value)
-        } else if (tokens[0] is LParen) {
-            consume()
-            val value: Int
-
-            when (tokens[0].toString()) {
-                "-" -> {
-                    consume()
-                    value = - parseIntExp().value
-                }
-                else -> throw Exception("Expected integer expression function but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+        when (tokens[0]) {
+            is ConcreteValue -> {
+                val value = (tokens[0] as ConcreteValue).value
+                consume()
+                return MvInteger(value)
             }
-            consume(RParen())
-            return MvInteger(value)
-        } else
-            throw Exception("Expected concrete integer value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+            is LParen -> {
+                consume()
+                val value: Int
+
+                when (tokens[0].toString()) {
+                    "-" -> {
+                        consume()
+                        value = - parseIntExp().value
+                    }
+                    else -> throw Exception("Expected integer expression function but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+                }
+                consume(RParen())
+                return MvInteger(value)
+            }
+            else -> throw Exception("Expected concrete integer value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+        }
     }
 
     private fun parseArrayExp(defs: Map<String, List<Token>> = mapOf()): MvArray {
@@ -207,54 +211,57 @@ object ModelParser {
 
         consume(LParen())
 
-        if (tokens[0] is LParen)
-            array = parseConstArray()
-        else if (tokens[0] == Identifier("let")) {
-            val newDefs = defs.toMutableMap()
-            consume()
-            consume(LParen())
-            // Parse 'macro' definitions
-            while (tokens[0] is LParen) {
+        when (tokens[0]) {
+            is LParen -> array = parseConstArray()
+            Identifier("let") -> {
+                val newDefs = defs.toMutableMap()
                 consume()
-                val id = (tokens[0] as Identifier).toString()
-                consume()
-                // Save token sequence for replacements
-                newDefs[id] = extractSubexpression()
+                consume(LParen())
+                // Parse 'macro' definitions
+                while (tokens[0] is LParen) {
+                    consume()
+                    val id = (tokens[0] as Identifier).toString()
+                    consume()
+                    // Save token sequence for replacements
+                    newDefs[id] = extractSubexpression()
+                    consume(RParen())
+                }
+
                 consume(RParen())
+                array = parseArrayExp(newDefs)
             }
+            Identifier("store") -> {
+                consume()
+                array = parseArrayExp(defs)
+                val elemType = array.elemType
+                val index = parseIntExp().value
+                val value = parseValue(elemType)
+                array.map[index] = value
+            }
+            Identifier("lambda") -> {
+                // This is fragile - I'm hoping lambdas are only generated for very simple boolean array expressions
+                // At this point we only support lambdas that result in an all-false array with a single true value at a given index
+                consume()
+                val args = parseArguments()
 
-            consume(RParen())
-            array = parseArrayExp(newDefs)
-        } else if (tokens[0] == Identifier("store")) {
-            consume()
-            array = parseArrayExp(defs)
-            val elemType = array.elemType
-            val index = parseIntExp().value
-            val value = parseValue(elemType)
-            array.map.put(index, value)
-        } else if (tokens[0] == Identifier("lambda")) {
-            // This is fragile - I'm hoping lambdas are only generated for very simple boolean array expressions
-            // At this point we only support lambdas that result in an all-false array with a single true value at a given index
-            consume()
-            val args = parseArguments()
+                if (args.size != 1)
+                    throw Exception("Lambda with more than one argument in SMT array expression - unsupported")
 
-            if (args.size != 1)
-                throw Exception("Lambda with more than one argument in SMT array expression - unsupported")
+                consume(LParen())
+                consume(Identifier("="))
+                consume(Identifier(args[0].name))
 
-            consume(LParen())
-            consume(Identifier("="))
-            consume(Identifier(args[0].name))
+                if (tokens[0] !is ConcreteValue)
+                    throw Exception("Unsupported complex lambda in SMT array expression")
 
-            if (tokens[0] !is ConcreteValue)
-                throw Exception("Unsupported complex lambda in SMT array expression")
-
-            val index = (tokens[0] as ConcreteValue).value
-            consume()
-            consume(RParen())
-            array = MvArray(Type.BOOL, MvBoolean(false))
-            array.map.put(index, MvBoolean(true))
-        } else
-            throw Exception("Unexpected token \"${tokens[0]}\" in array expression")
+                val index = (tokens[0] as ConcreteValue).value
+                consume()
+                consume(RParen())
+                array = MvArray(Type.BOOL, MvBoolean(false))
+                array.map[index] = MvBoolean(true)
+            }
+            else -> throw Exception("Unexpected token \"${tokens[0]}\" in array expression")
+        }
 
         consume(RParen())
         return array
@@ -262,29 +269,31 @@ object ModelParser {
 
     private fun parseComplexTypeExp(): MvDataType {
         // Simple types without parameters
-        if (tokens[0] is Identifier) {
-            val value = (tokens[0] as Identifier).spelling
-            consume()
-            return MvDataType(value)
-        }
-        // Types with parameters
-        else if (tokens[0] is LParen) {
-            consume()
-
-            if (tokens[0] !is Identifier)
-                throw Exception("Expected data type constructor but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
-            val typeConstructor = (tokens[0] as Identifier).spelling
-            consume()
-
-            val params = mutableListOf<ModelValue>()
-            while (tokens[0] !is RParen) {
-                params.add(parseScalarValue())
+        when (tokens[0]) {
+            is Identifier -> {
+                val value = (tokens[0] as Identifier).spelling
+                consume()
+                return MvDataType(value)
             }
-            consume(RParen())
+            // Types with parameters
+            is LParen -> {
+                consume()
 
-            return MvDataType(typeConstructor, params)
-        } else
-            throw Exception("Expected data type value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+                if (tokens[0] !is Identifier)
+                    throw Exception("Expected data type constructor but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+                val typeConstructor = (tokens[0] as Identifier).spelling
+                consume()
+
+                val params = mutableListOf<ModelValue>()
+                while (tokens[0] !is RParen) {
+                    params.add(parseScalarValue())
+                }
+                consume(RParen())
+
+                return MvDataType(typeConstructor, params)
+            }
+            else -> throw Exception("Expected data type value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+        }
     }
 
     private fun parseBoolExp(): MvBoolean {
@@ -411,7 +420,7 @@ data class MvBoolean(val value: Boolean) : ModelValue {
 
 data class MvDataType(val value: String, val params: List<ModelValue> = listOf()) : ModelValue {
     override fun toString(): String {
-        return if (params.size == 0)
+        return if (params.isEmpty())
             stripModulePrefix(value)
         else
             "${stripModulePrefix(value)}(${params.joinToString(", ")})"

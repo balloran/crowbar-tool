@@ -66,27 +66,25 @@ fun renderFunction(f: Function, m: Map<String, String>): String {
 
 fun renderSelect(heapTerm: Term, field: Field, m: Map<String, String>): String {
     val simpleHeapTerm = filterStores(heapTerm, field)
-    val sht = simpleHeapTerm
 
-    return when {
-        sht is Heap || sht is OldHeap || sht is LastHeap ->
-            renderTerm(sht, m) + "." + renderTerm(field, m).substring(5) // Pretty-printing select(heapconst, this.field) as heapconst.field
+    return when (val sht = simpleHeapTerm) {
+        is Heap, is OldHeap, is LastHeap -> renderTerm(sht, m) + "." + renderTerm(field, m).substring(5) // Pretty-printing select(heapconst, this.field) as heapconst.field
         else -> "select(${renderTerm(sht, m)}, ${renderTerm(field, m)})" // We'll keep a top-level select to emphasize heap access
     }
 }
 
 // Remove any store functions not relevant to the selected field or return value of matching store function
 fun filterStores(heapTerm: Term, field: Field): Term {
-    if (heapTerm is Function && heapTerm.name == "store") {
+    return if (heapTerm is Function && heapTerm.name == "store") {
         val store = heapTerm
         val subHeap = store.params[0]
         val storeField = store.params[1]
         val value = store.params[2]
 
-        return if (field == storeField)
+        if (field == storeField)
             Function("store", listOf(Heap, field, value)) // replace the sub-heap term with a plain heap constant as it is irrelevant to the value
         else
             filterStores(subHeap, field)
     } else
-        return heapTerm
+        heapTerm
 }

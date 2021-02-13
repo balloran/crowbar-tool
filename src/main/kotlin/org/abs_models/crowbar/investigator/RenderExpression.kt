@@ -40,10 +40,10 @@ import org.abs_models.frontend.ast.UnderscorePattern
 import org.abs_models.frontend.ast.VarUse
 
 fun renderExpression(expression: Expr, varSubMap: Map<String, String> = mapOf()): String {
-    if (expression.absExp == null)
-        return renderSimpleCrowbarExpression(expression, varSubMap) // Fallback rendering, required for pattern expressions
+    return if (expression.absExp == null)
+        renderSimpleCrowbarExpression(expression, varSubMap) // Fallback rendering, required for pattern expressions
     else
-        return renderAbsExpression(expression.absExp!!, varSubMap)
+        renderAbsExpression(expression.absExp!!, varSubMap)
 }
 
 fun renderAbsExpression(e: Exp, m: Map<String, String>): String {
@@ -68,21 +68,21 @@ fun renderAbsExpression(e: Exp, m: Map<String, String>): String {
         is OrBoolExp       -> "(${renderAbsExpression(e.left, m)} || ${renderAbsExpression(e.right, m)})"
         is GetExp          -> "(${renderAbsExpression(e.pureExp, m)}).get"
         is NegExp          -> "!${renderAbsExpression(e.operand, m)}"
-        is NewExp          -> "new ${e.className}(${e.paramList.map{ renderAbsExpression(it, m) }.joinToString(", ")})"
-        is Call            -> "${e.methodSig.name}(${e.params.map{ renderAbsExpression(it, m) }.joinToString(", ")})"
+        is NewExp          -> "new ${e.className}(${e.paramList.joinToString(", ") { renderAbsExpression(it, m) }})"
+        is Call            -> "${e.methodSig.name}(${e.params.joinToString(", ") { renderAbsExpression(it, m) }})"
         is IfExp           -> "(if ${renderAbsExpression(e.condExp, m)} then ${renderAbsExpression(e.thenExp, m)} else ${renderAbsExpression(e.elseExp, m)})"
-        is FnApp           -> "${e.name}(${e.params.map{ renderAbsExpression(it, m) }.joinToString(", ")})"
+        is FnApp           -> "${e.name}(${e.params.joinToString(", ") { renderAbsExpression(it, m) }})"
         is CaseExp         -> {
-            val branches = e.branchList.map {
+            val branches = e.branchList.joinToString("\n") {
                 "${renderPattern(it.left, m)} => ${renderAbsExpression(it.right, m)}"
-            }.joinToString("\n")
+            }
             "case ${renderAbsExpression(e.expr, m)} {\n${indent(branches, 1)}\n}"
         }
         is DataConstructorExp -> {
             if (e.params.toList().isEmpty())
                 e.dataConstructor!!.name
             else
-                "${e.dataConstructor!!.name}(${e.params.map{ renderAbsExpression(it, m) }.joinToString(", ")})"
+                "${e.dataConstructor!!.name}(${e.params.joinToString(", ") { renderAbsExpression(it, m) }})"
         }
         else               -> throw Exception("Cannot render ABS Expression: $e")
     }
@@ -96,9 +96,9 @@ fun renderPattern(p: Pattern, m: Map<String, String>): String {
         is UnderscorePattern  -> "_"
         is ConstructorPattern ->
             if (p.params.toList().isEmpty())
-                "${p.constructor}"
+                p.constructor
             else
-                "${p.constructor}(${p.params.map{ renderPattern(it, m)}.joinToString(", ")})"
+                "${p.constructor}(${p.params.joinToString(", ") { renderPattern(it, m) }})"
         else -> throw Exception("Cannot render unknown ABS pattern: $p")
     }
 }
@@ -108,7 +108,14 @@ fun renderSimpleCrowbarExpression(e: Expr, m: Map<String, String>): String {
         is Const           -> e.name
         is ProgVar         -> if (m.containsKey(e.name)) m[e.name]!! else e.name
         is Field           -> "this." + e.name.substring(0, e.name.length - 2)
-        is DataTypeExpr    -> if (e.e.isEmpty()) e.name else "${e.name}({${e.e.map{renderExpression(it, m)}.joinToString(", ")})"
+        is DataTypeExpr    -> if (e.e.isEmpty()) e.name else "${e.name}({${
+            e.e.joinToString(", ") {
+                renderExpression(
+                    it,
+                    m
+                )
+            }
+        })"
         else               -> throw Exception("Cannot render complex crowbar Expression: ${e.prettyPrint()}")
     }
 }
