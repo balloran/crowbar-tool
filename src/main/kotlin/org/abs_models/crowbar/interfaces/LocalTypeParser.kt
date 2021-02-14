@@ -73,18 +73,18 @@ object LocalTypeParser : LocalSessionBaseVisitor<LocalType>() {
     override fun visitCall_local_type(ctx: Call_local_typeContext): LocalType {
         val role = ctx.role().STRING().text
         val method = ctx.STRING().text
-        val formula = ctx.formula().accept(formulaConverter) as Expr
+        val formula = ctx.formula()?.accept(formulaConverter) ?: Const("true")
+
         return LTCall(role, method, formula)
     }
 
     override fun visitRep_local_type(ctx: Rep_local_typeContext): LocalType {
         val inner = ctx.local().accept(this)
-        // val formula = ctx.formula().accept(formulaConverter) as Expr
         return LTRep(inner)
     }
 
     override fun visitPut_local_type(ctx: Put_local_typeContext): LocalType {
-        val formula = ctx.formula().accept(formulaConverter) as Expr
+        val formula = ctx.formula()?.accept(formulaConverter) ?: Const("true")
         return LTPut(formula)
     }
 
@@ -103,12 +103,12 @@ object LocalTypeParser : LocalSessionBaseVisitor<LocalType>() {
     }
 
     override fun visitGet_local_type(ctx: Get_local_typeContext): LocalType {
-        val term = ctx.term().accept(formulaConverter) as Expr
+        val term = ctx.term().accept(formulaConverter)!!
         return LTGet(term)
     }
 
     override fun visitSusp_local_type(ctx: Susp_local_typeContext): LocalType {
-        val formula = ctx.formula().accept(formulaConverter) as Expr
+        val formula = ctx.formula()?.accept(formulaConverter) ?: Const("true")
         return LTSusp(formula)
     }
 

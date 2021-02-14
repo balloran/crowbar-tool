@@ -86,6 +86,7 @@ class LocalTypeTest : StringSpec() {
                 testMethod(classDecl, "callPrecondFail", repos, false)
                 testMethod(classDecl, "suspPrecond", repos, true)
                 testMethod(classDecl, "suspPrecondFail", repos, false)
+                testMethod(classDecl, "shorthand", repos, true)
             }
 
             "$smt local type loops"{

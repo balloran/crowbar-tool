@@ -41,10 +41,10 @@ local : local DOT local                               # seq_local_type
       | local ALTERNATIVE local                       # or_local_type
       | OPARAN local CPARAN AST                       # rep_local_type
       | SKIP_S                                        # skip_local_type
-      | PUT OPARAN formula CPARAN                     # put_local_type
-      | SUSP OPARAN formula CPARAN                    # susp_local_type
+      | PUT (OPARAN formula CPARAN)?                  # put_local_type
+      | SUSP (OPARAN formula CPARAN)?                 # susp_local_type
       | GET OPARAN term CPARAN                        # get_local_type
-      | role BANG STRING OPARAN formula CPARAN        # call_local_type
+      | role BANG STRING (OPARAN formula CPARAN)?     # call_local_type
       ;
 
 formula : BANG formula                                # not_type_formula

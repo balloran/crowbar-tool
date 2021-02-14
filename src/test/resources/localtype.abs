@@ -64,6 +64,12 @@ class C(Server s, Client c, Database d) {
         }
     }
 
+    [Spec:Local("client!a.Susp.Put")]
+    Unit shorthand() {
+        Fut<Int> sth = this.c!a();
+        await sth?;
+    }
+
     [Spec:Local("(client!b(true).server!a(true) + client!b(true).client!c(true)).Put(true)")]
     Unit greedyOptionTrap() {
         Fut<Int> sth = this.c!b();
