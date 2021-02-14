@@ -292,6 +292,39 @@ class C(Server s, Client c, Database d) {
         }
     }
 
+    [Spec:Local("((server!a(true))*.server!b(true) + (server!a(true))*.server!c(true)).Put(true)")]
+    Unit multipathLoopAmbiguity() {
+
+        Int a = 10;
+
+        // This should always print a warning when verifying
+
+        [Spec: WhileInv(this.s != null && hasRole(this.s, "server"))]
+        while(a > 5) {
+            Fut<Int> sth = this.s!a();
+            a = a - 1;
+        }
+
+        Fut<Int> sth = this.s!b(); // Changing this to server!c will cause the proof to fail due to greedy matching of repetitions
+    }
+
+    [Spec:Local("((server!a(false))*.server!b(true) + (server!a(true))*.server!b(true)).Put(true)")]
+    Unit multipathLoopAmbiguityFail() {
+
+        Int a = 10;
+
+        // This should always print a warning when verifying
+        // In this case, the proof will (incorrectly) fail due to greedy repetition matching
+
+        [Spec: WhileInv(this.s != null && hasRole(this.s, "server"))]
+        while(a > 5) {
+            Fut<Int> sth = this.s!a();
+            a = a - 1;
+        }
+
+        Fut<Int> sth = this.s!b();
+    }
+
     [Spec:Local("(client!arg(i == 0) + client!arg(i != 0)).Put(true)")]
     Unit multipathSidecondtion(Int something) {
         Fut<Int> sth = this.c!arg(something);

@@ -120,6 +120,25 @@ fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : 
     return ret //Todo: add warning for old and last in precondition
 }
 
+fun extractRoleSpec(classDecl: ClassDecl): Formula {
+    return classDecl.annotations.filter {
+        it.type.toString()
+            .endsWith(".Spec") && it.value is DataConstructorExp && (it.value as DataConstructorExp).constructor == "Role"
+    }.map {
+        val roleAnnotation = it.value as DataConstructorExp
+
+        if (roleAnnotation.getParam(0) !is StringLiteral)
+            throw Exception("First argument of Role annotation should be role name as string")
+        if (roleAnnotation.getParam(1) !is FieldUse)
+            throw Exception("Second argument of Role annotation should be a field use")
+
+        val roleString = (roleAnnotation.getParam(0) as StringLiteral).content
+        val fieldUse = (roleAnnotation.getParam(1) as FieldUse)
+        val field = Field(fieldUse.name + "_f", fieldUse.type.qualifiedName, fieldUse.type)
+        Predicate("hasRole", listOf(exprToTerm(field), Function("\"$roleString\""))) as Formula
+    }.fold(True as Formula) { acc, elem -> And(acc, elem) }
+}
+
 
 fun Model.extractAllClasses() : List<ClassDecl>{
     var l = emptyList<ClassDecl>()

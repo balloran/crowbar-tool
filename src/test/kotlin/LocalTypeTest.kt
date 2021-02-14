@@ -119,6 +119,8 @@ class LocalTypeTest : StringSpec() {
                 testMethod(classDecl, "greedySeqTrap", repos, true)
                 testMethod(classDecl, "multipathSidecondtion", repos, true)
                 testMethod(classDecl, "multipathSidecondtionFail", repos, false)
+                testMethod(classDecl, "multipathLoopAmbiguity", repos, true)
+                testMethod(classDecl, "multipathLoopAmbiguityFail", repos, false) // Ideally we'd like this to succeed
             }
         }
     }

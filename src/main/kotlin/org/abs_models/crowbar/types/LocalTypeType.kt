@@ -72,6 +72,7 @@ import org.abs_models.crowbar.interfaces.LocalTypeParser
 import org.abs_models.crowbar.main.Repository
 import org.abs_models.crowbar.main.Verbosity
 import org.abs_models.crowbar.main.extractInheritedSpec
+import org.abs_models.crowbar.main.extractRoleSpec
 import org.abs_models.crowbar.main.extractSpec
 import org.abs_models.crowbar.main.output
 import org.abs_models.crowbar.rule.FreshGenerator
@@ -98,16 +99,17 @@ interface LocalTypeType : DeductType {
         val objInv: Formula?
         val ltexp: LocalType?
         val metpre: Formula?
+        val roles: Formula?
         val body: Stmt?
 
         val context = getParseContext(mDecl, classDecl)
-        val roleMapping = extractRoleMapping(classDecl)
 
         try {
             objInv = extractSpec(classDecl, "ObjInv", UnknownType.INSTANCE)
             ltexp = extractLocalTypeSpec(mDecl, context)
             metpre = extractInheritedSpec(mDecl.methodSig, "Requires")
             body = getNormalizedStatement(mDecl.block)
+            roles = extractRoleSpec(classDecl)
         } catch (e: Exception) {
             e.printStackTrace()
             System.err.println("error during translation, aborting")
@@ -119,12 +121,8 @@ interface LocalTypeType : DeductType {
         if (ltexp == null)
             return emptySymNode()
 
-        val roleEquivalences = roleMapping.map {
-            Predicate("hasRole", listOf(exprToTerm(it.second), Function("\"${it.first}\""))) as Formula
-        }.reduce { acc, elem -> And(acc, elem) }
-
         val updateOldHeap = ChainUpdate(ElementaryUpdate(LastHeap, Heap), ElementaryUpdate(OldHeap, Heap))
-        symb = SymbolicState(And(And(objInv, metpre), roleEquivalences), updateOldHeap, Modality(body, LocalTypeTarget(ltexp, objInv)))
+        symb = SymbolicState(And(And(objInv, metpre), roles), updateOldHeap, Modality(body, LocalTypeTarget(ltexp, objInv)))
 
         val usedSpec = StaticNode("Using specification of ${classDecl.qualifiedName}.$name:\nObject Invariant: ${objInv.prettyPrint()}\nRequires: ${metpre.prettyPrint()}")
 
@@ -144,25 +142,6 @@ interface LocalTypeType : DeductType {
         }
         val mapping = (fields + params).associate { it }
         return Pair(returnType, mapping)
-    }
-
-    fun extractRoleMapping(classDecl: ClassDecl): List<Pair<String, Field>> {
-        return classDecl.annotations.filter {
-            it.type.toString()
-                .endsWith(".Spec") && it.value is DataConstructorExp && (it.value as DataConstructorExp).constructor == "Role"
-        }.map {
-            val roleAnnotation = it.value as DataConstructorExp
-
-            if (roleAnnotation.getParam(0) !is StringLiteral)
-                throw Exception("First argument of Role annotation should be role name as string")
-            if (roleAnnotation.getParam(1) !is FieldUse)
-                throw Exception("Second argument of Role annotation should be a field use")
-
-            val roleString = (roleAnnotation.getParam(0) as StringLiteral).content
-            val fieldUse = (roleAnnotation.getParam(1) as FieldUse)
-            val field = Field(fieldUse.name + "_f", fieldUse.type.qualifiedName, fieldUse.type)
-            Pair(roleString, field)
-        }
     }
 
     fun extractLocalTypeSpec(mDecl: MethodImpl, context: Pair<Type, Map<String, Type>>?): LocalType? {
@@ -258,7 +237,7 @@ class LTTSyncAssign(repos: Repository) : LTTAssign(repos, Modality(
 
         // We're executing a get statement here which has to match the local type specification
         if (!ltexp.matches(LTPatternGet)) {
-            output("Crowbar  : Bailing out, could not match .get to ${target.prettyPrint()}")
+            output("Crowbar  : bailing out, could not match .get to $ltexp")
             return listOf()
         }
 
@@ -333,7 +312,7 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
         val ltexp = target.lte
         val callPattern = LTPatternCall(call.met.split(".").last())
         if (!ltexp.matches(callPattern)) {
-            output("Crowbar  : Bailing out, could not match call $callPattern to ${target.prettyPrint()}")
+            output("Crowbar  : bailing out, could not match call $callPattern to $ltexp")
             return listOf()
         }
 
@@ -404,7 +383,7 @@ object LTTSkip : Rule(Modality(SkipStmt, LocalTypeAbstractTarget("TARGET"))) {
         // If the remaining local type expression does not require any further actions,
         // the proof was successful. If not, it failed.
         if (!target.lte.couldSkip) {
-            output("Crowbar  : Bailing out, program execution completed but expected actions remain: ${target.prettyPrint()}")
+            output("Crowbar  : bailing out, program execution completed but expected actions remain: ${target.lte}")
             return listOf()
         }
 
@@ -455,7 +434,7 @@ object LTTReturn : Rule(Modality(
         // We're executing a return statement here which has to match the local type specification
         val ltexp = target.lte
         if (!ltexp.matches(LTPatternPut)) {
-            output("Crowbar  : Bailing out, could not match return to ${target.prettyPrint()}")
+            output("Crowbar  : bailing out, could not match return to $ltexp")
             return listOf()
         }
 
@@ -466,7 +445,7 @@ object LTTReturn : Rule(Modality(
 
         // We can't have un-matched parts of the local type expression remaining when finishing execution
         if (!newTargetExp.couldSkip) {
-            output("Crowbar  : Bailing out, finished execution but pattern is not skippable: ${target.prettyPrint()}")
+            output("Crowbar  : bailing out, finished execution but pattern is not skippable: $newTargetExp")
             return listOf()
         }
 
@@ -536,7 +515,7 @@ object LTTAwait : Rule(Modality(
         // We're executing an await statement here which has to match the local type specification
         val ltexp = target.lte
         if (!ltexp.matches(LTPatternSusp)) {
-            output("Crowbar  : Bailing out, could not match suspend to ${target.prettyPrint()}")
+            output("Crowbar  : bailing out, could not match suspend to $ltexp")
             return listOf()
         }
 
@@ -582,11 +561,15 @@ object LTTWhile : Rule(Modality(
 
         // Side condition: Show that the specified invariant holds
         if (ltexp.matches(LTPatternRep)) {
-            val matchedRep = ltexp.getMatch(LTPatternRep) as LTRep
+            val matches = ltexp.getMatches(LTPatternRep)
+            if (matches.size > 1)
+                output("Crowbar  : could not determine which repetition to match at '$ltexp', arbitrarily choosing first match")
+
+            val matchedRep = matches[0] as LTRep
             preservesTarget = LocalTypeTarget(matchedRep.inner, invariant, true)
 
             useTarget = LocalTypeTarget(
-                ltexp.readTransform(LTPatternRep),
+                ltexp.readTransform(LTPatternRep, greedy = true),
                 target.invariant,
                 target.showInvariant
             )

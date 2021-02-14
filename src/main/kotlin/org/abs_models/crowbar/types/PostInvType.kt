@@ -45,6 +45,7 @@ interface PostInvType : DeductType{
         val objInv: Formula?
         val metpost: Formula?
         val metpre: Formula?
+        val roles: Formula?
         val body: Stmt?
         var overlapsSet : String? = null
         var succeedsSet : String? = null
@@ -54,6 +55,7 @@ interface PostInvType : DeductType{
             metpost = extractSpec(mDecl, "Ensures", mDecl.type)
             metpre = extractInheritedSpec(mDecl.methodSig, "Requires")
             body = getNormalizedStatement(mDecl.block)
+            roles = extractRoleSpec(classDecl)
             if(hasPre) {
                 overlapsSet = extractContextSet(mDecl, "Overlaps")
                 succeedsSet = extractContextSet(mDecl, "Succeeds")
@@ -66,7 +68,7 @@ interface PostInvType : DeductType{
         output("Crowbar-v: method post-condition: ${metpost.prettyPrint()}", Verbosity.V)
         output("Crowbar-v: object invariant: ${objInv.prettyPrint()}",Verbosity.V)
         val updateOldHeap = ChainUpdate(ElementaryUpdate(LastHeap,Heap), ElementaryUpdate(OldHeap, Heap))
-        symb = SymbolicState(And(objInv,metpre), updateOldHeap, Modality(body, PostInvariantPair(metpost, objInv)))
+        symb = SymbolicState(And(And(objInv,metpre),roles), updateOldHeap, Modality(body, PostInvariantPair(metpost, objInv)))
         if(hasPre && (overlapsSet == null || succeedsSet == null)){
             output("Crowbar: Method ${mDecl.methodSig.name} has a heap precondition but does not fully specify its context.")
             val full = classDecl.allMethodSigs.joinToString(",") { it.name }

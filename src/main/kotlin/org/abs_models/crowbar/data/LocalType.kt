@@ -14,12 +14,14 @@ interface LocalType : Anything {
     // E.g. in (a+b).c, a and b would be possible starting elements
     fun matches(pattern: LTPattern): Boolean
 
-    fun getMatch(pattern: LTPattern): LocalType
+    fun getMatches(pattern: LTPattern): List<LocalType>
 
     // Return a LocalType expression describing all possible runs _after_ reading the LTPattern
     // Replaces removed elements with their required side conditions (has to be called with matching context for side condition rendering)
     // E.g. for ((a.b) + (c.d)), possible runs after reading a would be "b"
-    fun readTransform(pattern: LTPattern, context: LTContext = LTEmptyContext): LocalType
+    // When set, the greedy flag ensures that the returned expression represents only the first matching path and that precisely one element was executed
+    // this is required for loop execution as loop sideconditions cannot be stored within the expression as LTSidecondition nodes
+    fun readTransform(pattern: LTPattern, context: LTContext = LTEmptyContext, greedy: Boolean = false): LocalType
 }
 
 abstract class SingleLT : LocalType {
@@ -27,17 +29,18 @@ abstract class SingleLT : LocalType {
     override val isSkip = false
     override val sideConditions = emptyList<LogicNode>()
 
-    override fun getMatch(pattern: LTPattern): LocalType {
-        if(!matches(pattern))
-            throw Exception("Cannot match local type pattern '$pattern' to local type expression '${this.prettyPrint()}'")
-        return this
+    override fun getMatches(pattern: LTPattern): List<LocalType> {
+        return if(!matches(pattern))
+                emptyList()
+            else
+                listOf(this)
     }
 }
 
 abstract class CommonSidecondLT : SingleLT() {
     abstract val formula: Expr
 
-    override fun readTransform(pattern: LTPattern, context: LTContext): LocalType {
+    override fun readTransform(pattern: LTPattern, context: LTContext, greedy: Boolean): LocalType {
         if (!matches(pattern))
             throw Exception("Cannot match local type pattern '$pattern' to local type expression '${this.prettyPrint()}'")
 
@@ -66,19 +69,19 @@ data class LTSeq(val first: LocalType, val second: LocalType) : LocalType {
             first.matches(pattern)
     }
 
-    override fun getMatch(pattern: LTPattern): LocalType {
-        return if(first.couldSkip && !first.matches(pattern))
-            second.getMatch(pattern)
+    override fun getMatches(pattern: LTPattern): List<LocalType> {
+        return if(first.couldSkip)
+            first.getMatches(pattern) + second.getMatches(pattern)
         else
-            first.getMatch(pattern)
+            first.getMatches(pattern)
     }
 
-    override fun readTransform(pattern: LTPattern, context: LTContext): LocalType {
+    override fun readTransform(pattern: LTPattern, context: LTContext, greedy: Boolean): LocalType {
         val firstMatches = first.matches(pattern)
         val secondMatches = second.matches(pattern)
 
         // If both expressions could be matched, we simulate execution of both in a new option
-        return if(firstMatches && secondMatches && first.couldSkip)
+        return if(firstMatches && secondMatches && first.couldSkip && !greedy)
             LTOpt(
                 LTSeq(first.readTransform(pattern, context), second), // Path executing the first expression
                 LTSeq(LTSideCondition(first.sideConditions, "seq-agg"), second.readTransform(pattern, context)) // Path executing the second expression
@@ -89,9 +92,8 @@ data class LTSeq(val first: LocalType, val second: LocalType) : LocalType {
             LTSeq(first.readTransform(pattern, context), second)
     }
 
-    override fun prettyPrint(): String {
-        return "(${first.prettyPrint()}.${second.prettyPrint()})"
-    }
+    override fun toString() = "$first.$second"
+    override fun prettyPrint() = "(${first.prettyPrint()}.${second.prettyPrint()})"
 }
 
 data class LTNest(val inner: LocalType) : LocalType {
@@ -103,12 +105,11 @@ data class LTNest(val inner: LocalType) : LocalType {
         get() = inner.sideConditions
 
     override fun matches(pattern: LTPattern) = inner.matches(pattern)
-    override fun getMatch(pattern: LTPattern) = inner.getMatch(pattern)
-    override fun readTransform(pattern: LTPattern, context: LTContext) = inner.readTransform(pattern, context)
+    override fun getMatches(pattern: LTPattern) = inner.getMatches(pattern)
+    override fun readTransform(pattern: LTPattern, context: LTContext, greedy: Boolean) = inner.readTransform(pattern, context, greedy)
 
-    override fun prettyPrint(): String {
-        return "(${inner.prettyPrint()})"
-    }
+    override fun toString() = "($inner)"
+    override fun prettyPrint() = "(${inner.prettyPrint()})"
 }
 
 data class LTOpt(val first: LocalType, val second: LocalType) : LocalType {
@@ -134,17 +135,14 @@ data class LTOpt(val first: LocalType, val second: LocalType) : LocalType {
 
     override fun matches(pattern: LTPattern) = first.matches(pattern) || second.matches(pattern)
 
-    override fun getMatch(pattern: LTPattern): LocalType {
-        return if(first.matches(pattern))
-            first.getMatch(pattern)
-        else
-            second.getMatch(pattern)
+    override fun getMatches(pattern: LTPattern): List<LocalType> {
+        return first.getMatches(pattern) + second.getMatches(pattern)
     }
 
-    override fun readTransform(pattern: LTPattern, context: LTContext): LocalType {
+    override fun readTransform(pattern: LTPattern, context: LTContext, greedy: Boolean): LocalType {
         return when {
             // If both branches match, we simulate execution in both branches and keep the option
-            first.matches(pattern) && second.matches(pattern) -> 
+            first.matches(pattern) && second.matches(pattern) && !greedy -> 
                 LTOpt(first.readTransform(pattern, context), second.readTransform(pattern, context))
             // If only one branch matches, we can throw the other away, including sideconditions
             first.matches(pattern) -> first.readTransform(pattern, context)
@@ -152,9 +150,8 @@ data class LTOpt(val first: LocalType, val second: LocalType) : LocalType {
         }
     }
 
-    override fun prettyPrint(): String {
-        return "(${first.prettyPrint()} + ${second.prettyPrint()})"
-    }
+    override fun toString() = "($first + $second)"
+    override fun prettyPrint() = "(${first.prettyPrint()} + ${second.prettyPrint()})"
 }
 
 data class LTRep(val inner: LocalType) : LocalType {
@@ -166,14 +163,14 @@ data class LTRep(val inner: LocalType) : LocalType {
 
     override fun matches(pattern: LTPattern) = if (pattern == LTPatternRep) true else inner.matches(pattern)
 
-    override fun getMatch(pattern: LTPattern): LocalType {
+    override fun getMatches(pattern: LTPattern): List<LocalType> {
         return if(pattern == LTPatternRep)
-            this
+            listOf(this)
         else
-            inner.getMatch(pattern)
+            inner.getMatches(pattern)
     }
 
-    override fun readTransform(pattern: LTPattern, context: LTContext): LocalType {
+    override fun readTransform(pattern: LTPattern, context: LTContext, greedy: Boolean): LocalType {
         return when {
             pattern == LTPatternRep -> this // Leave the repetition in to allow tail duplication (ie statements outside the program loop still matching the repetition)
             !inner.matches(pattern) -> LTSkip
@@ -181,32 +178,28 @@ data class LTRep(val inner: LocalType) : LocalType {
         }
     }
 
-    override fun prettyPrint(): String {
-        //return "(${inner.prettyPrint()})*[${formula.prettyPrint()}]"
-        return "(${inner.prettyPrint()})*"
-    }
+    override fun toString() = "($inner)*" 
+    override fun prettyPrint() = "(${inner.prettyPrint()})*"
 }
 
 data class LTSusp(override val formula: Expr) : CommonSidecondLT() {
     override fun matches(pattern: LTPattern) = (pattern == LTPatternSusp)
 
-    override fun prettyPrint(): String {
-        return "Susp[${formula.prettyPrint()}]"
-    }
+    override fun toString() = "Susp"
+    override fun prettyPrint() = "Susp[${formula.prettyPrint()}]"
 }
 
 data class LTPut(override val formula: Expr) : CommonSidecondLT() {
     override fun matches(pattern: LTPattern) = (pattern == LTPatternPut)
 
-    override fun prettyPrint(): String {
-        return "Put[${formula.prettyPrint()}]"
-    }
+    override fun toString() = "Put"
+    override fun prettyPrint() = "Put[${formula.prettyPrint()}]"
 }
 
 data class LTGet(val term: Expr) : SingleLT() {
     override fun matches(pattern: LTPattern) = (pattern == LTPatternGet)
 
-    override fun readTransform(pattern: LTPattern, context: LTContext): LocalType {
+    override fun readTransform(pattern: LTPattern, context: LTContext, greedy: Boolean): LocalType {
         if (!matches(pattern))
             throw Exception("Cannot match local type pattern '$pattern' to local type expression '${this.prettyPrint()}'")
 
@@ -224,15 +217,14 @@ data class LTGet(val term: Expr) : SingleLT() {
         return LTSideCondition(listOf(sidecond), "get")
     }
 
-    override fun prettyPrint(): String {
-        return "Get(${term.prettyPrint()})"
-    }
+    override fun toString() = "Get"
+    override fun prettyPrint() = "Get(${term.prettyPrint()})"
 }
 
 data class LTCall(val role: String, val method: String, val precond: Expr) : SingleLT() {
     override fun matches(pattern: LTPattern) = (pattern is LTPatternCall && pattern.method == method)
 
-    override fun readTransform(pattern: LTPattern, context: LTContext): LocalType {
+    override fun readTransform(pattern: LTPattern, context: LTContext, greedy: Boolean): LocalType {
         if (!matches(pattern))
             throw Exception("Cannot match local type pattern '$pattern' to local type expression '${this.prettyPrint()}'")
 
@@ -253,17 +245,17 @@ data class LTCall(val role: String, val method: String, val precond: Expr) : Sin
         return LTSideCondition(listOf(sidecond), "call")
     }
 
-    override fun prettyPrint(): String {
-        return "$role!$method[${precond.prettyPrint()}]"
-    }
+    override fun toString() = "$role!$method"
+    override fun prettyPrint() = "$role!$method[${precond.prettyPrint()}]"
 }
 
 object LTSkip : SingleLT() {
     override val couldSkip = true
     override val isSkip = true
     override fun matches(pattern: LTPattern) = false
-    override fun readTransform(pattern: LTPattern, context: LTContext) =
+    override fun readTransform(pattern: LTPattern, context: LTContext, greedy: Boolean) =
         throw Exception("Cannot match local type pattern '$pattern' to local type expression '${this.prettyPrint()}'")
+    override fun toString() = "skip"
     override fun prettyPrint() = "skip"
 }
 
@@ -272,8 +264,9 @@ data class LTSideCondition(override val sideConditions: List<LogicNode>, private
     override val isSkip = true
 
     override fun matches(pattern: LTPattern) = false
-    override fun readTransform(pattern: LTPattern, context: LTContext) =
+    override fun readTransform(pattern: LTPattern, context: LTContext, greedy: Boolean) =
         throw Exception("Cannot match local type pattern '$pattern' to local type expression '${this.prettyPrint()}'")
+    override fun toString() = "sidecond"
     override fun prettyPrint() = "sidecond-$source"
 }
 
