@@ -122,7 +122,7 @@ interface LocalTypeType : DeductType {
             return emptySymNode()
 
         val updateOldHeap = ChainUpdate(ElementaryUpdate(LastHeap, Heap), ElementaryUpdate(OldHeap, Heap))
-        symb = SymbolicState(And(And(objInv, metpre), roles), updateOldHeap, Modality(body, LocalTypeTarget(ltexp, objInv)))
+        symb = SymbolicState(And(And(objInv, metpre), roles), updateOldHeap, Modality(body, LocalTypeTarget(ltexp, roles, objInv)))
 
         val usedSpec = StaticNode("Using specification of ${classDecl.qualifiedName}.$name:\nObject Invariant: ${objInv.prettyPrint()}\nRequires: ${metpre.prettyPrint()}")
 
@@ -163,7 +163,7 @@ interface LocalTypeType : DeductType {
             "${classDecl.name}.${it.methodSig.name}: ${lte?.prettyPrint() ?: "no local type annotation"}"
         }.joinToString("\n")
 
-        val emptySymState = SymbolicState(True, EmptyUpdate, Modality(SkipStmt, LocalTypeTarget(LTSkip)))
+        val emptySymState = SymbolicState(True, EmptyUpdate, Modality(SkipStmt, LocalTypeTarget(LTSkip, True)))
 
         return SymbolicNode(emptySymState, listOf(StaticNode("Expected projection result:\n$methods")))
     }
@@ -173,13 +173,15 @@ interface LocalTypeType : DeductType {
     override fun exctractFunctionNode(fDecl: FunctionDecl) = emptySymNode()
 
     fun emptySymNode(): SymbolicNode {
-        val emptySymState = SymbolicState(True, EmptyUpdate, Modality(SkipStmt, LocalTypeTarget(LTSkip)))
+        val emptySymState = SymbolicState(True, EmptyUpdate, Modality(SkipStmt, LocalTypeTarget(LTSkip, True)))
         return SymbolicNode(emptySymState, listOf())
     }
 }
 
-data class LocalTypeTarget(val lte: LocalType, val invariant: Formula = True, val showInvariant: Boolean = false) : LocalTypeType {
+data class LocalTypeTarget(val lte: LocalType, val roleInv: Formula, val invariant: Formula = True, val showInvariant: Boolean = false) : LocalTypeType {
     override fun prettyPrint() = lte.prettyPrint()
+
+    fun updateLTE(newLte: LocalType) = LocalTypeTarget(newLte, roleInv, invariant, showInvariant)
 }
 
 data class LocalTypeAbstractTarget(val name: String) : LocalTypeType, AbstractVar {
@@ -243,11 +245,7 @@ class LTTSyncAssign(repos: Repository) : LTTAssign(repos, Modality(
 
         // Side condition: Show that the term we sync on is equivalent to the specified one (handled in readTransform)
         val context = LTGetContext(input.condition, input.update, rhsExpr.e[0]) // rhsExpr is valueOf(<get term>)
-        val newTarget = LocalTypeTarget(
-            ltexp.readTransform(LTPatternGet, context),
-            target.invariant,
-            target.showInvariant
-        )
+        val newTarget = target.updateLTE(ltexp.readTransform(LTPatternGet, context))
 
         // Generate SMT representation of the future expression to get its model value later
         val futureSMTExpr = apply(input.update, rhs) as Term
@@ -333,11 +331,7 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
         // - Show that role of callee matches specified role
         // - Show that specified call precondition is met
         val context = LTCallContext(input.condition, input.update, calleeExpr, substMap)
-        val newTarget = LocalTypeTarget(
-            ltexp.readTransform(callPattern, context),
-            target.invariant,
-            target.showInvariant
-        )
+        val newTarget = target.updateLTE(ltexp.readTransform(callPattern, context))
 
         val freshFut = FreshGenerator.getFreshFuture(targetDecl.type)
         val read = repos.methodEnss[call.met]
@@ -457,6 +451,9 @@ object LTTReturn : Rule(Modality(
         if (target.showInvariant)
             sideconditions.add(LogicNode(input.condition, UpdateOnFormula(newUpdate, target.invariant)))
 
+        // Show that roles are preserved
+        sideconditions.add(LogicNode(input.condition, UpdateOnFormula(newUpdate, target.roleInv)))
+
         return sideconditions
     }
 }
@@ -508,7 +505,7 @@ object LTTAwait : Rule(Modality(
                         input.condition,
                         UpdateOnFormula(
                             newUpdate,
-                            And(objInvariant, guard)
+                            And(objInvariant, And(guard, target.roleInv))
                         )
                     )
 
@@ -521,11 +518,7 @@ object LTTAwait : Rule(Modality(
 
         // Sidecondition handled in readTransform: specified precondition has to hold
         val context = LTCommonContext(input.condition, input.update)
-        val newTarget = LocalTypeTarget(
-            ltexp.readTransform(LTPatternSusp, context),
-            target.invariant,
-            target.showInvariant
-        )
+        val newTarget = target.updateLTE(ltexp.readTransform(LTPatternSusp, context))
 
         val sState = SymbolicState(newInputCondition, newUpdate, Modality(cont, newTarget))
 
@@ -566,18 +559,13 @@ object LTTWhile : Rule(Modality(
                 output("Crowbar  : could not determine which repetition to match at '$ltexp', arbitrarily choosing first match")
 
             val matchedRep = matches[0] as LTRep
-            preservesTarget = LocalTypeTarget(matchedRep.inner, invariant, true)
-
-            useTarget = LocalTypeTarget(
-                ltexp.readTransform(LTPatternRep, greedy = true),
-                target.invariant,
-                target.showInvariant
-            )
+            preservesTarget = LocalTypeTarget(matchedRep.inner, target.roleInv, invariant, true)
+            useTarget = target.updateLTE(ltexp.readTransform(LTPatternRep, greedy = true))
         }
         // If no repetition could be matched, the proof might still succeed if the loop does nothing
         else {
-            useTarget = LocalTypeTarget(ltexp, target.invariant, target.showInvariant)
-            preservesTarget = LocalTypeTarget(LTSkip, True, true)
+            useTarget = LocalTypeTarget(ltexp, target.roleInv, target.invariant, target.showInvariant)
+            preservesTarget = LocalTypeTarget(LTSkip, target.roleInv, True, true)
         }
 
         // Initial Case
