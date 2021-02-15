@@ -89,6 +89,18 @@ class LocalTypeTest : StringSpec() {
                 testMethod(classDecl, "shorthand", repos, true)
             }
 
+            "$smt local types with complex data types"{
+                smtPath = smt
+
+                val (model, repos) = load(listOf(Paths.get("src/test/resources/localtype.abs")))
+                val classDecl = model.extractClassDecl("LocalTypeTest", "C", repos)
+
+                testMethod(classDecl, "returnDataTypeSpec", repos, true)
+                testMethod(classDecl, "returnDataTypeSpecFail", repos, false)
+                testMethod(classDecl, "returnDataTypeParamSpec", repos, true)
+                testMethod(classDecl, "returnDataTypeParamSpecFail", repos, false)
+            }
+
             "$smt local type loops"{
                 smtPath = smt
 

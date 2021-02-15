@@ -21,6 +21,7 @@ import antlr.crowbar.gen.LocalSessionParser.Seq_local_typeContext
 import antlr.crowbar.gen.LocalSessionParser.Skip_local_typeContext
 import antlr.crowbar.gen.LocalSessionParser.Susp_local_typeContext
 import org.abs_models.crowbar.data.Const
+import org.abs_models.crowbar.data.DataTypeExpr
 import org.abs_models.crowbar.data.Expr
 import org.abs_models.crowbar.data.Field
 import org.abs_models.crowbar.data.LTCall
@@ -36,6 +37,7 @@ import org.abs_models.crowbar.data.LocalType
 import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.crowbar.data.ReturnVar
 import org.abs_models.crowbar.data.SExpr
+import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
 import org.antlr.v4.runtime.BaseErrorListener
@@ -124,6 +126,12 @@ class LocalTypeFormulaConverter(context: Pair<Type, Map<String, Type>>) : LocalS
     private val methodReturnType = context.first
     private val fieldTypeMapping = context.second
 
+    // Build a mapping from possible data type constructor names to their declarations
+    // this is the only way we can distinguish a data type constructor from a function / a program variable
+    private val dataTypeConstructors = ADTRepos.dTypesDecl.map {
+        datatype -> datatype.dataConstructorList.map { constructor -> Pair(constructor.name, datatype) }
+    }.flatten().associate { it }
+
     override fun visitOr_type_formula(ctx: Or_type_formulaContext): SExpr {
         val left = ctx.formula(0).accept(this) as Expr
         val right = ctx.formula(1).accept(this) as Expr
@@ -148,7 +156,10 @@ class LocalTypeFormulaConverter(context: Pair<Type, Map<String, Type>>) : LocalS
     override fun visitFunction_type_term(ctx: Function_type_termContext): Expr {
         val name = ctx.STRING().text
         val args = ctx.termlist().term().map { it.accept(this) as Expr }
-        return SExpr(name, args)
+        return if (dataTypeConstructors.containsKey(name))
+                buildDataType(name, args)
+            else
+                SExpr(name, args)
     }
 
     override fun visitBinary_type_term(ctx: Binary_type_termContext): Expr {
@@ -165,17 +176,26 @@ class LocalTypeFormulaConverter(context: Pair<Type, Map<String, Type>>) : LocalS
     }
 
     override fun visitConstant_type_term(ctx: Constant_type_termContext): Expr {
-        return when (val text = ctx.STRING().text) {
-            "null"   -> Const("0")
-            "this"   -> Const("1")
-            "true"   -> Const("true")
-            "false"  -> Const("false")
-            "True"   -> Const("true")
-            "False"  -> Const("false")
-            "result" -> ReturnVar(methodReturnType.qualifiedName, methodReturnType)
+        val text = ctx.STRING().text
+        return when {
+            text == "null"   -> Const("0")
+            text == "this"   -> Const("1")
+            text == "true"   -> Const("true")
+            text == "false"  -> Const("false")
+            text == "True"   -> Const("true")
+            text == "False"  -> Const("false")
+            text == "result" -> ReturnVar(methodReturnType.qualifiedName, methodReturnType)
+            text matches Regex("[0-9]+") -> Const(text)
+            dataTypeConstructors.containsKey(text) -> buildDataType(text)
             // TODO: This does not support data types, and ProgVars are only kind of supported - sometimes the unknown type causes issues
-            else -> if (text matches Regex("[0-9]+")) Const(text) else ProgVar(text, "<UNKNOWN>", UnknownType.INSTANCE)
+            else -> ProgVar(text, "<UNKNOWN>", UnknownType.INSTANCE)
         }
+    }
+
+    private fun buildDataType(name: String, args: List<Expr> = emptyList()): Expr {
+        val decl = dataTypeConstructors[name]!!
+        val constructor = decl.dataConstructorList.first { it.name == name }
+        return DataTypeExpr(constructor.qualifiedName, constructor.type.qualifiedName, constructor.type, args)
     }
 }
 

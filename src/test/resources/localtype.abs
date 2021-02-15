@@ -2,6 +2,9 @@ module LocalTypeTest;
 
 data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool) | Local(String) | Role(String, Object);
 
+data ComplexType = ComplexA | ComplexB;
+data ComplexWrapType = ComplexWrap(ComplexType);
+
 interface Server {
     Int a();
     Int b();
@@ -51,6 +54,26 @@ class C(Server s, Client c, Database d) {
     [Spec:Local("Put(this.s == old(this.s))")]
     Unit returnOldSpecFail(Int a) {
         this.s = null;
+    }
+
+    [Spec:Local("Put(result == ComplexA)")]
+    ComplexType returnDataTypeSpec() {
+        return ComplexA;
+    }
+
+    [Spec:Local("Put(result == ComplexWrap(ComplexA))")]
+    ComplexWrapType returnDataTypeParamSpec() {
+        return ComplexWrap(ComplexA);
+    }
+
+    [Spec:Local("Put(result == ComplexB)")]
+    ComplexType returnDataTypeSpecFail() {
+        return ComplexA;
+    }
+
+    [Spec:Local("Put(result == ComplexWrap(ComplexB))")]
+    ComplexWrapType returnDataTypeParamSpecFail() {
+        return ComplexWrap(ComplexA);
     }
 
     // Basic options
