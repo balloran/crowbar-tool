@@ -387,6 +387,9 @@ object LTTSkip : Rule(Modality(SkipStmt, LocalTypeAbstractTarget("TARGET"))) {
         if (target.showInvariant)
             sideconditions.add(LogicNode(input.condition, apply(input.update, target.invariant) as Formula))
 
+        // Show that roles are preserved
+        sideconditions.add(LogicNode(input.condition, UpdateOnFormula(input.update, target.roleInv)))
+
         return sideconditions
     }
 }
@@ -569,20 +572,26 @@ object LTTWhile : Rule(Modality(
         }
 
         // Initial Case
-        val initial = LogicNode(input.condition, UpdateOnFormula(input.update, invariant), info = InfoLoopInitial(guardExpr, invariant))
+        val initial = LogicNode(
+            input.condition,
+            UpdateOnFormula(input.update, And(invariant, target.roleInv)), info = InfoLoopInitial(guardExpr, And(invariant, target.roleInv))
+        )
 
         // Preserves Case
         val preservesInfo = InfoLoopPreserves(guardExpr, invariant)
-        val preserves = SymbolicState(And(invariant, guard),
+        val preserves = SymbolicState(
+            And(invariant, And(guard, target.roleInv)),
             EmptyUpdate,
             Modality(appendStmt(body, SeqStmt(ScopeMarker, SkipStmt)), preservesTarget)
         )
 
         // Use Case
         val useInfo = InfoLoopUse(guardExpr, invariant)
-        val use = SymbolicState(And(invariant, Not(guard)),
-                                EmptyUpdate,
-                                Modality(cont, useTarget))
+        val use = SymbolicState(
+            And(invariant, And(Not(guard), target.roleInv)),
+            EmptyUpdate,
+            Modality(cont, useTarget)
+        )
 
         return listOf(
             initial,

@@ -207,12 +207,11 @@ class C(Server s, Client c, Database d) {
     [Spec:Local("server!a(true).Put(true)")]
     Unit unspecifiedLoop() {
         Int a = 10;
-        [Spec: WhileInv(this.s != null && hasRole(this.s, "server") && hasRole(this.c, "client") && hasRole(this.d, "database"))]
+        [Spec: WhileInv(this.s != null)]
         while(a > 5) {
             a = a - 1;
         }
         Fut<Int> sth = this.s!a();
-        [Spec: WhileInv(hasRole(this.s, "server") && hasRole(this.c, "client") && hasRole(this.d, "database"))]
         while(a < 10) {
             a = a + 1;
         }
@@ -229,7 +228,7 @@ class C(Server s, Client c, Database d) {
         sth = this.c!b();
         sth = this.c!c();
         
-        [Spec: WhileInv(this.s != null && this.c != null && hasRole(this.s, "server") && hasRole(this.c, "client") && hasRole(this.d, "database"))]
+        [Spec: WhileInv(this.s != null && this.c != null)]
         while(a > 5) {
             sth = this.s!a();
             sth = this.c!b();
@@ -245,7 +244,7 @@ class C(Server s, Client c, Database d) {
         Fut<Int> sth = this.d!reset();
         Int a = 10;
         
-        [Spec: WhileInv(this.s != null && this.c != null && hasRole(this.s, "server") && hasRole(this.c, "client") && hasRole(this.d, "database"))]
+        [Spec: WhileInv(this.s != null && this.c != null)]
         while(a > 5) {
             sth = this.s!a();
             sth = this.c!b();
@@ -263,7 +262,7 @@ class C(Server s, Client c, Database d) {
 
         Int a = 10;
         
-        [Spec: WhileInv(this.s != null && this.c != null && hasRole(this.s, "server") && hasRole(this.c, "client") && hasRole(this.d, "database"))]
+        [Spec: WhileInv(this.s != null && this.c != null)]
         while(a > 5) {
             Fut<Int> sth = this.s!a();
 
@@ -283,7 +282,7 @@ class C(Server s, Client c, Database d) {
 
         Int a = 10;
         
-        [Spec: WhileInv(this.s != null && this.c != null && hasRole(this.s, "server") && hasRole(this.c, "client") && hasRole(this.d, "database"))]
+        [Spec: WhileInv(this.s != null && this.c != null)]
         while(a > 5) {
             Fut<Int> sth = this.s!a();
             sth = this.c!b();
@@ -291,7 +290,7 @@ class C(Server s, Client c, Database d) {
             a = a - 1;
         }
 
-        [Spec: WhileInv(this.s != null && this.c != null && hasRole(this.s, "server") && hasRole(this.c, "client") && hasRole(this.d, "database"))]
+        [Spec: WhileInv(this.s != null && this.c != null)]
         while(a < 10) {
             Fut<Int> sth = this.s!a();
             sth = this.c!b();
@@ -306,7 +305,7 @@ class C(Server s, Client c, Database d) {
         Fut<Int> sth = this.d!reset();
         Int a = 10;
         
-        [Spec: WhileInv(this.s != null && hasRole(this.s, "server") && hasRole(this.c, "client") && hasRole(this.d, "database"))]
+        [Spec: WhileInv(this.s != null)]
         while(a > 5) {
             sth = this.s!a();
             a = a - 1;
@@ -319,7 +318,7 @@ class C(Server s, Client c, Database d) {
         Fut<Int> sth = this.d!reset();
         Int a = 10;
         
-        [Spec: WhileInv(this.s != null && hasRole(this.s, "server") && hasRole(this.c, "client") && hasRole(this.d, "database"))]
+        [Spec: WhileInv(this.s != null)]
         while(a > 5) {
             sth = this.s!a();
             a = a - 1;
@@ -333,7 +332,7 @@ class C(Server s, Client c, Database d) {
 
         // This should always print a warning when verifying
 
-        [Spec: WhileInv(this.s != null && hasRole(this.s, "server") && hasRole(this.c, "client") && hasRole(this.d, "database"))]
+        [Spec: WhileInv(this.s != null)]
         while(a > 5) {
             Fut<Int> sth = this.s!a();
             a = a - 1;
@@ -350,7 +349,7 @@ class C(Server s, Client c, Database d) {
         // This should always print a warning when verifying
         // In this case, the proof will (incorrectly) fail due to greedy repetition matching
 
-        [Spec: WhileInv(this.s != null && hasRole(this.s, "server") && hasRole(this.c, "client") && hasRole(this.d, "database"))]
+        [Spec: WhileInv(this.s != null)]
         while(a > 5) {
             Fut<Int> sth = this.s!a();
             a = a - 1;
