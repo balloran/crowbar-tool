@@ -184,11 +184,11 @@ fun Model.extractClassDecl(moduleName : String, className : String, repos : Repo
         exitProcess(-1)
     }
 
-    if(    classDecl.params.any { !repos.isAllowedType(it.type.toString()) }
-        || classDecl.fields.any { !repos.isAllowedType(it.type.toString()) } ){
-        System.err.println("fields with non-Int type not supported")
-        exitProcess(-1)
-    }
+//    if(    classDecl.params.any { !repos.isAllowedType(it.type.toString()) }
+//        || classDecl.fields.any { !repos.isAllowedType(it.type.toString()) } ){
+//        System.err.println("fields with non-Int type not supported")
+//        exitProcess(-1)
+//    }
     return classDecl
 }
 

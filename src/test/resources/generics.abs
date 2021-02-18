@@ -1,0 +1,121 @@
+module Generics;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+
+
+
+data Type = Type1 | Type2;
+
+[Ensures(result != Just(Nothing))]
+def Maybe<Maybe<Int>> trivialFunction(Int x) = Just(Just(1));
+
+class MaybeClass(Maybe<Int> f, Type f1) {
+
+    [Ensures(Just(1) == Just(1))]
+    Unit trivialSuccess (){
+    }
+
+    [Ensures(Just(result) == Just(1))]
+    Int trivialWrapResultSuccess (){
+        return 1;
+    }
+
+    [Requires(i == 0)]
+    [Ensures(Just(result + 1) == Just(1))]
+    Int wrapExpressionSuccess (Int i){
+        return i;
+    }
+
+    [Ensures(Just(1)== this.f)]
+    Unit updateFieldTrivialSuccess(){
+        this.f = Just(1);
+    }
+
+    [Ensures(Just(result)== this.f)]
+    Int updateFieldWrapSuccess(){
+        this.f = Just(1);
+        return 1;
+    }
+
+    [Requires(Nothing == this.f)]
+    [Ensures(result != Just(this.f))]
+    Maybe<Maybe<Int>> trivialFunctionSuccess(){
+        return trivialFunction(3);
+    }
+
+    [Ensures(result != Just(this.f1))]
+    Maybe<Type> caseSuccess(){
+        Maybe<Type> res = Just(Type1);
+        switch (this.f1) {
+            Type1 => res = Just(Type2);
+            Type2 => res = Just(Type1);
+            _ => skip;
+        }
+        return res;
+    }
+
+}
+
+class PairClass(Pair<Type, Bool> f, Type f1, Type f2) {
+
+    [Ensures(Pair(Type1, True) == Pair(Type1, True))]
+    Unit trivialSuccess (){
+    }
+
+    [Ensures(Pair(result,True) == Pair(Type1, True))]
+    Type trivialWrapResultSuccess (){
+        return Type1;
+    }
+
+    [Requires(i == 0)]
+    [Ensures(Pair(result + 1,result-1) == Pair(1,-1))]
+    Int wrapExpressionSuccess (Int i){
+        return i;
+    }
+
+    [Ensures(Pair(Type2, True) == this.f)]
+    Unit updateFieldTrivialSuccess(){
+        this.f = Pair(Type2, True);
+    }
+
+    [Ensures(Pair(Type1,result)== this.f)]
+    Bool updateFieldWrapSuccess(){
+        this.f = Pair(Type1, True);
+        return True;
+    }
+}
+
+class ListClass(List<Type> list){
+
+   [Ensures(Cons(Type1, Nil) == Cons(Type1, Nil))]
+   Unit trivialSuccess (){
+   }
+
+   [Ensures(Cons(result,Nil) == Cons(Type1, Nil))]
+   Type trivialWrapResultSuccess (){
+       return Type1;
+   }
+
+   [Requires(i == 0)]
+   [Ensures(Cons(result + 1,Nil) == Cons(1,Nil))]
+   Int wrapExpressionSuccess (Int i){
+       return i;
+   }
+
+   [Ensures(Cons(Type2, Nil) == this.list)]
+   Unit updateFieldTrivialSuccess(){
+       this.list = Cons(Type2, Nil);
+   }
+
+   [Ensures(Cons(Type1, Cons(result, Nil))== this.list)]
+   Type updateFieldWrapSuccess(){
+       this.list = Cons(Type1, Cons(Type1, Nil));
+       return Type1;
+   }
+
+}
+
+
+
+{
+}

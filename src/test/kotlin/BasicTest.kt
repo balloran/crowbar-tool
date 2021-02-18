@@ -11,6 +11,7 @@ import org.abs_models.crowbar.rule.match
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.nextPITStrategy
 import org.abs_models.crowbar.types.PostInvariantPair
+import org.abs_models.frontend.ast.Model
 
 class BasicTest : StringSpec() {
 
@@ -22,7 +23,7 @@ class BasicTest : StringSpec() {
     private val pattern3 = addExpr(ExprAbstractVar("A"), Const("1"))
 
     init {
-        ADTRepos.initStdLib()
+        ADTRepos.initBuiltIn()
         "collect"{
             val stmt = WhileStmt(SExpr(">=", listOf(Field("f"), Const("0"))),
                                  SeqStmt(AssignStmt(Field("g"), ProgVar("v")), SkipStmt),
@@ -41,31 +42,31 @@ class BasicTest : StringSpec() {
             res shouldBe AddExpr(ProgVar("v"), Const("1"))
             assert(!containsAbstractVar(res))
         }*/
-        "Z3Test"{
-            val prog = SeqStmt(
-                    IfStmt(SExpr(">=", listOf(ProgVar("v"), Const("0"))),
-                            AssignStmt(Field("f"), ProgVar("v")),
-                            AssignStmt(Field("f"), SExpr("-", listOf(ProgVar("v"))))
-                    ),
-                    ReturnStmt(Field("f"))
-            )
-
-            val input3 = SymbolicState(
-                    True,
-                    EmptyUpdate,
-                    Modality(prog, PostInvariantPair(Predicate(">=", listOf(select(Field("f")), Function("0"))),
-                            True))
-            )
-
-            val strategy = nextPITStrategy(Repository(null))
-            val node = SymbolicNode(input3, emptyList())
-            strategy.execute(node)
-            println(node.debugString(0))
-            println(node.finishedExecution())
-            for(l in node.collectLeaves()){
-                println(l.evaluate())
-            }
-        }
+//        "Z3Test"{ //todo: this test should be rewritten defining concrete types for fields and progvars
+//            val prog = SeqStmt(
+//                    IfStmt(SExpr(">=", listOf(ProgVar("v"), Const("0"))),
+//                            AssignStmt(Field("f"), ProgVar("v")),
+//                            AssignStmt(Field("f"), SExpr("-", listOf(ProgVar("v"))))
+//                    ),
+//                    ReturnStmt(Field("f"))
+//            )
+//
+//            val input3 = SymbolicState(
+//                    True,
+//                    EmptyUpdate,
+//                    Modality(prog, PostInvariantPair(Predicate(">=", listOf(select(Field("f")), Function("0"))),
+//                            True))
+//            )
+//
+//            val strategy = nextPITStrategy(Repository(null))
+//            val node = SymbolicNode(input3, emptyList())
+//            strategy.execute(node)
+//            println(node.debugString(0))
+//            println(node.finishedExecution())
+//            for(l in node.collectLeaves()){
+//                println(l.evaluate())
+//            }
+//        }
         "deupdatify" {/* { v := 0 }{ v := v+1 } ((v == { v := v+1 }(v+w)) /\ { v := v+1 }!(v == w))
                           ->
                          (0+1 == (0+1+1+w)) /\ !(0+1+1 == w) */
@@ -77,7 +78,7 @@ class BasicTest : StringSpec() {
                     )), UpdateOnFormula(ElementaryUpdate(ProgVar("v"), Function("+", listOf(ProgVar("v"), Function("1")))),
                             Not(Predicate("=", listOf(ProgVar("v"), ProgVar("w")))))))
 
-            deupdatify(s).prettyPrint() shouldBe "(0+1=0+1+1+w:Int) /\\ (!0+1+1=w:Int)"
+            deupdatify(s).prettyPrint() shouldBe "(0+1=0+1+1+w:ABS.StdLib.Int) /\\ (!0+1+1=w:ABS.StdLib.Int)"
         }
         "apply" {
             apply(ElementaryUpdate(ProgVar("v"), Function("0")),
@@ -113,7 +114,7 @@ class BasicTest : StringSpec() {
             val cond = MatchCondition()
             match(conc, pattern2, cond)
             assert(cond.failure)
-            cond.failReason shouldBe "AbstractVar A failed unification with two terms: v:Int and 1"
+            cond.failReason shouldBe "AbstractVar A failed unification with two terms: v:ABS.StdLib.Int and 1"
         }
         "matchAndFail2"{
             val cond = MatchCondition()

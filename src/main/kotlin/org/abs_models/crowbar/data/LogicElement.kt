@@ -3,7 +3,10 @@ package org.abs_models.crowbar.data
 import org.abs_models.crowbar.interfaces.createWildCard
 import org.abs_models.crowbar.interfaces.refreshWildCard
 import org.abs_models.crowbar.main.ADTRepos
+import org.abs_models.crowbar.main.FunctionRepos
+import org.abs_models.crowbar.types.getReturnType
 import org.abs_models.frontend.ast.DataTypeDecl
+import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
 
 interface ProofElement: Anything {
@@ -41,6 +44,93 @@ data class HeapDecl(val dtype: String) : ProofElement{
     }
 }
 
+
+data class GenericTypeDecl(val dTypeDecl : DataTypeDecl, val concreteMap : Map<Type,Type>, val concreteTypes : List<Type>): ProofElement{
+
+    fun getDecl() : List<Term>{
+        val additionalName ="_${concreteTypes.joinToString("_") {
+            if(it.qualifiedName != "Unbound Type")
+                genericTypeSMTName(it)
+            else "UNBOUND"}}"
+        val  genericTypeName = "${dTypeDecl.qualifiedName}$additionalName"
+        val valueOf  = FunctionDeclSMT("valueOf_${genericTypeName.replace(".","_")}", genericTypeName, listOf("ABS.StdLib.Fut"))
+
+        val dTypeValDecl = mutableListOf<Term>()
+        for (dataConstructor in dTypeDecl.dataConstructorList) {
+            var count = 0
+
+            dTypeValDecl.add(
+                ArgsSMT("${dataConstructor.qualifiedName}$additionalName",
+                    dataConstructor.constructorArgList.map {
+                        if(!isGeneric(it.type)) {
+                            ArgsSMT(
+                                "${dataConstructor.qualifiedName}_${count++}",
+                                listOf(
+                                    Function(
+                                        if (concreteMap[it.type]!!.qualifiedName != "Unbound Type") {
+                                            genericTypeSMTName(concreteMap[it.type]!!)
+                                        } else "UNBOUND"
+                                    )
+                                )
+                            )
+                        }else {
+                            ArgsSMT(
+                                "${dataConstructor.qualifiedName}_${count++}",
+                                listOf(
+                                    Function( it.type.qualifiedName + "_" +
+                                            (it.type as DataTypeType).typeArgs.joinToString("_"){
+                                                type ->
+                                                if (concreteMap[type]!!.qualifiedName != "Unbound Type") {
+                                                genericTypeSMTName(concreteMap[type]!!)
+                                            } else "UNBOUND"}
+
+
+                                    )
+                                )
+                            )
+
+                        }
+                    })
+            )
+        }
+
+        val name = ArgsSMT("$genericTypeName 0")
+        val declaration = ArgSMT(dTypeValDecl)
+        return listOf(name, declaration, valueOf)
+    }
+
+    override fun toSMT(indent: String): String {
+        val additionalName ="_${concreteTypes.joinToString("_") { 
+                    if(it.qualifiedName != "Unbound Type")
+                        genericTypeSMTName(it)
+                    else "UNBOUND"}}"
+        val  genericTypeName = "${dTypeDecl.qualifiedName}$additionalName"
+        val valueOf  = "(declare-fun   valueOf_${genericTypeName.replace(".","_")} (ABS.StdLib.Fut) $genericTypeName)\n"
+        val dTypeValDecl = mutableListOf<Term>()
+        for (dataConstructor in dTypeDecl.dataConstructorList) {
+            var count = 0
+            dTypeValDecl.add(
+                ArgsSMT("${dataConstructor.qualifiedName}$additionalName",
+                    dataConstructor.constructorArgList.map {
+                        ArgsSMT(
+                            "${dataConstructor.qualifiedName}_${count++}",
+                            listOf(Function(
+                                if(concreteMap[it.type]!!.qualifiedName != "Unbound Type")
+                                    genericTypeSMTName(concreteMap[it.type]!!)
+                                else "UNBOUND")))
+                    })
+            )
+        }
+        val decl = Function(
+            "declare-datatypes", (
+                    listOf(ArgSMT(listOf(ArgsSMT("$genericTypeName 0"))),
+                        ArgSMT(listOf(ArgSMT(dTypeValDecl))))))
+        return decl.toSMT() + "\n$valueOf"
+    }
+}
+
+
+
 data class DataTypesDecl(val dTypesDecl : List<DataTypeDecl>) : ProofElement{
     override fun toSMT(indent:String): String {
         var valueOfs = ""
@@ -48,7 +138,7 @@ data class DataTypesDecl(val dTypesDecl : List<DataTypeDecl>) : ProofElement{
             val dTypeDecl = mutableListOf<ArgsSMT>()
             val dTypeValsDecl = mutableListOf<Term>()
             for (dType in dTypesDecl) {
-                valueOfs += "(declare-fun   valueOf_${dType.qualifiedName.replace(".","_")} (Int) ${dType.qualifiedName})\n"
+                valueOfs += "(declare-fun   valueOf_${dType.qualifiedName.replace(".","_")} (ABS.StdLib.Fut) ${dType.qualifiedName})\n"
                 dTypeDecl.add(ArgsSMT(dType.qualifiedName, listOf(Function("0"))))
                 val dTypeValDecl = mutableListOf<Term>()
                 for (dataConstructor in dType.dataConstructorList) {
@@ -80,11 +170,6 @@ data class DataTypesDecl(val dTypesDecl : List<DataTypeDecl>) : ProofElement{
     }
 }
 
-//data class Something(val dtype: String) :Term{
-//    override fun toSMT(isInForm : Boolean, indent:String) : String {
-//        return "Something_${dtype.replace(".", "_")}"
-//    }
-//}
 
 data class ArgsSMT(val name : String, val params : List<Term> = emptyList()) : Term{
     override fun toSMT(indent:String) : String {
@@ -102,7 +187,7 @@ data class ArgSMT(val params : List<Term> = emptyList()) : Term{
     }
 }
 
-data class FunctionDeclSMT(val name : String, val type: String, val params :List<String> = listOf()) :ProofElement{
+data class FunctionDeclSMT(val name : String, val type: String, val params :List<String> = listOf()) :ProofElement, Term{
     override fun toSMT(indent:String): String {
         return "$indent(declare-fun $name (${params.joinToString(" ") {it}}) $type)"
     }
@@ -152,21 +237,33 @@ data class FormulaAbstractVar(val name : String) : Formula, AbstractVar {
 // For SMT translation, we have to use separate heaps for different types
 // Therefore, we have to translate the generic heap expressions to properly
 // typed ones
-fun filterHeapTypes(term : Term, dtype: String) : String{
-    val smtdType = ADTRepos.getSMTDType(dtype)
+fun filterHeapTypes(term : Term, dtype: String, concrType:Type?=null) : String{
+    val smtdType =
+        if (concrType == null)
+            ADTRepos.getSMTDType(dtype)
+         else {
+            ADTRepos.getSMTDType(genericTypeSMTName(concrType))
+        }
+
+    val concrTypeStr = concrType?.toString() ?: dtype
+
     if (term is Function ) {
         // Remove stores that do not change the sub-heap for type dType
-        return if(term.name == "store") {
-            if (ADTRepos.libPrefix((term.params[1] as Field).dType) == dtype)
-                "(store " +
-                        "${filterHeapTypes(term.params[0], dtype)} " +
+        if(term.name == "store") {
+
+
+            if ((concrType!=null && (term.params[1] as Field).concrType == concrType)
+                || ADTRepos.libPrefix((term.params[1] as Field).dType) == concrTypeStr)
+                return "(store " +
+                        "${filterHeapTypes(term.params[0], concrTypeStr,concrType)} " +
                         "${term.params[1].toSMT()} " +
                         "${term.params[2].toSMT()})"
             else
-                filterHeapTypes(term.params[0], dtype)
-            // Rewrite generic anon to correctly typed anon function
-        } else if (term.name == "anon")
-            "(${smtdType.anon} ${filterHeapTypes(term.params[0], dtype)})"
+                return filterHeapTypes(term.params[0], concrTypeStr,concrType)
+        // Rewrite generic anon to correctly typed anon function
+        }
+        else if (term.name == "anon")
+            return "(${smtdType.anon} ${filterHeapTypes(term.params[0], concrTypeStr,concrType)})"
         else
             throw Exception("${term.prettyPrint()}  is neither an heap nor anon or store function")
 
@@ -192,7 +289,6 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
     override fun toSMT(indent:String): String {
-
         if(name == "valueOf") {
             if(params[0] is ProgVar)
                 return "(valueOf_${
@@ -201,9 +297,15 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
                 throw Exception("parameter of \"valueOf\" expects Progvar or Future, actual value: ${params[0]}")
         }
         if(name == "select") {
-            val heapType = ADTRepos.libPrefix((params[1] as Field).dType)
+            val field =  (params[1] as Field)
+            val heapType = ADTRepos.libPrefix(
+                if(field.concrType.isUnknownType)
+                    field.dType
+                else
+                    (params[1] as Field).concrType.toString())
+
             val fieldName = params[1].toSMT()
-            return "(select ${filterHeapTypes(params[0], heapType)} $fieldName)"
+            return "(select ${filterHeapTypes(params[0], heapType,(params[1] as Field).concrType)} $fieldName)"
         }
 
         if(params.isEmpty()) {
@@ -211,24 +313,69 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
             return name
         }
         val list = params.fold("",{acc,nx -> acc + " ${nx.toSMT()}"})
+
+        if(name in FunctionRepos.genericFunctions) {
+            return ("(${FunctionRepos.genericFunctionsName(this)} $list)")
+        }
         return getSMT(name, list)
     }
 }
 
+fun  isGeneric(type : Type?) : Boolean = type != null && !type.isFutureType && type is DataTypeType && type.numTypeArgs() > 0
+fun isConcreteGeneric(type: Type?) = isGeneric(type) && !(type as DataTypeType).typeArgs[0].isTypeParameter
+fun isNotWellKnown(dataTypeConst:DataTypeConst) = dataTypeConst.toString().contains("<UNKNOWN>")
+fun isNotWellKnown(type: Type?) = type!!.toString().contains("<UNKNOWN>")
+fun isUnboundGeneric(type : Type?) : Boolean = isGeneric(type) && (type as DataTypeType).toString().contains("Unbound Type")
+fun isUnboundGeneric(dataTypeConst:DataTypeConst) : Boolean = isGeneric(dataTypeConst.concrType) && dataTypeConst.toString().contains("Unbound Type")
+fun isBoundGeneric(type : Type?) : Boolean = isGeneric(type) && !(type as DataTypeType).toString().contains("Unbound Type")
+fun isBoundGeneric(dataTypeConst:DataTypeConst) : Boolean = isGeneric(dataTypeConst.concrType) && !dataTypeConst.toString().contains("Unbound Type")
+
 data class DataTypeConst(val name : String, val dType : String, val concrType: Type?, val params : List<Term> = emptyList()) : Term {
+
+    init{
+        if( name == "ABS.StdLib.Cons" && params.size < 2)
+            throw Exception("too few parameters")
+    }
+
     override fun prettyPrint(): String {
         return name + ":" + dType+"("+params.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
     override fun toSMT(indent:String): String {
-        val back = name
+
+        val back = genericSMTName(name, concrType!!)
         if(params.isEmpty())
-            return name
+            return back
         val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT()}"})
         return "($back $list)"
     }
+}
 
+fun genericTypeSMTName(type :Type) :String{
+
+    return genericSMTName(if(!type.qualifiedName.contains(".")) type.toString() else type.qualifiedName, type)
+}
+
+fun genericSMTName(name :String, type :Type) :String{
+
+    val ret =
+
+        if(isGeneric(type)){
+            if((type as DataTypeType).typeArgs[0].isTypeParameter)
+                return name
+            "${name}_${
+                type.typeArgs.joinToString("_") { 
+                if(it.toString() == "Unbound Type" || it.isUnknownType)
+                    "UNBOUND"
+                else {
+                    genericTypeSMTName(it)
+                }
+            }}"
+        }else
+            name
+
+    return ret
 }
 
 fun extractPatternMatching(match: Term, branchTerm: DataTypeConst, freeVars: Set<String>): Formula {
@@ -343,8 +490,38 @@ data class Predicate(val name : String, val params : List<Term> = emptyList()) :
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
     override fun toSMT(indent:String) : String {
+
+
         if(params.isEmpty()) return name
-        val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT()}"})
+        var boundParam0 = params[0]
+        var boundParam1 = params[1]
+        if(name == "=") {
+
+
+
+            val param0IsUnbound = params[0] is DataTypeConst && isUnboundGeneric((params[0] as DataTypeConst))
+            val param1IsUnbound = params[1] is DataTypeConst && isUnboundGeneric((params[1] as DataTypeConst))
+            val param0NotWellKnown = params[0] is DataTypeConst && isNotWellKnown((params[0] as DataTypeConst))
+            val param1NotWellKnown = params[1] is DataTypeConst && isNotWellKnown((params[1] as DataTypeConst))
+
+
+            val param0Bound = !param0IsUnbound && !param0NotWellKnown
+            val param1Bound = !param1IsUnbound && !param1NotWellKnown
+
+
+            if((param0NotWellKnown && param1NotWellKnown) || (param0IsUnbound && param1NotWellKnown) || (param0NotWellKnown && param1IsUnbound))
+                throw Exception("Impossible to bind type: \n$boundParam0 and \n$boundParam1")
+
+
+            if(param0Bound || param1Bound)
+            if (!param0Bound) {
+                boundParam0 = boundGeneric(getReturnType(params[1]),params[0])
+            }
+            if (!param1Bound) {
+                boundParam1 = boundGeneric(getReturnType(params[0]),params[1])
+            }
+        }
+        val list = listOf(boundParam0, boundParam1).fold("",{acc,nx -> acc+ " ${nx.toSMT()}"})
         return getSMT(name, list)
     }
 }
@@ -547,6 +724,36 @@ fun prettyPrintFunction(params: List<Term>, name: String):String{
     if(binaries.contains(name) && params.size == 2) return params[0].prettyPrint() + name + params[1].prettyPrint()
     return name+"("+params.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
 }
+
+fun boundGeneric(bindingType: Type,  unboundTerm:Term) : Term{
+    println("boundGeneric::: $bindingType $unboundTerm")
+    if(unboundTerm is Function)
+        return unboundTerm
+    if(unboundTerm is ProgVar)
+        return ProgVar(unboundTerm.name, unboundTerm.dType, bindingType)
+    if(unboundTerm is Field)
+        return Field(unboundTerm.name, unboundTerm.dType, bindingType)
+    val bindingTypeHasArgs = bindingType is DataTypeType && bindingType.hasTypeArgs()
+    val unboundTermHasArgs = unboundTerm is DataTypeConst && unboundTerm.concrType is DataTypeType && unboundTerm.concrType.hasTypeArgs()
+    if(bindingTypeHasArgs != unboundTermHasArgs || (bindingType as DataTypeType).numTypeArgs() != ((unboundTerm as DataTypeConst).concrType as DataTypeType).numTypeArgs())
+        throw Exception("Term with unbound type \n$unboundTerm \nnot matching with binding type \n$bindingType")
+
+    val bindingTypeArgs =
+    if(bindingType.simpleName != "List" && bindingType.simpleName != "Set" && bindingType.simpleName != "Map"){
+
+        if(bindingType.numTypeArgs() < unboundTerm.params.size)
+            throw Exception("Cannot bind recursive types that are not List or Set")
+        bindingType.typeArgs
+    }else{
+        listOf(bindingType.typeArgs[0], bindingType)
+    }
+
+
+    val res = DataTypeConst(unboundTerm.name,bindingType.qualifiedName,bindingType,bindingTypeArgs.zip(unboundTerm.params).map { boundGeneric(it.first, it.second) })
+
+    return res
+}
+
 /*
 fun subst(input: LogicElement, elem : ProgVar, term : Term) : LogicElement {
     when(input){

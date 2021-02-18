@@ -265,6 +265,7 @@ data class LocationAbstractVar(val name : String) : Location, AbstractVar{
 }
 //name must end with _f when using automatic translation
 open class Field(val name : String, val dType : String="ABS.StdLib.Int", val concrType :Type = UnknownType.INSTANCE) : Location, Term {
+
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
         return "this.$name : $dType"
@@ -286,7 +287,7 @@ open class Field(val name : String, val dType : String="ABS.StdLib.Int", val con
     override fun toSMT(indent:String) : String = name
 }
 
-open class ProgVar(open val name: String, open val dType: String = "Int", open val concrType: Type = UnknownType.INSTANCE) : Location, Term {
+open class ProgVar(open val name: String, open val dType: String = "ABS.StdLib.Int", open val concrType: Type = UnknownType.INSTANCE) : Location, Term {
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
         return "$name:$dType"
@@ -309,7 +310,15 @@ open class ProgVar(open val name: String, open val dType: String = "Int", open v
     }
     override fun toSMT(indent:String) : String = name
 }
-data class ReturnVar(val vParam : String, override val concrType: Type) : ProgVar("result", vParam, concrType)
+data class ReturnVar(val vParam : String, override val concrType: Type) : ProgVar("result", vParam, concrType){
+    override fun equals(other: Any?): Boolean {
+        return super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        return super.hashCode()
+    }
+}
 
 data class ProgAbstractVar(val vName : String) : ProgVar(vName, "AVAR", UnknownType.INSTANCE), AbstractVar {
     override fun prettyPrint(): String {

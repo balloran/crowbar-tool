@@ -28,10 +28,10 @@ fun translateABSExpToSymExpr(input: Exp, returnType: Type) : Expr {
             val type = if (input.type.isUnknownType) {
                 if(input.contextDecl.locallookupVarOrFieldName(input.name, true) == null)
                     throw Exception("Field ${input.name} not defined")
-                input.contextDecl.locallookupVarOrFieldName(input.name, true).type.qualifiedName
+                input.contextDecl.locallookupVarOrFieldName(input.name, true).type
             } else
-                input.type.qualifiedName
-            Field(input.name + "_f", type,input.type)
+                input.type
+            Field(input.name + "_f", type.qualifiedName,type)
         }
         is IntLiteral -> Const(input.content)
         is GetExp          -> readFut(translateABSExpToSymExpr(input.pureExp, returnType))

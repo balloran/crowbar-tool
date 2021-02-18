@@ -4,6 +4,7 @@ import io.kotlintest.specs.StringSpec
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.types.PostInvType
 import java.nio.file.Paths
+import kotlin.system.exitProcess
 
 class PostInvTest : StringSpec ({
 	val postInv = PostInvType::class
@@ -12,7 +13,7 @@ class PostInvTest : StringSpec ({
 			load(listOf(Paths.get("src/test/resources/exception.abs")))
 		}
 	}
-	val cvc: String = System.getenv("CVC") ?: "cvc"
+	val cvc: String = System.getenv("CVC") ?: "docker exec -ti crowbar /root/cvc/cvc4"
 	val z3: String = System.getenv("Z3") ?: "z3"
 	for (smt in listOf(z3, cvc)) {
 		println("testing with: $smt as backend")
@@ -199,6 +200,9 @@ class PostInvTest : StringSpec ({
 
 			sNode = classDecl.extractMethodNode(postInv,"fail", repos)
 			executeNode(sNode, repos, postInv) shouldBe false
+
+			sNode = classDecl.extractMethodNode(postInv,"valueOfBoolFutSuccess", repos)
+			executeNode(sNode, repos, postInv) shouldBe true
 		}
 
 		"$smt ensures-this"{

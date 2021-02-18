@@ -46,6 +46,13 @@ class C(I2 o) implements I1 {
 		Int i = ff.get;
 		return i;
 	}
+
+	[Spec : Requires(valueOf(fut) == True)]
+    [Spec : Ensures(result == True)]
+    Bool valueOfBoolFutSuccess(Fut<Bool> fut) {
+        await fut?;
+        return fut.get;
+    }
 }
 
 {}
