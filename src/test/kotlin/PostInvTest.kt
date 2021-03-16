@@ -13,7 +13,7 @@ class PostInvTest : StringSpec ({
 			load(listOf(Paths.get("src/test/resources/exception.abs")))
 		}
 	}
-	val cvc: String = System.getenv("CVC") ?: "docker exec -ti crowbar /root/cvc/cvc4"
+	val cvc: String = System.getenv("CVC") ?: "cvc"
 	val z3: String = System.getenv("Z3") ?: "z3"
 	for (smt in listOf(z3, cvc)) {
 		println("testing with: $smt as backend")

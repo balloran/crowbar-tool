@@ -37,6 +37,9 @@ class GenericsTest : StringSpec({
             val caseSuccess = classDecl.extractMethodNode (postInv, "caseSuccess", repos)
             executeNode(caseSuccess, repos, postInv) shouldBe true
 
+            val wrappedOldSuccess = classDecl.extractMethodNode (postInv, "wrappedOldSuccess", repos)
+            executeNode(wrappedOldSuccess, repos, postInv) shouldBe true
+
         }
 
         "$smt pair"{
@@ -56,6 +59,9 @@ class GenericsTest : StringSpec({
 
             val updateFieldWrapSuccess = classDecl.extractMethodNode (postInv, "updateFieldWrapSuccess", repos)
             executeNode(updateFieldWrapSuccess, repos, postInv) shouldBe true
+
+            val wrappedOldSuccess = classDecl.extractMethodNode (postInv, "wrappedOldSuccess", repos)
+            executeNode(wrappedOldSuccess, repos, postInv) shouldBe true
 
         }
         "$smt list"{
@@ -78,7 +84,32 @@ class GenericsTest : StringSpec({
             val updateFieldWrapSuccess = classDecl.extractMethodNode (postInv, "updateFieldWrapSuccess", repos)
             executeNode(updateFieldWrapSuccess, repos, postInv) shouldBe true
 
+            val wrappedOldSuccess = classDecl.extractMethodNode (postInv, "wrappedOldSuccess", repos)
+            executeNode(wrappedOldSuccess, repos, postInv) shouldBe true
+
         }
 
+        "$smt triple"{
+            smtPath = smt
+
+            val (model, repos) = load(listOf(Paths.get("src/test/resources/generics.abs")))
+            val classDecl = model.extractClassDecl("Generics", "TripleClass", repos)
+
+            val trivialSuccess = classDecl.extractMethodNode (postInv, "trivialSuccess", repos)
+            executeNode(trivialSuccess, repos, postInv) shouldBe true//trivialWrapResultSuccess
+
+            val trivialWrapResultSuccess = classDecl.extractMethodNode (postInv, "trivialWrapResultSuccess", repos)
+            executeNode(trivialWrapResultSuccess, repos, postInv) shouldBe true
+
+            val wrapExpressionSuccess = classDecl.extractMethodNode (postInv, "wrapExpressionSuccess", repos)
+            executeNode(wrapExpressionSuccess, repos, postInv) shouldBe true
+
+            val updateFieldTrivialSuccess = classDecl.extractMethodNode (postInv, "updateFieldTrivialSuccess", repos)
+            executeNode(updateFieldTrivialSuccess, repos, postInv) shouldBe true
+
+            val wrappedOldSuccess = classDecl.extractMethodNode (postInv, "wrappedOldSuccess", repos)
+            executeNode(wrappedOldSuccess, repos, postInv) shouldBe true
+
+        }
     }
 })

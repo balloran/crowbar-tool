@@ -30,6 +30,7 @@ import org.abs_models.crowbar.tree.InfoSkipEnd
 import org.abs_models.crowbar.tree.InfoSyncCallAssign
 import org.abs_models.crowbar.tree.NoInfo
 import org.abs_models.crowbar.tree.NodeInfoVisitor
+import org.abs_models.frontend.typechecker.Type
 
 object NodeInfoRenderer : NodeInfoVisitor<String> {
 
@@ -69,13 +70,13 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         // The state in which the actual counterexample begins is initialized in the method-internal initial assignments
         val fields = model.oldHeap
         // Find fields not included in the model but included in the counterexample and initialize them with default value
-        val missingFields = (usedFields - fields.map { it.first }.toSet()).map { Pair(it, getDefaultValueForType(it.dType)) }
+        val missingFields = (usedFields - fields.map { it.first }.toSet()).map { Pair(it, getDefaultValueForType(it.concrType)) }
 
         val defs = (fields + missingFields).map {
             val field = it.first
             val name = field.name.substring(0, field.name.length - 2)
-            val value = renderModelValue(it.second, field.dType)
-            "${complexTypeToString(field.dType)} $name = $value;"
+            val value = renderModelValue(it.second, field.concrType)
+            "${complexTypeToString(field.concrType)} $name = $value;"
         }
         return defs
     }
@@ -179,7 +180,10 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
 
     override fun visit(info: InfoSyncCallAssign): String {
         // Detect a stand-alone method call with no lhs
-        val unitCall = if (info.lhs is ProgVar) info.lhs.dType == "ABS.StdLib.Unit" else (info.lhs as Field).dType == "ABS.StdLib.Unit"
+        val unitCall = if (info.lhs is ProgVar)
+                info.lhs.concrType.qualifiedName == "ABS.StdLib.Unit"
+            else
+                (info.lhs as Field).concrType.qualifiedName == "ABS.StdLib.Unit"
 
         val location = renderDeclLocation(info.lhs, type2str = false, declare = false)
         val origCallExp = "${renderExp(info.callee)}.${renderExp(info.call)}"
@@ -246,7 +250,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
 
         // Get the evaluation of the whole expression
         val evalValue = model.smtExprs[info.retExpr.toSMT()]
-        val eval = if (evalValue == null) "Irrelevant or unavailable value" else renderModelValue(evalValue, info.expression.absExp!!.type.qualifiedName)
+        val eval = if (evalValue == null) "Irrelevant or unavailable value" else renderModelValue(evalValue, info.expression.absExp!!.type)
 
         // Get evaluations of all used definitions (progVars and fields)
         val componentValues = info.retExprComponentMap.mapValues {
@@ -256,7 +260,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         // Render value and location for each component
         val renderedComponents = componentValues.map {
             val loc = if (it.key is Location) renderLocation(it.key as Location) else it.key.prettyPrint()
-            val value = renderModelValue(it.value!!, it.key.absExp!!.type.qualifiedName)
+            val value = renderModelValue(it.value!!, it.key.absExp!!.type)
             "// $loc: $value"
         }
 
@@ -287,7 +291,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
 
         // Futures and object types are replaced by placeholder strings
         // in executable code but kept in comments for context
-        val tpe = if (type2str) complexTypeToString(loc.dType) else renderType(loc.dType)
+        val tpe = if (type2str) complexTypeToString(loc.concrType) else renderType(loc.concrType)
 
         // Variables have to be declared on first use
         if (varDefs.none { it.first == location }) {
@@ -347,15 +351,16 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         val location = renderDeclLocation(loc, type2str = true)
 
         val type = when (loc) {
-            is Field -> loc.dType
-            is ProgVar -> loc.dType
+            is Field -> loc.concrType
+            is ProgVar -> loc.concrType
             else -> throw Exception("Cannot render unknown location: ${loc.prettyPrint()}")
         }
 
         return "$location = ${renderModelValue(value, type)};"
     }
 
-    private fun renderModelValue(value: ModelValue, dType: String): String {
+    private fun renderModelValue(value: ModelValue, ctype: Type): String {
+        val dType = ctype.qualifiedName
         return when {
             dType == "ABS.StdLib.Int" -> (value as MvInteger).value.toString()
             dType == "ABS.StdLib.Fut" -> "\"${model.futNameById((value as MvInteger).value)}\""
@@ -367,7 +372,8 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         }
     }
 
-    private fun getDefaultValueForType(dType: String): ModelValue {
+    private fun getDefaultValueForType(ctype: Type): ModelValue {
+        val dType = ctype.qualifiedName
         return when {
             isDataType(dType) -> {
                 // Data types are tricky
@@ -378,7 +384,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
                 if (preferredConstructor.constructorArgList.toList().isEmpty())
                     MvDataType(preferredConstructor.qualifiedName)
                 else {
-                    val params = preferredConstructor.constructorArgList.map { getDefaultValueForType(it.type.qualifiedName) }
+                    val params = preferredConstructor.constructorArgList.map { getDefaultValueForType(it.type) }
                     MvDataType(preferredConstructor.qualifiedName, params)
                 }
             }
@@ -389,8 +395,8 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
 
     private fun getDefaultValueForLocation(loc: Location): ModelValue {
         val type = when (loc) {
-            is Field -> loc.dType
-            is ProgVar -> loc.dType
+            is Field -> loc.concrType
+            is ProgVar -> loc.concrType
             else -> throw Exception("Cannot get default value for unknown location: ${loc.prettyPrint()}")
         }
         return getDefaultValueForType(type)
@@ -413,7 +419,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         return getObjectBySMT(smtRep)
     }
 
-    private fun renderType(type: String) = stripModulePrefix(type)
+    private fun renderType(type: Type) = stripModulePrefix(type.qualifiedName)
 
     private fun renderExp(e: Expr): String {
         // Keep track of fields referenced in expressions for field declarations
@@ -427,7 +433,8 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
     private fun indent(text: String) = indent(text, scopeLevel)
 }
 
-fun complexTypeToString(type: String): String {
+fun complexTypeToString(ctype: Type): String {
+    val type = ctype.qualifiedName
     return if (type == "ABS.StdLib.Int" || type == "ABS.StdLib.Bool" || isDataType(type))
         stripModulePrefix(type)
     else
