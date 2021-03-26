@@ -134,7 +134,7 @@ fun extractRoleSpec(classDecl: ClassDecl): Formula {
 
         val roleString = (roleAnnotation.getParam(0) as StringLiteral).content
         val fieldUse = (roleAnnotation.getParam(1) as FieldUse)
-        val field = Field(fieldUse.name + "_f", fieldUse.type.qualifiedName, fieldUse.type)
+        val field = Field(fieldUse.name + "_f", fieldUse.type)
         Predicate("hasRole", listOf(exprToTerm(field), Function("\"$roleString\""))) as Formula
     }.fold(True as Formula) { acc, elem -> And(acc, elem) }
 }

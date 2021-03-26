@@ -204,7 +204,7 @@ object CounterexampleGenerator {
             if (varTypes[it.name] == null) {
                 output("Investigator: model contains unknown variable \"${it.name}\", ignoring. Generated counterexample might be faulty.")
             } else {
-                val variable = ProgVar(it.name, varTypes[it.name]!!.qualifiedName, varTypes[it.name]!!)
+                val variable = ProgVar(it.name, varTypes[it.name]!!)
                 initialAssignments.add(Pair(variable, it.value))
             }
         }
@@ -244,7 +244,7 @@ object CounterexampleGenerator {
                 // (ADTRepos.libPrefix maps ABS types to SMT types)
                 val subheapID = ADTRepos.libPrefix(fieldType.qualifiedName)
                 val value = parsedHeaps[subheapID]!![index].getValue((field.value as MvInteger).value)
-                Pair(Field(field.name, fieldType.qualifiedName, fieldType), value)
+                Pair(Field(field.name, fieldType), value)
             }
 
             Pair(exp.toSMT(), heapContents)
