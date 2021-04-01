@@ -4,7 +4,6 @@ import io.kotlintest.specs.StringSpec
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.types.PostInvType
 import java.nio.file.Paths
-import kotlin.system.exitProcess
 
 class PostInvTest : StringSpec ({
 	val postInv = PostInvType::class
@@ -21,13 +20,13 @@ class PostInvTest : StringSpec ({
 		"$smt success"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/success.abs")))
-			val classDecl = model.extractClassDecl("Success", "C", repos)
+			val classDecl = model.extractClassDecl("Success", "C")
 			classDecl.executeAll(repos,postInv) shouldBe true
 		}
 		"$smt types"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/types.abs")))
-			val classDecl = model.extractClassDecl("Types", "C", repos)
+			val classDecl = model.extractClassDecl("Types", "C")
 
 			val iNode = classDecl.extractInitialNode(postInv)
 			executeNode(iNode, repos, postInv) shouldBe true
@@ -42,7 +41,7 @@ class PostInvTest : StringSpec ({
 		"$smt ints"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/ints.abs")))
-			val classDecl = model.extractClassDecl("Ints", "C", repos)
+			val classDecl = model.extractClassDecl("Ints", "C")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
 			val mNode = model.exctractMainNode(postInv)
@@ -52,7 +51,7 @@ class PostInvTest : StringSpec ({
 		"$smt guards"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/guards.abs")))
-			val classDecl = model.extractClassDecl("Guard", "C", repos)
+			val classDecl = model.extractClassDecl("Guard", "C")
 
 			val m1Node = classDecl.extractMethodNode(postInv,"msucc", repos)
 			executeNode(m1Node, repos, postInv) shouldBe true
@@ -64,7 +63,7 @@ class PostInvTest : StringSpec ({
 		"$smt fails"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/fail.abs")))
-			val classDecl = model.extractClassDecl("Fail", "C", repos)
+			val classDecl = model.extractClassDecl("Fail", "C")
 
 			val iNode = classDecl.extractInitialNode(postInv)
 			executeNode(iNode, repos, postInv) shouldBe false
@@ -73,7 +72,7 @@ class PostInvTest : StringSpec ({
 				val node = classDecl.extractMethodNode(postInv,m.methodSig.name, repos)
 				executeNode(node, repos, postInv) shouldBe false
 			}
-			val classDecl2 = model.extractClassDecl("Fail", "D", repos)
+			val classDecl2 = model.extractClassDecl("Fail", "D")
 			val node2 = classDecl2.extractMethodNode(postInv,"failure", repos)
 			executeNode(node2, repos, postInv) shouldBe false
 		}
@@ -81,7 +80,7 @@ class PostInvTest : StringSpec ({
 		"$smt create"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/create.abs")))
-			val classDecl = model.extractClassDecl("Create", "C", repos)
+			val classDecl = model.extractClassDecl("Create", "C")
 
 			val iNode = classDecl.extractInitialNode(postInv)
 			executeNode(iNode, repos, postInv) shouldBe true
@@ -99,7 +98,7 @@ class PostInvTest : StringSpec ({
 		"$smt reference"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/reference.abs")))
-			val classDecl = model.extractClassDecl("Reference", "C", repos)
+			val classDecl = model.extractClassDecl("Reference", "C")
 
 			val iNode = classDecl.extractInitialNode(postInv)
 			executeNode(iNode, repos, postInv) shouldBe true
@@ -123,7 +122,7 @@ class PostInvTest : StringSpec ({
 		"$smt multi"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/multi1.abs"), Paths.get("src/test/resources/multi2.abs")))
-			val classDecl = model.extractClassDecl("Multi1", "C", repos)
+			val classDecl = model.extractClassDecl("Multi1", "C")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
 			val mNode = model.exctractMainNode(postInv)
@@ -133,11 +132,11 @@ class PostInvTest : StringSpec ({
 		"$smt callsuccess"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/callsimplesuccess.abs")))
-			val classDeclC = model.extractClassDecl("CallS", "C", repos)
+			val classDeclC = model.extractClassDecl("CallS", "C")
 			classDeclC.executeAll(repos,postInv) shouldBe true
-			val classDeclD = model.extractClassDecl("CallS", "D", repos)
+			val classDeclD = model.extractClassDecl("CallS", "D")
 			classDeclD.executeAll(repos,postInv) shouldBe true
-			val classDeclE = model.extractClassDecl("CallS", "E", repos)
+			val classDeclE = model.extractClassDecl("CallS", "E")
 			classDeclE.executeAll(repos,postInv) shouldBe true
 			val mNode = model.exctractMainNode(postInv)
 			executeNode(mNode, repos, postInv) shouldBe true
@@ -146,13 +145,13 @@ class PostInvTest : StringSpec ({
 		"$smt callfail"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/callsimplefail.abs")))
-			val classDeclC = model.extractClassDecl("CallF", "C", repos)
+			val classDeclC = model.extractClassDecl("CallF", "C")
 			val m0Node = classDeclC.extractMethodNode(postInv, "m", repos)
 			executeNode(m0Node, repos, postInv) shouldBe false
-			val classDeclD = model.extractClassDecl("CallF", "D", repos)
+			val classDeclD = model.extractClassDecl("CallF", "D")
 			val m1Node = classDeclD.extractMethodNode(postInv, "m", repos)
 			executeNode(m1Node, repos, postInv) shouldBe false
-			val classDeclE = model.extractClassDecl("CallF", "E", repos)
+			val classDeclE = model.extractClassDecl("CallF", "E")
 			val m2Node = classDeclE.extractMethodNode(postInv, "m", repos)
 			executeNode(m2Node, repos, postInv) shouldBe false
 			val mNode = model.exctractMainNode(postInv)
@@ -162,7 +161,7 @@ class PostInvTest : StringSpec ({
 		"$smt failinher"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/callfailinherited.abs")))
-			val classDeclC = model.extractClassDecl("Call", "C", repos)
+			val classDeclC = model.extractClassDecl("Call", "C")
 			val m0Node = classDeclC.extractMethodNode(postInv, "fail", repos)
 			executeNode(m0Node, repos, postInv) shouldBe false
 		}
@@ -170,7 +169,7 @@ class PostInvTest : StringSpec ({
 		"$smt selfcall"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/selfcall.abs")))
-			val classDecl = model.extractClassDecl("Self", "C", repos)
+			val classDecl = model.extractClassDecl("Self", "C")
 			val m0Node = classDecl.extractMethodNode(postInv, "n", repos)
 			executeNode(m0Node, repos, postInv) shouldBe true
 			val m1Node = classDecl.extractMethodNode(postInv, "m", repos)
@@ -184,7 +183,7 @@ class PostInvTest : StringSpec ({
 		"$smt valueof"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/valueof.abs")))
-			val classDecl = model.extractClassDecl("Values", "C", repos)
+			val classDecl = model.extractClassDecl("Values", "C")
 
 			val iNode = classDecl.extractInitialNode(postInv)
 			executeNode(iNode, repos, postInv) shouldBe true
@@ -208,7 +207,7 @@ class PostInvTest : StringSpec ({
 		"$smt ensures-this"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/ensures.abs")))
-			val classDecl = model.extractClassDecl("ThisCalls", "C", repos)
+			val classDecl = model.extractClassDecl("ThisCalls", "C")
 
 			val iNode = classDecl.extractInitialNode(postInv)
 			executeNode(iNode, repos, postInv) shouldBe true
@@ -235,7 +234,7 @@ class PostInvTest : StringSpec ({
 		"$smt paramensures"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/params.abs")))
-			var classDecl = model.extractClassDecl("ParamCalls", "C", repos)
+			var classDecl = model.extractClassDecl("ParamCalls", "C")
 
 			var sNode = classDecl.extractMethodNode(postInv,"firstArg", repos)
 			executeNode(sNode, repos, postInv) shouldBe true
@@ -244,7 +243,7 @@ class PostInvTest : StringSpec ({
 			executeNode(sNode, repos, postInv) shouldBe false
 
 
-			classDecl = model.extractClassDecl("ParamCalls", "D", repos)
+			classDecl = model.extractClassDecl("ParamCalls", "D")
 
 			sNode = classDecl.extractMethodNode(postInv,"succ", repos)
 			executeNode(sNode, repos, postInv) shouldBe true
@@ -256,7 +255,7 @@ class PostInvTest : StringSpec ({
 		"$smt fieldvarclash"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/fieldvarclash.abs")))
-			val classDecl = model.extractClassDecl("FieldVarClash", "C", repos)
+			val classDecl = model.extractClassDecl("FieldVarClash", "C")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
 			val mNode = model.exctractMainNode(postInv)
@@ -266,7 +265,7 @@ class PostInvTest : StringSpec ({
 		"$smt recidentity"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/identity.abs")))
-			val classDecl = model.extractClassDecl("Iden", "C", repos)
+			val classDecl = model.extractClassDecl("Iden", "C")
 
 			var sNode = classDecl.extractMethodNode(postInv,"id", repos)
 			executeNode(sNode, repos, postInv) shouldBe true
@@ -281,13 +280,13 @@ class PostInvTest : StringSpec ({
 		"$smt examples"{
 			smtPath = smt
 			var (model, repos) = load(listOf(Paths.get("examples/c2abs.abs")))
-			var classDecl = model.extractClassDecl("TestModule", "C_main", repos)
+			var classDecl = model.extractClassDecl("TestModule", "C_main")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
-			classDecl = model.extractClassDecl("TestModule", "Global", repos)
+			classDecl = model.extractClassDecl("TestModule", "Global")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
-			classDecl = model.extractClassDecl("TestModule", "C_set_x", repos)
+			classDecl = model.extractClassDecl("TestModule", "C_set_x")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
 			var mNode = model.exctractMainNode(postInv)
@@ -296,10 +295,10 @@ class PostInvTest : StringSpec ({
 			var any = load(listOf(Paths.get("examples/gcd.abs")))
 			model = any.first
 			repos = any.second
-			classDecl = model.extractClassDecl("CallS", "GcdC", repos)
+			classDecl = model.extractClassDecl("CallS", "GcdC")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
-			classDecl = model.extractClassDecl("CallS", "LogC", repos)
+			classDecl = model.extractClassDecl("CallS", "LogC")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
 			mNode = model.exctractMainNode(postInv)
@@ -308,7 +307,7 @@ class PostInvTest : StringSpec ({
 			any = load(listOf(Paths.get("examples/gcdfield.abs")))
 			model = any.first
 			repos = any.second
-			classDecl = model.extractClassDecl("CallSField", "GcdC", repos)
+			classDecl = model.extractClassDecl("CallSField", "GcdC")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
 			mNode = model.exctractMainNode(postInv)
@@ -318,19 +317,19 @@ class PostInvTest : StringSpec ({
 			model = any.first
 			repos = any.second
 
-			classDecl = model.extractClassDecl("TestModule", "Global", repos)
+			classDecl = model.extractClassDecl("TestModule", "Global")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
-			classDecl = model.extractClassDecl("TestModule", "C_set_x", repos)
+			classDecl = model.extractClassDecl("TestModule", "C_set_x")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
-			classDecl = model.extractClassDecl("TestModule", "C_two_unspec", repos)
+			classDecl = model.extractClassDecl("TestModule", "C_two_unspec")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
-			classDecl = model.extractClassDecl("TestModule", "C_add_zero", repos)
+			classDecl = model.extractClassDecl("TestModule", "C_add_zero")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
-			classDecl = model.extractClassDecl("TestModule", "C_one_to_fib_n", repos)
+			classDecl = model.extractClassDecl("TestModule", "C_one_to_fib_n")
 			classDecl.executeAll(repos, postInv) shouldBe true
 
 			mNode = model.exctractMainNode(postInv)
@@ -340,7 +339,7 @@ class PostInvTest : StringSpec ({
 		"$smt functional"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/func.abs")))
-			val classDecl = model.extractClassDecl("Func", "C", repos)
+			val classDecl = model.extractClassDecl("Func", "C")
 
 			var sNode = classDecl.extractMethodNode(postInv,"m", repos)
 			executeNode(sNode, repos, postInv) shouldBe true
@@ -352,7 +351,7 @@ class PostInvTest : StringSpec ({
 		"$smt synccall"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/synccall.abs")))
-			val classDecl = model.extractClassDecl("SyncCall", "SyncCallC", repos)
+			val classDecl = model.extractClassDecl("SyncCall", "SyncCallC")
 
 			//empty contract for sync call
 			val emptyContractSyncCallSuccessNode = classDecl.extractMethodNode(postInv,"emptyContractSuccess", repos)
@@ -380,7 +379,7 @@ class PostInvTest : StringSpec ({
 		"$smt unexposedcontract"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/unexposedcontract.abs")))
-			val classDecl = model.extractClassDecl("UnexposedContract", "UnexposedContractC", repos)
+			val classDecl = model.extractClassDecl("UnexposedContract", "UnexposedContractC")
 
 			val unexposedContractFail = classDecl.extractMethodNode(postInv,"unexposedContractFail", repos)
 			executeNode(unexposedContractFail, repos, postInv) shouldBe false
@@ -392,7 +391,7 @@ class PostInvTest : StringSpec ({
 		"$smt syncField"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/syncField.abs")))
-			val classDecl = model.extractClassDecl("TargetField", "C", repos)
+			val classDecl = model.extractClassDecl("TargetField", "C")
 
 			val unexposedContractFail = classDecl.extractMethodNode(postInv,"m", repos)
 			executeNode(unexposedContractFail, repos, postInv) shouldBe true
@@ -401,7 +400,7 @@ class PostInvTest : StringSpec ({
 		"$smt case"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/case.abs")))
-			val classDecl = model.extractClassDecl("M", "C", repos)
+			val classDecl = model.extractClassDecl("M", "C")
 
 			var res = classDecl.extractMethodNode(postInv,"m1", repos)
 			executeNode(res, repos, postInv) shouldBe true
@@ -420,7 +419,7 @@ class PostInvTest : StringSpec ({
 		"$smt suspend"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/suspend.abs")))
-			val classDecl = model.extractClassDecl("Susp", "C", repos)
+			val classDecl = model.extractClassDecl("Susp", "C")
 
 			var res = classDecl.extractMethodNode(postInv,"m1", repos)
 			executeNode(res, repos, postInv) shouldBe true
@@ -431,9 +430,9 @@ class PostInvTest : StringSpec ({
 		"$smt nullable"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/nullable.abs")))
-			val classDecl = model.extractClassDecl("Nullable", "K", repos)
+			val classDecl = model.extractClassDecl("Nullable", "K")
 
-			var res = classDecl.extractMethodNode(postInv,"m", repos)
+			val res = classDecl.extractMethodNode(postInv,"m", repos)
 			executeNode(res, repos, postInv) shouldBe true
 		}
 	}

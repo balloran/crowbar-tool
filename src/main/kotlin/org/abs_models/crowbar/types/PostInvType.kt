@@ -35,10 +35,6 @@ interface PostInvType : DeductType{
             System.err.println("method not found: ${classDecl.qualifiedName}.${name}")
             exitProcess(-1)
         }
-//        if (mDecl.methodSig.params.any { !repos.isAllowedType(it.type.toString()) }) {
-//            System.err.println("parameters with non-Int type not supported")
-//            exitProcess(-1)
-//        }
 
         output("Crowbar  : loading specification....")
         val symb: SymbolicState?

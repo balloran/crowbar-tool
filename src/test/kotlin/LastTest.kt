@@ -27,7 +27,7 @@ class LastTest : StringSpec({
         "$smt last"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/last.abs")))
-            val classDecl = model.extractClassDecl("Last", "LastC", repos)
+            val classDecl = model.extractClassDecl("Last", "LastC")
             for(fail in fails) {
                 val failNode = classDecl.extractMethodNode(postInv, fail, repos)
                 executeNode(failNode, repos, postInv) shouldBe false

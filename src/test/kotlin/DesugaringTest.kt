@@ -14,7 +14,7 @@ class DesugaringTest : StringSpec({
         "$smt desugaring"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/desugaring.abs")))
-            val classDecl = model.extractClassDecl("Desugaring", "DesugaringC", repos)
+            val classDecl = model.extractClassDecl("Desugaring", "DesugaringC")
 
             val simpleDesugaringSuccess = classDecl.extractMethodNode(postInv,"simpleDesugaringSuccess", repos)
             executeNode(simpleDesugaringSuccess, repos, postInv) shouldBe true

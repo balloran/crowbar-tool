@@ -17,7 +17,7 @@ class GenericsTest : StringSpec({
             smtPath = smt
 
             val (model, repos) = load(listOf(Paths.get("src/test/resources/generics.abs")))
-            val classDecl = model.extractClassDecl("Generics", "MaybeClass", repos)
+            val classDecl = model.extractClassDecl("Generics", "MaybeClass")
 
             val trivialSuccess = classDecl.extractMethodNode (postInv, "trivialSuccess", repos)
             executeNode(trivialSuccess, repos, postInv) shouldBe true
@@ -46,7 +46,7 @@ class GenericsTest : StringSpec({
             smtPath = smt
 
             val (model, repos) = load(listOf(Paths.get("src/test/resources/generics.abs")))
-            val classDecl = model.extractClassDecl("Generics", "PairClass", repos)
+            val classDecl = model.extractClassDecl("Generics", "PairClass")
 
             val trivialSuccess = classDecl.extractMethodNode (postInv, "trivialSuccess", repos)
             executeNode(trivialSuccess, repos, postInv) shouldBe true
@@ -68,7 +68,7 @@ class GenericsTest : StringSpec({
             smtPath = smt
 
             val (model, repos) = load(listOf(Paths.get("src/test/resources/generics.abs")))
-            val classDecl = model.extractClassDecl("Generics", "ListClass", repos)
+            val classDecl = model.extractClassDecl("Generics", "ListClass")
 
             val trivialSuccess = classDecl.extractMethodNode (postInv, "trivialSuccess", repos)
             executeNode(trivialSuccess, repos, postInv) shouldBe true//trivialWrapResultSuccess
@@ -93,7 +93,7 @@ class GenericsTest : StringSpec({
             smtPath = smt
 
             val (model, repos) = load(listOf(Paths.get("src/test/resources/generics.abs")))
-            val classDecl = model.extractClassDecl("Generics", "TripleClass", repos)
+            val classDecl = model.extractClassDecl("Generics", "TripleClass")
 
             val trivialSuccess = classDecl.extractMethodNode (postInv, "trivialSuccess", repos)
             executeNode(trivialSuccess, repos, postInv) shouldBe true//trivialWrapResultSuccess

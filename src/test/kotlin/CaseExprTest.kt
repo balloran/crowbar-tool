@@ -17,7 +17,7 @@ class CaseExprTest : StringSpec({
             smtPath = smt
 
             val (model, repos) = load(listOf(Paths.get("src/test/resources/caseExpr.abs")))
-            val classDecl = model.extractClassDecl("CaseExpr", "E", repos)
+            val classDecl = model.extractClassDecl("CaseExpr", "E")
 
             val fullIntSuccess = classDecl.extractMethodNode(postInv, "fullIntSuccess", repos)
             executeNode(fullIntSuccess, repos, postInv) shouldBe true
@@ -41,7 +41,7 @@ class CaseExprTest : StringSpec({
         "$smt patternMatching"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/caseExpr.abs")))
-            val classDecl = model.extractClassDecl("CaseExpr", "E", repos)
+            val classDecl = model.extractClassDecl("CaseExpr", "E")
 
             val patternMatchingIntTrivialType3Success = classDecl.extractMethodNode(postInv, "patternMatchingIntTrivialType3Success", repos)
             executeNode(patternMatchingIntTrivialType3Success, repos, postInv) shouldBe true

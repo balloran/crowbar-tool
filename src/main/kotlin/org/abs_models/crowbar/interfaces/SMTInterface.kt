@@ -6,9 +6,7 @@ import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.main.ADTRepos.libPrefix
 import org.abs_models.crowbar.main.ADTRepos.setUsedHeaps
 import org.abs_models.crowbar.types.booleanFunction
-import org.abs_models.crowbar.types.getReturnType
 import org.abs_models.frontend.typechecker.DataTypeType
-import org.abs_models.frontend.typechecker.Type
 import java.io.File
 import java.util.concurrent.TimeUnit
 
