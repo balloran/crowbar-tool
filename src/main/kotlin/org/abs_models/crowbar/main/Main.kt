@@ -16,9 +16,9 @@ import com.github.ajalt.clikt.parameters.types.restrictTo
 import org.abs_models.crowbar.data.Formula
 import org.abs_models.crowbar.data.True
 import org.abs_models.crowbar.interfaces.filterAtomic
+import org.abs_models.crowbar.types.LocalTypeType
 import org.abs_models.crowbar.types.PostInvType
 import org.abs_models.crowbar.types.RegAccType
-import org.abs_models.crowbar.types.LocalTypeType
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.UnknownType
 import java.nio.file.Paths
@@ -158,6 +158,7 @@ class Main : CliktCommand() {
 
     override fun run() {
 
+        var start = System.currentTimeMillis()
         tmpPath = "$tmp/"
         smtPath = smtCmd
         verbosity = Verbosity.values()[verbose]
@@ -241,6 +242,9 @@ class Main : CliktCommand() {
                 output("Crowbar  : Verification result: $closed", Verbosity.SILENT)
             }
         }
+        var end = System.currentTimeMillis()
+        output("Crowbar  : Verification time: ${end-start}ms", Verbosity.SILENT)
+        output("Crowbar  : Total number of branches: ${count}", Verbosity.SILENT)
     }
 
     private fun runFreeAnalysis(model: Model) : Boolean{

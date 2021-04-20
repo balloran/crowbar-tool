@@ -1,6 +1,7 @@
 package org.abs_models.crowbar.main
 
 import org.abs_models.crowbar.data.*
+import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.Stmt
 import org.abs_models.crowbar.interfaces.translateABSExpToSymExpr
 import org.abs_models.crowbar.investigator.CounterexampleGenerator
@@ -214,7 +215,7 @@ fun ClassDecl.extractMethodNode(usedType: KClass<out DeductType>, name : String,
     val obj = usedType.companionObject!!.objectInstance
     return callTarget.call(obj, this, name, repos) as SymbolicNode
 }
-
+var count = 0;
 fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out DeductType>, identifier: String = "unknown") : Boolean{ //todo: this should handle inference and static leafs now
 
     output("Crowbar  : starting symbolic execution....")
@@ -235,6 +236,7 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
     for(l in node.collectLeaves()){
         when (l) {
             is LogicNode -> {
+                count++;
                 output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
                 closed = closed && l.evaluate()
                 output("Crowbar-v: verified? ${l.evaluate()}", Verbosity.V)
