@@ -35,10 +35,6 @@ interface PostInvType : DeductType{
             System.err.println("method not found: ${classDecl.qualifiedName}.${name}")
             exitProcess(-1)
         }
-//        if (mDecl.methodSig.params.any { !repos.isAllowedType(it.type.toString()) }) {
-//            System.err.println("parameters with non-Int type not supported")
-//            exitProcess(-1)
-//        }
 
         output("Crowbar  : loading specification....")
         val symb: SymbolicState?
@@ -107,7 +103,7 @@ interface PostInvType : DeductType{
                 throw Exception("Could not extract context set $expectedSpec from ${mDecl.methodSig.name}: set must be declared using list[\"str\",...]")
             return (content.getParam(0) as ListLiteral).pureExpList.joinToString(",") { (it as StringLiteral).content }
         }
-        return null;
+        return null
     }
 
     override fun extractInitialNode(classDecl: ClassDecl) : SymbolicNode {
@@ -115,7 +111,7 @@ interface PostInvType : DeductType{
         var body = getNormalizedStatement(classDecl.initBlock)
         for (fieldDecl in classDecl.fields){
             if(fieldDecl.hasInitExp()){
-                val nextBody = AssignStmt(Field(fieldDecl.name+"_f", fieldDecl.type.qualifiedName, fieldDecl.type),
+                val nextBody = AssignStmt(Field(fieldDecl.name+"_f", fieldDecl.type),
                         translateABSExpToSymExpr(fieldDecl.initExp, UnknownType.INSTANCE))
                 body = SeqStmt(nextBody,body)
             }
@@ -271,7 +267,7 @@ class PITAllocAssign(repos: Repository) : PITAssign(repos, Modality(
         val targetDecl = repos.classReqs[classNameExpr.name]!!.second
         val substMap = mutableMapOf<LogicElement,LogicElement>()
         for(i in 0 until targetDecl.numParam){
-            val pName = select(Field(targetDecl.getParam(i).name+"_f", targetDecl.getParam(i).type.qualifiedName, targetDecl.getParam(i).type))
+            val pName = select(Field(targetDecl.getParam(i).name+"_f", targetDecl.getParam(i).type))
             val pValue = nextRhs.params[i]
             substMap[pName] = pValue
         }
@@ -329,7 +325,6 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
         for(i in 0 until targetDecl.numParam){
             val pName = ProgVar(
                 targetDecl.getParam(i).name,
-                targetDecl.getParam(i).type.qualifiedName,
                 targetDecl.getParam(i).type
             )
             val pValue = exprToTerm(call.e[i])
@@ -351,7 +346,6 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
         for(i in 0 until targetDecl.numParam){
             val pName = ProgVar(
                 targetPostDecl.getParam(i).name,
-                targetPostDecl.getParam(i).type.qualifiedName,
                 targetPostDecl.getParam(i).type
             )
             val pValue = exprToTerm(call.e[i])
@@ -441,7 +435,6 @@ fun mapSubstPar(callExpr: SyncCallExpr, targetDecl: MethodSig): MutableMap<Logic
     for (i in 0 until targetDecl.numParam) {
         val pName = ProgVar(
             targetDecl.getParam(i).name,
-            targetDecl.getParam(i).type.qualifiedName,
             targetDecl.getParam(i).type
         )
         val pValue = exprToTerm(callExpr.e[i])

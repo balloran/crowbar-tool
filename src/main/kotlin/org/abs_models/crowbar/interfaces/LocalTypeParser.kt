@@ -172,7 +172,7 @@ class LocalTypeFormulaConverter(context: Pair<Type, Map<String, Type>>) : LocalS
     override fun visitField_type_term(ctx: Field_type_termContext): Expr {
         val name = ctx.STRING().text
         val type = fieldTypeMapping[name] ?: UnknownType.INSTANCE
-        return Field(name + "_f", type.qualifiedName, type)
+        return Field(name + "_f", type)
     }
 
     override fun visitConstant_type_term(ctx: Constant_type_termContext): Expr {
@@ -188,7 +188,7 @@ class LocalTypeFormulaConverter(context: Pair<Type, Map<String, Type>>) : LocalS
             text matches Regex("[0-9]+") -> Const(text)
             dataTypeConstructors.containsKey(text) -> buildDataType(text)
             // TODO: This does not support data types, and ProgVars are only kind of supported - sometimes the unknown type causes issues
-            else -> ProgVar(text, "<UNKNOWN>", UnknownType.INSTANCE)
+            else -> ProgVar(text, UnknownType.INSTANCE)
         }
     }
 

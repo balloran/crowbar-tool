@@ -19,7 +19,7 @@ class ContextTest : StringSpec( {
 
 		"$smt context"{
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/context.abs")))
-			val classDecl = model.extractClassDecl("Context", "C", repos)
+			val classDecl = model.extractClassDecl("Context", "C")
 			classDecl.extractMethodNode(postInv, "m1", repos).collectInferenceLeaves().filterIsInstance<StaticNode>().size shouldBe 2
 			classDecl.extractMethodNode(postInv, "m2", repos).collectInferenceLeaves().filterIsInstance<StaticNode>().size shouldBe 2
 			classDecl.extractMethodNode(postInv, "m3", repos).collectInferenceLeaves().filterIsInstance<StaticNode>().size shouldBe 2

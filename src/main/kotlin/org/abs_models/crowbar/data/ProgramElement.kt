@@ -264,11 +264,11 @@ data class LocationAbstractVar(val name : String) : Location, AbstractVar{
     }
 }
 //name must end with _f when using automatic translation
-open class Field(val name : String, val dType : String="ABS.StdLib.Int", val concrType :Type = UnknownType.INSTANCE) : Location, Term {
+open class Field(val name : String, val concrType :Type = UnknownType.INSTANCE) : Location, Term {
 
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
-        return "this.$name : $dType"
+        return "this.$name : ${concrType.qualifiedName}"
     }
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -287,10 +287,10 @@ open class Field(val name : String, val dType : String="ABS.StdLib.Int", val con
     override fun toSMT(indent:String) : String = name
 }
 
-open class ProgVar(open val name: String, open val dType: String = "ABS.StdLib.Int", open val concrType: Type = UnknownType.INSTANCE) : Location, Term {
+open class ProgVar(open val name: String, open val concrType: Type = UnknownType.INSTANCE) : Location, Term {
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
-        return "$name:$dType"
+        return "$name:${concrType.qualifiedName}"
     }
 
     //this ignores the type and that is ok for now
@@ -310,7 +310,7 @@ open class ProgVar(open val name: String, open val dType: String = "ABS.StdLib.I
     }
     override fun toSMT(indent:String) : String = name
 }
-data class ReturnVar(val vParam : String, override val concrType: Type) : ProgVar("result", vParam, concrType){
+data class ReturnVar(val vParam : String, override val concrType: Type) : ProgVar("result", concrType){
     override fun equals(other: Any?): Boolean {
         return super.equals(other)
     }
@@ -320,12 +320,12 @@ data class ReturnVar(val vParam : String, override val concrType: Type) : ProgVa
     }
 }
 
-data class ProgAbstractVar(val vName : String) : ProgVar(vName, "AVAR", UnknownType.INSTANCE), AbstractVar {
+data class ProgAbstractVar(val vName : String) : ProgVar(vName, UnknownType.INSTANCE), AbstractVar {
     override fun prettyPrint(): String {
         return name
     }
 }
-data class ProgFieldAbstractVar(val vName : String) : Field(vName, "AVAR", UnknownType.INSTANCE), AbstractVar {
+data class ProgFieldAbstractVar(val vName : String) : Field(vName, UnknownType.INSTANCE), AbstractVar {
     override fun prettyPrint(): String {
         return name
     }

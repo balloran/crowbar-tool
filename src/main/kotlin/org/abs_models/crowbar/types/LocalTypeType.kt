@@ -320,7 +320,6 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
         for (i in 0 until targetDecl.numParam) {
             val pName = ProgVar(
                 targetDecl.getParam(i).name,
-                targetDecl.getParam(i).type.qualifiedName,
                 targetDecl.getParam(i).type
             )
             val pValue = exprToTerm(call.e[i])
@@ -340,7 +339,7 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
         val targetPostDecl = read!!.second
         val substPostMap = mutableMapOf<LogicElement, LogicElement>()
         for (i in 0 until targetDecl.numParam) {
-            val pName = ProgVar(targetPostDecl.getParam(i).name, targetPostDecl.getParam(i).type.qualifiedName)
+            val pName = ProgVar(targetPostDecl.getParam(i).name, targetPostDecl.getParam(i).type)
             val pValue = exprToTerm(call.e[i])
             substPostMap[pName] = pValue
         }

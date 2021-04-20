@@ -5,6 +5,7 @@ import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.Repository
+import org.abs_models.crowbar.main.load
 import org.abs_models.crowbar.rule.MatchCondition
 import org.abs_models.crowbar.rule.containsAbstractVar
 import org.abs_models.crowbar.rule.match
@@ -12,21 +13,28 @@ import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.nextPITStrategy
 import org.abs_models.crowbar.types.PostInvariantPair
 import org.abs_models.frontend.ast.Model
+import java.nio.file.Paths
+import kotlin.system.exitProcess
 
 class BasicTest : StringSpec() {
 
     private fun addExpr(e1 : Expr, e2 : Expr): Expr = SExpr("+", listOf(e1,e2))
 
-    private val conc = addExpr(ProgVar("v"), addExpr(Const("1"), ProgVar("v")))
-    private val pattern = addExpr(ExprAbstractVar("A"), addExpr(Const("1"), ExprAbstractVar("A")))
-    private val pattern2 = addExpr(ExprAbstractVar("A"), addExpr(ExprAbstractVar("A"), Const("1")))
-    private val pattern3 = addExpr(ExprAbstractVar("A"), Const("1"))
-
     init {
+
+        val model = load(listOf(Paths.get("src/test/resources/empty.abs"))).first
+        val int = model.intType
+
+
+        val conc = addExpr(ProgVar("v",int), addExpr(Const("1"), ProgVar("v")))
+        val pattern = addExpr(ExprAbstractVar("A"), addExpr(Const("1"), ExprAbstractVar("A")))
+        val pattern2 = addExpr(ExprAbstractVar("A"), addExpr(ExprAbstractVar("A"), Const("1")))
+        val pattern3 = addExpr(ExprAbstractVar("A"), Const("1"))
+
         ADTRepos.initBuiltIn()
         "collect"{
-            val stmt = WhileStmt(SExpr(">=", listOf(Field("f"), Const("0"))),
-                                 SeqStmt(AssignStmt(Field("g"), ProgVar("v")), SkipStmt),
+            val stmt = WhileStmt(SExpr(">=", listOf(Field("f",int), Const("0"))),
+                                 SeqStmt(AssignStmt(Field("g",int), ProgVar("v")), SkipStmt),
                                  PPId(0))
             stmt.collectAll(Field::class).size shouldBe 2
             stmt.collectAll(AssignStmt::class).size shouldBe 1
@@ -42,72 +50,72 @@ class BasicTest : StringSpec() {
             res shouldBe AddExpr(ProgVar("v"), Const("1"))
             assert(!containsAbstractVar(res))
         }*/
-//        "Z3Test"{ //todo: this test should be rewritten defining concrete types for fields and progvars
-//            val prog = SeqStmt(
-//                    IfStmt(SExpr(">=", listOf(ProgVar("v"), Const("0"))),
-//                            AssignStmt(Field("f"), ProgVar("v")),
-//                            AssignStmt(Field("f"), SExpr("-", listOf(ProgVar("v"))))
-//                    ),
-//                    ReturnStmt(Field("f"))
-//            )
-//
-//            val input3 = SymbolicState(
-//                    True,
-//                    EmptyUpdate,
-//                    Modality(prog, PostInvariantPair(Predicate(">=", listOf(select(Field("f")), Function("0"))),
-//                            True))
-//            )
-//
-//            val strategy = nextPITStrategy(Repository(null))
-//            val node = SymbolicNode(input3, emptyList())
-//            strategy.execute(node)
-//            println(node.debugString(0))
-//            println(node.finishedExecution())
-//            for(l in node.collectLeaves()){
-//                println(l.evaluate())
-//            }
-//        }
+        "Z3Test"{
+            val prog = SeqStmt(
+                    IfStmt(SExpr(">=", listOf(ProgVar("v",int), Const("0"))),
+                            AssignStmt(Field("f",int), ProgVar("v",int)),
+                            AssignStmt(Field("f",int), SExpr("-", listOf(ProgVar("v",int))))
+                    ),
+                    ReturnStmt(Field("f",int))
+            )
+
+            val input3 = SymbolicState(
+                    True,
+                    EmptyUpdate,
+                    Modality(prog, PostInvariantPair(Predicate(">=", listOf(select(Field("f",int)), Function("0"))),
+                            True))
+            )
+
+            val strategy = nextPITStrategy(Repository(null))
+            val node = SymbolicNode(input3, emptyList())
+            strategy.execute(node)
+            println(node.debugString(0))
+            println(node.finishedExecution())
+            for(l in node.collectLeaves()){
+                println(l.evaluate())
+            }
+        }
         "deupdatify" {/* { v := 0 }{ v := v+1 } ((v == { v := v+1 }(v+w)) /\ { v := v+1 }!(v == w))
                           ->
                          (0+1 == (0+1+1+w)) /\ !(0+1+1 == w) */
-            val s = UpdateOnFormula(ChainUpdate(ElementaryUpdate(ProgVar("v"), Function("0")), ElementaryUpdate(ProgVar("v"), Function("+", listOf(ProgVar("v"), Function("1"))))),
+            val s = UpdateOnFormula(ChainUpdate(ElementaryUpdate(ProgVar("v",int), Function("0")), ElementaryUpdate(ProgVar("v",int), Function("+", listOf(ProgVar("v",int), Function("1"))))),
                     And(Predicate("=", listOf(
-                            ProgVar("v"),
-                            UpdateOnTerm(ElementaryUpdate(ProgVar("v"), Function("+", listOf(ProgVar("v"), Function("1")))),
-                                    Function("+", listOf(ProgVar("v"), ProgVar("w"))))
-                    )), UpdateOnFormula(ElementaryUpdate(ProgVar("v"), Function("+", listOf(ProgVar("v"), Function("1")))),
-                            Not(Predicate("=", listOf(ProgVar("v"), ProgVar("w")))))))
+                            ProgVar("v",int),
+                            UpdateOnTerm(ElementaryUpdate(ProgVar("v",int), Function("+", listOf(ProgVar("v",int), Function("1")))),
+                                    Function("+", listOf(ProgVar("v",int), ProgVar("w",int))))
+                    )), UpdateOnFormula(ElementaryUpdate(ProgVar("v",int), Function("+", listOf(ProgVar("v",int), Function("1")))),
+                            Not(Predicate("=", listOf(ProgVar("v",int), ProgVar("w",int)))))))
 
             deupdatify(s).prettyPrint() shouldBe "(0+1=0+1+1+w:ABS.StdLib.Int) /\\ (!0+1+1=w:ABS.StdLib.Int)"
         }
         "apply" {
-            apply(ElementaryUpdate(ProgVar("v"), Function("0")),
-                    Predicate("=", listOf(Function("+", listOf(ProgVar("v"), ProgVar("v"))), Function("0")))) shouldBe
+            apply(ElementaryUpdate(ProgVar("v",int), Function("0")),
+                    Predicate("=", listOf(Function("+", listOf(ProgVar("v",int), ProgVar("v",int))), Function("0")))) shouldBe
                     Predicate("=", listOf(Function("+", listOf(Function("0"), Function("0"))), Function("0")))
         }
         "subst" {
-            subst(ProgVar("v"), ProgVar("v"), Function("0")) shouldBe Function("0")
-            subst(ProgVar("w"), ProgVar("v"), Function("0")) shouldBe ProgVar("w")
+            subst(ProgVar("v",int), ProgVar("v",int), Function("0")) shouldBe Function("0")
+            subst(ProgVar("w",int), ProgVar("v",int), Function("0")) shouldBe ProgVar("w")
             subst(Predicate("=",
-                    listOf(Function("+", listOf(ProgVar("v"), ProgVar("v"))),
-                            Function("0"))), ProgVar("v"), Function("0")) shouldBe
+                    listOf(Function("+", listOf(ProgVar("v",int), ProgVar("v",int))),
+                            Function("0"))), ProgVar("v",int), Function("0")) shouldBe
                     Predicate("=",
                             listOf(Function("+", listOf(Function("0"), Function("0"))),
                                     Function("0")))
 
             subst(Predicate("=",
-                    listOf(Function("+", listOf(UpdateOnTerm(ElementaryUpdate(ProgVar("v"), Function("1")), ProgVar("v")),
-                            UpdateOnTerm(ElementaryUpdate(ProgVar("w"), Function("1")), ProgVar("v")))),
-                            Function("0"))), ProgVar("v"), Function("0")) shouldBe
+                    listOf(Function("+", listOf(UpdateOnTerm(ElementaryUpdate(ProgVar("v",int), Function("1")), ProgVar("v",int)),
+                            UpdateOnTerm(ElementaryUpdate(ProgVar("w",int), Function("1")), ProgVar("v")))),
+                            Function("0"))), ProgVar("v",int), Function("0")) shouldBe
                     Predicate("=",
-                            listOf(Function("+", listOf(UpdateOnTerm(ElementaryUpdate(ProgVar("v"), Function("1")), ProgVar("v")),
-                                    UpdateOnTerm(ElementaryUpdate(ProgVar("w"), Function("1")), Function("0")))),
+                            listOf(Function("+", listOf(UpdateOnTerm(ElementaryUpdate(ProgVar("v",int), Function("1")), ProgVar("v",int)),
+                                    UpdateOnTerm(ElementaryUpdate(ProgVar("w",int), Function("1")), Function("0")))),
                                     Function("0")))
 
-            subst(ElementaryUpdate(ProgVar("v"), Function("+", listOf(ProgVar("v"), Function("1")))),
-                    ProgVar("v"),
+            subst(ElementaryUpdate(ProgVar("v",int), Function("+", listOf(ProgVar("v",int), Function("1")))),
+                    ProgVar("v",int),
                     Function("0")) shouldBe
-                    ElementaryUpdate(ProgVar("v"), Function("+", listOf(Function("0"), Function("1"))))
+                    ElementaryUpdate(ProgVar("v",int), Function("+", listOf(Function("0"), Function("1"))))
 
         }
         "matchAndFail1" {

@@ -108,7 +108,6 @@ data class Repository(private val model : Model?,
             }
         }
     }
-    fun isAllowedType(input : String) : Boolean = allowedTypes.contains(input)
 }
 
 sealed class CrowOption{
@@ -187,7 +186,7 @@ class Main : CliktCommand() {
                 output("Crowbar  : This is an experimental feature and under development", Verbosity.SILENT)
                 val tt = target as  CrowOption.FunctionOption
                 val targetPath = tt.path.split(".")
-                val funcDecl: FunctionDecl = model.extractFunctionDecl(targetPath[0], targetPath[1], repos)
+                val funcDecl: FunctionDecl = model.extractFunctionDecl(targetPath[0], targetPath[1])
                 val functionNode = funcDecl.exctractFunctionNode(deductType)
                 val closed = executeNode(functionNode, repos, deductType)
                 output("Crowbar  : Verification result: $closed", Verbosity.SILENT)
@@ -221,14 +220,14 @@ class Main : CliktCommand() {
             is  CrowOption.AllClassOption -> {
                 val tt = target as  CrowOption.AllClassOption
                 val targetPath = tt.path.split(".")
-                val classDecl = model.extractClassDecl(targetPath[0], targetPath[1], repos)
+                val classDecl = model.extractClassDecl(targetPath[0], targetPath[1])
                 val totalClosed = classDecl.executeAll(repos, deductType)
                 output("Crowbar  : Final verification result: $totalClosed", Verbosity.SILENT)
             }
             is  CrowOption.MethodOption -> {
                 val tt = target as  CrowOption.MethodOption
                 val targetPath = tt.path.split(".")
-                val classDecl = model.extractClassDecl(targetPath[0], targetPath[1], repos)
+                val classDecl = model.extractClassDecl(targetPath[0], targetPath[1])
                 val node = classDecl.extractMethodNode(deductType, targetPath[2],repos)
                 val closed = executeNode(node, repos, deductType)
                 output("Crowbar  : Verification result: $closed", Verbosity.SILENT)
@@ -236,7 +235,7 @@ class Main : CliktCommand() {
             is  CrowOption.InitOption -> {
                 val tt = target as  CrowOption.InitOption
                 val targetPath = tt.path.split(".")
-                val classDecl = model.extractClassDecl(targetPath[0], targetPath[1], repos)
+                val classDecl = model.extractClassDecl(targetPath[0], targetPath[1])
                 val node = classDecl.extractInitialNode(deductType)
                 val closed = executeNode(node, repos, deductType)
                 output("Crowbar  : Verification result: $closed", Verbosity.SILENT)

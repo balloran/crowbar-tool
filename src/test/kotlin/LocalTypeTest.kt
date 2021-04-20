@@ -74,7 +74,7 @@ class LocalTypeTest : StringSpec() {
                 smtPath = smt
 
                 val (model, repos) = load(listOf(Paths.get("src/test/resources/localtype.abs")))
-                val classDecl = model.extractClassDecl("LocalTypeTest", "C", repos)
+                val classDecl = model.extractClassDecl("LocalTypeTest", "C")
 
                 testMethod(classDecl, "returnVarSpec", repos, true)
                 testMethod(classDecl, "returnVarSpecFail", repos, false)
@@ -93,7 +93,7 @@ class LocalTypeTest : StringSpec() {
                 smtPath = smt
 
                 val (model, repos) = load(listOf(Paths.get("src/test/resources/localtype.abs")))
-                val classDecl = model.extractClassDecl("LocalTypeTest", "C", repos)
+                val classDecl = model.extractClassDecl("LocalTypeTest", "C")
 
                 testMethod(classDecl, "returnDataTypeSpec", repos, true)
                 testMethod(classDecl, "returnDataTypeSpecFail", repos, false)
@@ -105,7 +105,7 @@ class LocalTypeTest : StringSpec() {
                 smtPath = smt
 
                 val (model, repos) = load(listOf(Paths.get("src/test/resources/localtype.abs")))
-                val classDecl = model.extractClassDecl("LocalTypeTest", "C", repos)
+                val classDecl = model.extractClassDecl("LocalTypeTest", "C")
 
                 testMethod(classDecl, "unspecifiedLoop", repos, true)
                 testMethod(classDecl, "loopHeadDuplication", repos, true)
@@ -121,7 +121,7 @@ class LocalTypeTest : StringSpec() {
                 smtPath = smt
 
                 val (model, repos) = load(listOf(Paths.get("src/test/resources/localtype.abs")))
-                val classDecl = model.extractClassDecl("LocalTypeTest", "C", repos)
+                val classDecl = model.extractClassDecl("LocalTypeTest", "C")
 
                 testMethod(classDecl, "getExpAliasing", repos, true)
                 testMethod(classDecl, "getExpLocalAliasing", repos, true)

@@ -48,7 +48,7 @@ fun load(paths : List<Path>) : Pair<Model,Repository> {
 
 
     //initialization: first read the types, then the function definitions and then the specifications
-    FunctionRepos.init(model, repos)
+    FunctionRepos.init(model)
     ADTRepos.init(model)
     repos.populateClassReqs(model)
     repos.populateMethodReqs(model)
@@ -135,7 +135,7 @@ fun extractRoleSpec(classDecl: ClassDecl): Formula {
 
         val roleString = (roleAnnotation.getParam(0) as StringLiteral).content
         val fieldUse = (roleAnnotation.getParam(1) as FieldUse)
-        val field = Field(fieldUse.name + "_f", fieldUse.type.qualifiedName, fieldUse.type)
+        val field = Field(fieldUse.name + "_f", fieldUse.type)
         Predicate("hasRole", listOf(exprToTerm(field), Function("\"$roleString\""))) as Formula
     }.fold(True as Formula) { acc, elem -> And(acc, elem) }
 }
@@ -153,7 +153,7 @@ fun Model.extractAllClasses() : List<ClassDecl>{
     return l
 }
 
-fun Model.extractFunctionDecl(moduleName : String, funcName : String, repos : Repository) : FunctionDecl {
+fun Model.extractFunctionDecl(moduleName: String, funcName: String) : FunctionDecl {
     val moduleDecl = moduleDecls.firstOrNull { it.name == moduleName }
     if(moduleDecl == null){
         System.err.println("module not found: $moduleName")
@@ -164,16 +164,10 @@ fun Model.extractFunctionDecl(moduleName : String, funcName : String, repos : Re
         System.err.println("function not found: ${moduleName}.${funcDecl}")
         exitProcess(-1)
     }
-
-    if(    funcDecl.params.any { !repos.isAllowedType(it.type.toString()) }
-        ||  !repos.isAllowedType(funcDecl.type.toString())  ){
-        System.err.println("parameters and return types with non-Int type not supported")
-        exitProcess(-1)
-    }
     return funcDecl
 }
 
-fun Model.extractClassDecl(moduleName : String, className : String, repos : Repository) : ClassDecl {
+fun Model.extractClassDecl(moduleName: String, className: String) : ClassDecl {
     val moduleDecl = moduleDecls.firstOrNull { it.name == moduleName }
     if(moduleDecl == null){
         System.err.println("module not found: $moduleName")
@@ -185,11 +179,6 @@ fun Model.extractClassDecl(moduleName : String, className : String, repos : Repo
         exitProcess(-1)
     }
 
-//    if(    classDecl.params.any { !repos.isAllowedType(it.type.toString()) }
-//        || classDecl.fields.any { !repos.isAllowedType(it.type.toString()) } ){
-//        System.err.println("fields with non-Int type not supported")
-//        exitProcess(-1)
-//    }
     return classDecl
 }
 

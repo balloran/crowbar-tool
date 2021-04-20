@@ -11,14 +11,14 @@ import org.abs_models.frontend.typechecker.Type
 //todo: make some less intrusive restrictions
 object FreshGenerator {
     private var count = 0
-    fun getFreshProgVar(dType : Type, isFuture:Boolean=false) : ProgVar {
-        return ProgVar("pv_" + (count++), dType.qualifiedName, dType)
+    fun getFreshProgVar(dType : Type) : ProgVar {
+        return ProgVar("pv_" + (count++), dType)
     }
     fun getFreshPP() : PP {
         return PPId(count++)
     }
     fun getFreshFuture(dType : Type) : ProgVar {
-        return ProgVar("fut_"+ (count++), dType.qualifiedName, ADTRepos.model!!.getFutType(dType))
+        return ProgVar("fut_"+ (count++), ADTRepos.model!!.getFutType(dType))
     }
     fun getFreshFunction() : Function {
         return Function("f_"+ (count++), emptyList())

@@ -16,7 +16,7 @@ class DatatypeTest : StringSpec({
             smtPath = smt
 
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
-            val classDecl = model.extractClassDecl("DTypes", "C", repos)
+            val classDecl = model.extractClassDecl("DTypes", "C")
 
             val caseSimpleSuccess = classDecl.extractMethodNode(postInv, "caseSimpleSuccess", repos)
             executeNode(caseSimpleSuccess, repos, postInv) shouldBe true
@@ -47,7 +47,7 @@ class DatatypeTest : StringSpec({
         "$smt mixedHeapsTest"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
-            val classDecl = model.extractClassDecl("DTypes", "D", repos)
+            val classDecl = model.extractClassDecl("DTypes", "D")
 
             val mixedHeapSuccess = classDecl.extractMethodNode(postInv, "mixedHeapSuccess", repos)
             executeNode(mixedHeapSuccess, repos, postInv) shouldBe true
@@ -78,7 +78,7 @@ class DatatypeTest : StringSpec({
         "$smt dTypeAsParamObjectCreation"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
-            val classDecl = model.extractClassDecl("DTypes", "E", repos)
+            val classDecl = model.extractClassDecl("DTypes", "E")
 
             val moreFieldsThanValuesFail = classDecl.extractMethodNode(postInv, "simpleSuccess", repos)
             executeNode(moreFieldsThanValuesFail, repos, postInv) shouldBe true
@@ -87,7 +87,7 @@ class DatatypeTest : StringSpec({
         "$smt dTypeFuncTest"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypes.abs")))
-            val classDecl = model.extractClassDecl("DTypes", "D", repos)
+            val classDecl = model.extractClassDecl("DTypes", "D")
 
             val trivialFuncSuccess = classDecl.extractMethodNode(postInv, "trivialFuncSuccess", repos)
             executeNode(trivialFuncSuccess, repos, postInv) shouldBe true
@@ -102,7 +102,7 @@ class DatatypeTest : StringSpec({
         "$smt simpleDataTypesParams"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypesparams.abs")))
-            val classDecl = model.extractClassDecl("DTypesPar", "C", repos)
+            val classDecl = model.extractClassDecl("DTypesPar", "C")
 
             val constReturnSuccess = classDecl.extractMethodNode(postInv, "constReturnSuccess", repos)
             executeNode(constReturnSuccess, repos, postInv) shouldBe true
@@ -152,7 +152,7 @@ class DatatypeTest : StringSpec({
         "$smt complexDataTypesParams"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/datatypesparams.abs")))
-            val classDecl = model.extractClassDecl("DTypesPar", "D", repos)
+            val classDecl = model.extractClassDecl("DTypesPar", "D")
 
             val parametricParamSuccess = classDecl.extractMethodNode(postInv, "parametricParamSuccess", repos)
             executeNode(parametricParamSuccess, repos, postInv) shouldBe true
@@ -185,7 +185,7 @@ class DatatypeTest : StringSpec({
         "$smt functors"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/functors.abs")))
-            val classDecl = model.extractClassDecl("Functors", "C", repos)
+            val classDecl = model.extractClassDecl("Functors", "C")
 
             val trivialSuccess = classDecl.extractMethodNode(postInv, "trivialSuccess", repos)
             executeNode(trivialSuccess, repos, postInv) shouldBe true
@@ -233,7 +233,7 @@ class DatatypeTest : StringSpec({
         "$smt functors_fields"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/functors.abs")))
-            val classDecl = model.extractClassDecl("Functors", "D", repos)
+            val classDecl = model.extractClassDecl("Functors", "D")
 
             val simpleOldSuccess = classDecl.extractMethodNode(postInv, "simpleOldSuccess", repos)
             executeNode(simpleOldSuccess, repos, postInv) shouldBe true
@@ -262,7 +262,7 @@ class DatatypeTest : StringSpec({
         "$smt valueofDataTypes"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/valueofDataTypes.abs")))
-            val classDecl = model.extractClassDecl("Values", "C", repos)
+            val classDecl = model.extractClassDecl("Values", "C")
 
             val iNode = classDecl.extractInitialNode(postInv)
             executeNode(iNode, repos, postInv) shouldBe true

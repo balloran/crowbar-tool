@@ -31,7 +31,7 @@ fun translateABSExpToSymExpr(input: Exp, returnType: Type) : Expr {
                 input.contextDecl.locallookupVarOrFieldName(input.name, true).type
             } else
                 input.type
-            Field(input.name + "_f", type.qualifiedName,type)
+            Field(input.name + "_f",type)
         }
         is IntLiteral -> Const(input.content)
         is GetExp          -> readFut(translateABSExpToSymExpr(input.pureExp, returnType))
@@ -45,10 +45,10 @@ fun translateABSExpToSymExpr(input: Exp, returnType: Type) : Expr {
                 ReturnVar(returnType.qualifiedName,returnType)
             } else {
                 if (input.type.isFutureType) {
-                    ProgVar(input.name, (input.type as DataTypeType).getTypeArg(0).qualifiedName, input.type)
+                    ProgVar(input.name, input.type)
                 }
                 else
-                    ProgVar(input.name, input.type.qualifiedName, input.type)
+                    ProgVar(input.name, input.type)
             }
         }
         is Binary -> {
@@ -154,7 +154,7 @@ fun translateABSStmtToSymStmt(input: Stmt?) : org.abs_models.crowbar.data.Stmt {
                 }
         }
         is VarDeclStmt -> {
-            val loc = ProgVar(input.varDecl.name, input.varDecl.type.qualifiedName, input.varDecl.type)
+            val loc = ProgVar(input.varDecl.name, input.varDecl.type)
             return when(val exp = input.varDecl.initExp ?: NullExp()) {
                 is GetExp       -> SyncStmt(loc, translateABSExpToSymExpr(exp, returnType))
                 is NewExp       -> AllocateStmt(loc, translateABSExpToSymExpr(exp, returnType))
@@ -164,10 +164,9 @@ fun translateABSStmtToSymStmt(input: Stmt?) : org.abs_models.crowbar.data.Stmt {
             }
         }
         is AssignStmt -> {
-            val loc:Location = if(input.varNoTransform is FieldUse) Field(input.varNoTransform.name+"_f", input.varNoTransform.type.qualifiedName,input.varNoTransform.type)
+            val loc:Location = if(input.varNoTransform is FieldUse) Field(input.varNoTransform.name+"_f",input.varNoTransform.type)
                                else ProgVar(
                 input.varNoTransform.name,
-                input.varNoTransform.type.qualifiedName,
                 input.varNoTransform.type
             )
             return when(val exp = input.valueNoTransform) {
@@ -216,7 +215,7 @@ fun desugaring(loc: Location, type: Type, syncCall: SyncCall, returnType :Type) 
     if(syncCall.callee is ThisExp)
         return SyncCallStmt(loc, calleeExpr, callExpr as SyncCallExpr)
 
-    val fut = FreshGenerator.getFreshProgVar(type,true)
+    val fut = FreshGenerator.getFreshProgVar(type)
     val callStmt = CallStmt(fut, calleeExpr, callExpr as CallExpr)
     val syncStmt = SyncStmt(loc, readFut(fut))
     return SeqStmt(callStmt, syncStmt)
@@ -236,8 +235,8 @@ fun translateABSGuardToSymExpr(input: Guard, returnType: Type) : Expr =
 
 fun translateABSPatternToSymExpr(pattern : Pattern, overrideType : Type, returnType:Type) : Expr =
     when (pattern) {
-        is PatternVarUse -> ProgVar(pattern.name, pattern.type.qualifiedName, pattern.type)
-        is PatternVar -> ProgVar(pattern.`var`.name, pattern.type.qualifiedName, pattern.type)
+        is PatternVarUse -> ProgVar(pattern.name, pattern.type)
+        is PatternVar -> ProgVar(pattern.`var`.name, pattern.type)
         is LiteralPattern -> translateABSExpToSymExpr(pattern.literal, returnType)
         is UnderscorePattern ->  FreshGenerator.getFreshProgVar(overrideType)
         is ConstructorPattern -> DataTypeExpr(typeWithModule(pattern.constructor, pattern.moduleDecl.name),pattern.type.qualifiedName,pattern.type,pattern.params.map { translateABSPatternToSymExpr(it,it.inhType, returnType) })

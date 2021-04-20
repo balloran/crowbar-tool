@@ -14,7 +14,7 @@ class OldTest : StringSpec({
         "$smt trivialOld"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
-            val classDecl = model.extractClassDecl("Old", "OldC", repos)
+            val classDecl = model.extractClassDecl("Old", "OldC")
 
             val trivialSuccess = classDecl.extractMethodNode(postInv,"trivialSuccess", repos)
             executeNode(trivialSuccess, repos, postInv) shouldBe true
@@ -29,7 +29,7 @@ class OldTest : StringSpec({
         "$smt simpleOld"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
-            val classDecl = model.extractClassDecl("Old", "OldC", repos)
+            val classDecl = model.extractClassDecl("Old", "OldC")
 
             val simpleSuccess = classDecl.extractMethodNode(postInv,"simpleSuccess", repos)
             executeNode(simpleSuccess, repos, postInv) shouldBe true
@@ -42,7 +42,7 @@ class OldTest : StringSpec({
         "$smt booleanOld"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
-            val classDecl = model.extractClassDecl("Old", "OldC", repos)
+            val classDecl = model.extractClassDecl("Old", "OldC")
 
             val booleanValSuccess = classDecl.extractMethodNode(postInv,"booleanValSuccess", repos)
             executeNode(booleanValSuccess, repos, postInv) shouldBe true
@@ -54,7 +54,7 @@ class OldTest : StringSpec({
         "$smt predicateOld"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
-            val classDecl = model.extractClassDecl("Old", "OldC", repos)
+            val classDecl = model.extractClassDecl("Old", "OldC")
 
             val predicateSimpleSuccess = classDecl.extractMethodNode(postInv,"predicateSimpleSuccess", repos)
             executeNode(predicateSimpleSuccess, repos, postInv) shouldBe true
@@ -76,7 +76,7 @@ class OldTest : StringSpec({
         "$smt ifOld"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
-            val classDecl = model.extractClassDecl("Old", "OldC", repos)
+            val classDecl = model.extractClassDecl("Old", "OldC")
 
             val oldIfSuccess = classDecl.extractMethodNode(postInv,"oldIfSuccess", repos)
             executeNode(oldIfSuccess, repos, postInv) shouldBe true
@@ -86,7 +86,7 @@ class OldTest : StringSpec({
         "$smt awaitOld"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
-            val classDecl = model.extractClassDecl("Old", "OldC", repos)
+            val classDecl = model.extractClassDecl("Old", "OldC")
 
             val awaitSuccess = classDecl.extractMethodNode(postInv,"awaitSuccess", repos)
             executeNode(awaitSuccess, repos, postInv) shouldBe true
@@ -99,7 +99,7 @@ class OldTest : StringSpec({
         "$smt whileOld"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/old.abs")))
-            val classDecl = model.extractClassDecl("Old", "OldC", repos)
+            val classDecl = model.extractClassDecl("Old", "OldC")
 
             val predicateWhileSuccess = classDecl.extractMethodNode(postInv,"predicateWhileSuccess", repos)
             executeNode(predicateWhileSuccess, repos, postInv) shouldBe true
@@ -109,7 +109,7 @@ class OldTest : StringSpec({
         "$smt propOld"{
             smtPath = smt
             val (model, repos) = load(listOf(Paths.get("src/test/resources/oldprop.abs")))
-            val classDecl = model.extractClassDecl("M", "C", repos)
+            val classDecl = model.extractClassDecl("M", "C")
 
             var ss = classDecl.extractMethodNode(postInv,"m", repos)
             executeNode(ss, repos, postInv) shouldBe true

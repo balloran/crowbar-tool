@@ -252,8 +252,7 @@ fun filterHeapTypes(term : Term, dtype: String, concrType:Type?=null) : String{
         if(term.name == "store") {
 
 
-            if ((concrType!=null && (term.params[1] as Field).concrType == concrType)
-                || ADTRepos.libPrefix((term.params[1] as Field).dType) == concrTypeStr)
+            if ((concrType!=null && (term.params[1] as Field).concrType == concrType))
                 return "(store " +
                         "${filterHeapTypes(term.params[0], concrTypeStr,concrType)} " +
                         "${term.params[1].toSMT()} " +
@@ -269,7 +268,7 @@ fun filterHeapTypes(term : Term, dtype: String, concrType:Type?=null) : String{
 
     }
     // Rewrite generic heap variables to correctly typed sub-heap variables
-    else if(term is ProgVar && term.dType == "Heap"){
+    else if(term is ProgVar && term.concrType is HeapType){
         return when (term) {
             is OldHeap -> smtdType.old
             is LastHeap -> smtdType.last
@@ -292,7 +291,7 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
         if(name == "valueOf") {
             if(params[0] is ProgVar)
                 return "(valueOf_${
-                    ADTRepos.libPrefix((params[0] as ProgVar).dType).replace(".", "_")} ${(params[0] as ProgVar).name})"
+                    ADTRepos.libPrefix(((params[0] as ProgVar).concrType as DataTypeType).typeArgs[0].qualifiedName).replace(".", "_")} ${(params[0] as ProgVar).name})"
             else
                 throw Exception("parameter of \"valueOf\" expects Progvar or Future, actual value: ${params[0]}")
         }
@@ -300,7 +299,7 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
             val field =  (params[1] as Field)
             val heapType = ADTRepos.libPrefix(
                 if(field.concrType.isUnknownType)
-                    field.dType
+                    throw Exception("selecting UnknownType")
                 else
                     (params[1] as Field).concrType.toString())
 
@@ -330,7 +329,7 @@ fun isUnboundGeneric(dataTypeConst:DataTypeConst) : Boolean = isGeneric(dataType
 fun isBoundGeneric(type : Type?) : Boolean = isGeneric(type) && !(type as DataTypeType).toString().contains("Unbound Type")
 fun isBoundGeneric(dataTypeConst:DataTypeConst) : Boolean = isGeneric(dataTypeConst.concrType) && !dataTypeConst.toString().contains("Unbound Type")
 
-data class DataTypeConst(val name : String, val dType : String, val concrType: Type?, val params : List<Term> = emptyList()) : Term {
+data class DataTypeConst(val name : String, val concrType: Type?, val params : List<Term> = emptyList()) : Term {
 
     init{
         if( name == "ABS.StdLib.Cons" && params.size < 2)
@@ -338,7 +337,7 @@ data class DataTypeConst(val name : String, val dType : String, val concrType: T
     }
 
     override fun prettyPrint(): String {
-        return name + ":" + dType+"("+params.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
+        return name + ":" + concrType!!.qualifiedName+"("+params.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
 
@@ -549,7 +548,7 @@ data class Is(val typeName : String, val term : Term) :Formula{
 
 data class Exists(val params :List<ProgVar>, val formula: Formula) : Formula{
     override fun toSMT(indent:String): String {
-        return "(exists (${params.joinToString(" ") { "(${it.name} ${ADTRepos.libPrefix(it.dType)})" }}) ${formula.toSMT()})"
+        return "(exists (${params.joinToString(" ") { "(${it.name} ${ADTRepos.libPrefix(it.concrType.qualifiedName)})" }}) ${formula.toSMT()})"
     }
 }
 
@@ -585,9 +584,9 @@ data class HeapType(val name: String) : Type() {
 }
 
 
-object Heap : ProgVar("heap", "Heap", HeapType("Heap"))
-object OldHeap : ProgVar("old", "Heap", HeapType("Heap"))
-object LastHeap : ProgVar("last", "Heap", HeapType("Heap"))
+object Heap : ProgVar("heap",  HeapType("Heap"))
+object OldHeap : ProgVar("old",  HeapType("Heap"))
+object LastHeap : ProgVar("last",  HeapType("Heap"))
 
 fun store(field: Field, value : Term) : Function = Function("store", listOf(Heap, field, value))
 fun select(field : Field, heap: ProgVar = Heap) : Function = Function("select", listOf(heap, field))
@@ -618,7 +617,7 @@ fun exprToTerm(input : Expr, specialKeyword : String="NONE") : Term {//todo: add
                 Function(input.op, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
         }
         is DataTypeExpr -> {
-            DataTypeConst(input.name, input.dType, input.concrType, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
+            DataTypeConst(input.name, input.concrType, input.e.map { ex -> exprToTerm(ex, specialKeyword) })
         }
         is CaseExpr -> {
             val match =exprToTerm(input.match)
@@ -683,7 +682,7 @@ fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicEleme
             return ChainUpdate(subst(input.left, map) as UpdateElement, subst(input.right, map) as UpdateElement)
         }
 //        is DataTypeConst -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
-        is DataTypeConst -> return DataTypeConst(input.name, input.dType, input.concrType, input.params.map { p -> subst(p, map) as Term })
+        is DataTypeConst -> return DataTypeConst(input.name, input.concrType, input.params.map { p -> subst(p, map) as Term })
 //        is Case -> return Case(subst(input.match, map) as Term, input.expectedType, input.branches.map { p -> subst(p, map) as BranchTerm }, input.freeVars)
         is Function -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
         is Predicate -> return Predicate(input.name, input.params.map { p -> subst(p, map) as Term })
@@ -730,9 +729,9 @@ fun boundGeneric(bindingType: Type,  unboundTerm:Term) : Term{
     if(unboundTerm is Function)
         return unboundTerm
     if(unboundTerm is ProgVar)
-        return ProgVar(unboundTerm.name, unboundTerm.dType, bindingType)
+        return ProgVar(unboundTerm.name, bindingType)
     if(unboundTerm is Field)
-        return Field(unboundTerm.name, unboundTerm.dType, bindingType)
+        return Field(unboundTerm.name, bindingType)
     val bindingTypeHasArgs = bindingType is DataTypeType && bindingType.hasTypeArgs()
     val unboundTermHasArgs = unboundTerm is DataTypeConst && unboundTerm.concrType is DataTypeType && unboundTerm.concrType.hasTypeArgs()
     if(bindingTypeHasArgs != unboundTermHasArgs || (bindingType as DataTypeType).numTypeArgs() != ((unboundTerm as DataTypeConst).concrType as DataTypeType).numTypeArgs())
@@ -749,7 +748,7 @@ fun boundGeneric(bindingType: Type,  unboundTerm:Term) : Term{
     }
 
 
-    val res = DataTypeConst(unboundTerm.name,bindingType.qualifiedName,bindingType,bindingTypeArgs.zip(unboundTerm.params).map { boundGeneric(it.first, it.second) })
+    val res = DataTypeConst(unboundTerm.name,bindingType,bindingTypeArgs.zip(unboundTerm.params).map { boundGeneric(it.first, it.second) })
 
     return res
 }

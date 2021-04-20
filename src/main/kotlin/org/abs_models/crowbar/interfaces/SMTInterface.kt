@@ -6,9 +6,7 @@ import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.main.ADTRepos.libPrefix
 import org.abs_models.crowbar.main.ADTRepos.setUsedHeaps
 import org.abs_models.crowbar.types.booleanFunction
-import org.abs_models.crowbar.types.getReturnType
 import org.abs_models.frontend.typechecker.DataTypeType
-import org.abs_models.frontend.typechecker.Type
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -65,7 +63,7 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
 //
 //    }.joinToString("\n")
 
-    setUsedHeaps(fields.map{libPrefix(it.dType)}.toSet())
+    setUsedHeaps(fields.map{libPrefix(it.concrType.qualifiedName)}.toSet())
 
     ((pre.iterate { it is DataTypeConst && isConcreteGeneric(it.concrType!!) } + post.iterate { it is DataTypeConst && isConcreteGeneric(it.concrType!!) }) as Set<DataTypeConst>).map {
         ADTRepos.addGeneric(it.concrType!! as DataTypeType) }
@@ -83,7 +81,8 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     val wildcards: String = wildCardsConst.map { FunctionDeclSMT(it.key,it.value).toSMT("\n\t") }.joinToString("") { it }
     val fieldsDecl = fields.joinToString("\n\t"){ "(declare-const ${it.name} Field)"}
     val varsDecl = vars.joinToString("\n\t"){"(declare-const ${it.name} ${
-        if(it.concrType.isUnknownType) libPrefix(it.dType) 
+        if(it.concrType.isUnknownType)
+            throw Exception("Var with unknown type: ${it.name}")
         else if (isConcreteGeneric(it.concrType) && !it.concrType.isFutureType) {
             ADTRepos.addGeneric(it.concrType as DataTypeType)
             genericTypeSMTName(it.concrType)
@@ -104,7 +103,7 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     }}) Int)" }
     val funcsDecl = funcs.joinToString("\n") { "(declare-const ${it.name} Int)"}
     var fieldsConstraints = ""
-    fields.forEach { f1 -> fields.minus(f1).forEach{ f2 -> if(libPrefix(f1.dType) == libPrefix(f2.dType)) fieldsConstraints += "(assert (not ${Eq(f1,f2).toSMT()}))" } } //??
+    fields.forEach { f1 -> fields.minus(f1).forEach{ f2 -> if(libPrefix(f1.concrType.qualifiedName) == libPrefix(f2.concrType.qualifiedName)) fieldsConstraints += "(assert (not ${Eq(f1,f2).toSMT()}))" } } //??
 
 
     return """

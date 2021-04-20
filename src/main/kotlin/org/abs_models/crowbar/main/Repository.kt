@@ -16,7 +16,7 @@ object ADTRepos {
 
 	var model:Model? = null
 
-	val dtypeMap: MutableMap<String,  HeapDecl> = mutableMapOf()
+	private val dtypeMap: MutableMap<String,  HeapDecl> = mutableMapOf()
 	val dTypesDecl = mutableListOf<DataTypeDecl>()
 	val primitiveDtypesDecl = mutableListOf<DataTypeDecl>()
 
@@ -42,7 +42,7 @@ object ADTRepos {
 			"ABS.StdLib.HTTPCallableAnnotation")
 
 
-	fun addUsedHeap(heap :String){
+	private fun addUsedHeap(heap :String){
 		usedHeaps.add(heap)
 	}
 
@@ -51,11 +51,17 @@ object ADTRepos {
 		usedHeaps.addAll(usedHeapsPar)
 	}
 
-	fun isBuildInType(type : Type) :Boolean{
+	private fun isBuildInType(type : Type) :Boolean{
 		return type.isBoolType || type.isIntType
 	}
 
-	fun getSMTDType(dType : String) : HeapDecl = dtypeMap[libPrefix(dType)]!!
+	fun getSMTDType(dType : String) : HeapDecl =
+		try {
+		dtypeMap[libPrefix(dType)]!!
+	}catch ( e:KotlinNullPointerException){
+		System.err.println("Type $dType not supported")
+			exitProcess(-1)
+	}
 	fun getDeclForType(dType: String) : DataTypeDecl = dTypesDecl.find{ it.qualifiedName == dType }!!
 
 	fun getAllTypePrefixes() : Set<String> = dtypeMap.keys
@@ -169,7 +175,7 @@ object FunctionRepos{
     fun isKnown(str: String) = known.containsKey(str)
     fun get(str: String) = known.getValue(str)
 	fun hasContracts() = known.filter { hasContract(it.value) }.any()
-	fun contracts() = known.filter { hasContract(it.value) }
+	private fun contracts() = known.filter { hasContract(it.value) }
     override fun toString() : String {
 	    val contracts = contracts()
 	    val direct = known.filter { !hasContract(it.value) }
@@ -272,7 +278,7 @@ object FunctionRepos{
 	}
 
 
-	fun init(model: Model, repos: Repository) {
+	fun init(model: Model) {
 		known.clear()
 		genericFunctions.clear()
 		ADTRepos.clearConcreteGenerics()
@@ -280,27 +286,15 @@ object FunctionRepos{
 			if(mDecl.name.startsWith("ABS.")) continue
 			for (decl in mDecl.decls){
 				if(decl is FunctionDecl){
-					initFunctionDef(decl, repos)
+					initFunctionDef(decl)
 				}
 			}
 		}
 	}
 
-	private fun initFunctionDef(fDecl: FunctionDecl, repos: Repository) {
-		val fName = fDecl.qualifiedName
-		val params = fDecl.params
-//		if(params.find { !repos.isAllowedType(it.type.toString()) && !repos.isAllowedType(it.type.toString()) } != null){
-//			System.err.println("functions with not supported types: ${params.map { it.type }}")
-//
-//			exitProcess(-1)
-//		}
-//		val fType = fDecl.type
-//		if(!repos.isAllowedType(fType.toString())) {
-//			System.err.println("parameters with not supported type: $fType")
-//			exitProcess(-1)
-//		}
+	private fun initFunctionDef(fDecl: FunctionDecl) {
 		if(fDecl.functionDef is ExpFunctionDef){
-			known[fName] = fDecl
+			known[fDecl.qualifiedName] = fDecl
 		} else {
 			System.err.println("builtin types not supported")
 			exitProcess(-1)
