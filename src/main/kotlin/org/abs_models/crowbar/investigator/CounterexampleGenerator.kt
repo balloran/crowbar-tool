@@ -1,33 +1,12 @@
 package org.abs_models.crowbar.investigator
 
-import java.io.File
-import org.abs_models.crowbar.data.Field
-import org.abs_models.crowbar.data.Formula
-import org.abs_models.crowbar.data.Heap
-import org.abs_models.crowbar.data.Location
-import org.abs_models.crowbar.data.OldHeap
-import org.abs_models.crowbar.data.ProgVar
-import org.abs_models.crowbar.data.Term
-import org.abs_models.crowbar.data.apply
-import org.abs_models.crowbar.data.deupdatify
-import org.abs_models.crowbar.data.filterHeapTypes
-import org.abs_models.crowbar.data.specialHeapKeywords
+import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.interfaces.generateSMT
 import org.abs_models.crowbar.interfaces.plainSMTCommand
-import org.abs_models.crowbar.main.ADTRepos
-import org.abs_models.crowbar.main.FunctionRepos
-import org.abs_models.crowbar.main.Verbosity
-import org.abs_models.crowbar.main.output
-import org.abs_models.crowbar.main.tmpPath
-import org.abs_models.crowbar.tree.InfoNode
-import org.abs_models.crowbar.tree.InfoObjAlloc
-import org.abs_models.crowbar.tree.LeafInfo
-import org.abs_models.crowbar.tree.LogicNode
-import org.abs_models.crowbar.tree.NoInfo
-import org.abs_models.crowbar.tree.NodeInfo
-import org.abs_models.crowbar.tree.SymbolicNode
-import org.abs_models.crowbar.tree.SymbolicTree
+import org.abs_models.crowbar.main.*
+import org.abs_models.crowbar.tree.*
 import org.abs_models.frontend.typechecker.Type
+import java.io.File
 
 object CounterexampleGenerator {
 
@@ -330,7 +309,7 @@ object CounterexampleGenerator {
     }
 
     private fun renderDataTypeDefs(): String {
-        val definedDataTypes = ADTRepos.dTypesDecl
+        val definedDataTypes = ADTRepos.dTypesDecl.filter { !it.moduleName().startsWith("ABS") }
         // TODO: Filter unused but defined data types
         val defs = definedDataTypes.map {
             val constructors = it.dataConstructorList.map {
