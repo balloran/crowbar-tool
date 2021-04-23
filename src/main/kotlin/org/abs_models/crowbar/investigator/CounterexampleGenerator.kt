@@ -1,16 +1,17 @@
 package org.abs_models.crowbar.investigator
 
+import java.io.File
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.interfaces.generateSMT
 import org.abs_models.crowbar.interfaces.plainSMTCommand
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.tree.*
 import org.abs_models.frontend.typechecker.Type
-import java.io.File
 
 object CounterexampleGenerator {
 
     private var fileIndex = 1
+    private var usedTypes: Set<String> = setOf()
 
     fun investigateAll(node: SymbolicNode, snippetID: String) {
         val uncloseable = node.collectLeaves().filter { it is LogicNode && !it.evaluate() }.map { it as LogicNode }
@@ -121,7 +122,6 @@ object CounterexampleGenerator {
 
         // "heap", "old", "last", function names etc do not reference program vars
         val functionNames = FunctionRepos.known.map { it.key.replace(".", "-") }
-        val usedTypes = ADTRepos.getUsedTypePrefixes()
         val allTypes = ADTRepos.getAllTypePrefixes()
         val reservedVarNameStems = listOf("heap", "Something") + specialHeapKeywords.values.map { it.name }
         val reservedVarNames = allTypes.map { tpe -> reservedVarNameStems.map { stem -> "${stem}_${tpe.replace(".","_")}" } }.flatten() + functionNames + listOf("Unit")
@@ -129,6 +129,8 @@ object CounterexampleGenerator {
         // Collect types of fields and variables from leaf node
         val fieldTypes = ((leaf.ante.iterate { it is Field } + leaf.succ.iterate { it is Field }) as Set<Field>).associate { Pair(it.name, it.concrType) }
         val varTypes = ((leaf.ante.iterate { it is ProgVar } + leaf.succ.iterate { it is ProgVar }) as Set<ProgVar>).filter { !reservedVarNames.contains(it.name) }.associate { Pair(it.name, it.concrType) }
+
+        usedTypes = ADTRepos.getUsedTypePrefixes() + fieldTypes.values.map { ADTRepos.libPrefix(it.qualifiedName) }
 
         // Collect conjunctively joined sub-obligation parts
         val subObligationMap = collectSubObligations(deupdatify(leaf.succ) as Formula).associateBy { it.toSMT() }
@@ -160,6 +162,7 @@ object CounterexampleGenerator {
         }
 
         // Get evaluations of all collected expressions (heap states after anon, new objects, future values, etc)
+        // Side effect: This (partially?) kills usedTypes in ADTRepos, so we'll only use our saved copy
         val smtRep = generateSMT(leaf.ante, leaf.succ, modelCmd = baseModel)
         val solverResponse = plainSMTCommand(smtRep)!!
 
@@ -175,7 +178,7 @@ object CounterexampleGenerator {
         val constants = parsed.filterIsInstance<ModelConstant>()
         val vars = constants.filter { !(it.name matches Regex("(.*_f|fut_.*|NEW\\d.*|(f)?_(\\d)+|)") || reservedVarNames.contains(it.name)) }
         val fields = constants.filter { it.name matches Regex(".*_f") }
-        val futLookup = constants.filter { it.name.startsWith("fut_") }.associate { Pair((it.value as MvInteger).value, it.name) }
+        val futLookup = constants.filter { it.name.startsWith("fut_") }.associate { Pair((it.value as MvFuture).id, it.name) }
 
         val initialAssignments = mutableListOf<Pair<Location, ModelValue>>()
 
@@ -212,7 +215,6 @@ object CounterexampleGenerator {
 
         // This got a bit tricky with the introduction of multiple sub-heaps
         // We first parse the typed versions of all heap expressions for all used types
-        val usedTypes = ADTRepos.getUsedTypePrefixes()
         val parsedHeaps = usedTypes.map { Pair(it, ModelParser.parseArrayValues()) }.toMap()
 
         // And then find the correct value for every field in every heap state
@@ -337,7 +339,7 @@ object CounterexampleGenerator {
 class Model(
     val initState: List<Pair<Location, ModelValue>>,
     val heapMap: Map<String, List<Pair<Field, ModelValue>>>,
-    private val futLookup: Map<Int, String>,
+    private val futLookup: Map<String, String>,
     val objLookup: Map<Int, String>,
     val smtExprs: Map<String, ModelValue>,
     val subObligations: Map<Formula, Boolean>,
@@ -345,7 +347,7 @@ class Model(
 ) {
     // The SMT solver may reference futures that were not defined in the program
     // we'll mark these with a questionmark and give the underlying integer id from the solver
-    fun futNameById(id: Int) = if (futLookup.containsKey(id)) futLookup[id]!! else "fut_?($id)"
+    fun futNameById(id: String) = if (futLookup.containsKey(id)) futLookup[id]!! else "fut_?($id)"
 
     val oldHeap: List<Pair<Field, ModelValue>>
         get() = heapMap[oldHeapKey] ?: listOf()

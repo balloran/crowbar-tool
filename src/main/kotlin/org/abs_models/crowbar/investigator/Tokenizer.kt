@@ -19,6 +19,10 @@ object Tokenizer {
             i += 1
 
             when {
+                char == ";" && code[i] == ';' -> {
+                    while (code[i] != '\n')
+                        i += 1
+                }
                 char == "(" -> tokens.add(LParen())
                 char == ")" -> tokens.add(RParen())
                 char == "\"" -> {

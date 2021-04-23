@@ -363,7 +363,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         val dType = ctype.qualifiedName
         return when {
             dType == "ABS.StdLib.Int" -> (value as MvInteger).value.toString()
-            dType == "ABS.StdLib.Fut" -> "\"${model.futNameById((value as MvInteger).value)}\""
+            dType == "ABS.StdLib.Fut" -> "\"${model.futNameById((value as MvFuture).id)}\""
             dType == "ABS.StdLib.Bool" -> if ((value as MvBoolean).value) "True" else "False"
             dType == "<UNKNOWN>" -> "\"unknownType($value)\""
             isDataType(dType) -> (value as MvDataType).toString()
@@ -448,7 +448,7 @@ fun stripModulePrefix(type: String): String {
 
 fun isDataType(dType: String): Boolean {
     val prefix = ADTRepos.libPrefix(dType)
-    return prefix != "Int" && ADTRepos.getAllTypePrefixes().contains(prefix)
+    return prefix != "ABS.StdLib.Int" && prefix != "ABS.StdLib.Fut" && ADTRepos.getAllTypePrefixes().contains(prefix)
 }
 
 fun indent(text: String, level: Int, indentString: String = "\t"): String {

@@ -21,8 +21,12 @@ object ModelParser {
 
         val model = mutableListOf<ModelFunction>()
 
-        while (tokens[0] is LParen)
-            model.add(parseDefinition())
+        while (tokens[0] is LParen) {
+            if (tokens[1].toString() == "define-fun")
+                model.add(parseDefinition())
+            else
+                ignore()
+        }
 
         consume(RParen())
 
@@ -71,7 +75,7 @@ object ModelParser {
 
     private fun parseDefinition(): ModelFunction {
         consume(LParen())
-        consume(Identifier("define-fun")) // Is this always true?
+        consume(Identifier("define-fun"))
 
         val name = tokens[0].toString()
         consume()
@@ -85,7 +89,7 @@ object ModelParser {
         // Heap definitions of Array type can get complex once counterexamples reach a certain size
         // So we will only parse simple constant definitions here
         // Parsing of heaps and relevant functions is handled elsewhere
-        if (args.isEmpty() && (type == Type.INT || type == Type.COMPLEX))
+        if (args.isEmpty() && (type == Type.INT || type == Type.COMPLEX || type == Type.FUTURE))
             value = parseValue(type)
         else {
             ignore()
@@ -137,6 +141,7 @@ object ModelParser {
                 return when (typeid) {
                     "Int" -> Type.INT
                     "Bool" -> Type.BOOL
+                    "ABS.StdLib.Fut" -> Type.FUTURE
                     else -> Type.COMPLEX
                 }
             }
@@ -150,6 +155,7 @@ object ModelParser {
             Type.COMPLEX -> parseComplexTypeExp()
             Type.ARRAY -> parseArrayExp()
             Type.BOOL -> parseBoolExp()
+            Type.FUTURE -> parseFutureTypeExp()
             Type.UNKNOWN -> throw Exception("Can't parse value of unknown type")
         }
     }
@@ -268,8 +274,8 @@ object ModelParser {
     }
 
     private fun parseComplexTypeExp(): MvDataType {
-        // Simple types without parameters
         when (tokens[0]) {
+            // Simple types without parameters
             is Identifier -> {
                 val value = (tokens[0] as Identifier).spelling
                 consume()
@@ -294,6 +300,16 @@ object ModelParser {
             }
             else -> throw Exception("Expected data type value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
         }
+    }
+
+    private fun parseFutureTypeExp(): MvFuture {
+        if (tokens[0] !is Identifier)
+            throw Exception("Expected future expression but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+
+        val spelling = tokens[0].spelling
+        consume()
+
+        return MvFuture(spelling)
     }
 
     private fun parseBoolExp(): MvBoolean {
@@ -427,6 +443,10 @@ data class MvDataType(val value: String, val params: List<ModelValue> = listOf()
     }
 }
 
+data class MvFuture(val id: String) : ModelValue {
+    override fun toString() = id
+}
+
 enum class Type() {
-    INT, BOOL, ARRAY, COMPLEX, UNKNOWN
+    INT, BOOL, ARRAY, COMPLEX, FUTURE, UNKNOWN
 }
