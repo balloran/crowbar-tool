@@ -1,0 +1,58 @@
+module CaseStudy;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+
+interface Sensor {
+  Int getReading();
+}
+
+class Reader {
+  Int maxTemp = 0;
+
+  [Spec: Ensures(this.maxTemp >= old(this.maxTemp))]
+  Unit read(Sensor s) {
+    Fut<Int> reading = s!getReading();
+    await reading?;
+    Int temp = reading.get;
+    if(temp > this.maxTemp) {
+      this.maxTemp = temp;
+    }
+  }
+
+  [Spec: Requires(s != null)]
+  [Spec: Ensures(this.maxTemp == old(this.maxTemp))]
+  Int readAvg(Sensor s, Int sample) {
+    Int i = 0;
+    Int sum = 0;
+
+    [Spec: WhileInv(s != null)]
+    while(i < sample) {
+      i = i + 1;
+      Fut<Int> reading = s!getReading();
+      await reading?;
+      Int value = reading.get;
+      sum = sum + value;
+    }
+
+    Int avg = this.divide(sum, sample);
+    return avg;
+  }
+
+  [Spec: Requires(b > 0)]
+  [Spec: Ensures(result * b <= a && (result + 1) * a > b)]
+  [Spec: Ensures(this.maxTemp == old(this.maxTemp))]
+  Int divide(Int a, Int b) {
+    Int res = 0;
+    Int remainder = a;
+
+    [Spec: WhileInv(res * b + remainder == a)]
+    [Spec: WhileInv(this.maxTemp == old(this.maxTemp))]
+    while(remainder >= b) {
+      remainder = remainder - b;
+      res = res + 1;
+    }
+    return res;
+  }
+}
+
+{}
