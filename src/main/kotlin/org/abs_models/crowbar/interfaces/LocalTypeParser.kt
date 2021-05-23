@@ -187,7 +187,6 @@ class LocalTypeFormulaConverter(context: Pair<Type, Map<String, Type>>) : LocalS
             text == "result" -> ReturnVar(methodReturnType.qualifiedName, methodReturnType)
             text matches Regex("[0-9]+") -> Const(text)
             dataTypeConstructors.containsKey(text) -> buildDataType(text)
-            // TODO: This does not support data types, and ProgVars are only kind of supported - sometimes the unknown type causes issues
             else -> ProgVar(text, UnknownType.INSTANCE)
         }
     }

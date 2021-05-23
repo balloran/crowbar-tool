@@ -12,11 +12,12 @@ object CounterexampleGenerator {
 
     private var fileIndex = 1
     private var usedTypes: Set<String> = setOf()
+    var dryrun: Boolean = false
 
     fun investigateAll(node: SymbolicNode, snippetID: String) {
         val uncloseable = node.collectLeaves().filter { it is LogicNode && !it.evaluate() }.map { it as LogicNode }
 
-        // Splits in the symex tree _before_ the last full anonymization point can cause duplicate unclosed leafs
+        // Splits in the symex tree _before_ the last full anonymization point can cause duplicate unclosed leaves
         // we consider nodes with identical pre and postconditions to be redundant
         val deduped = uncloseable.distinctBy {
             deupdatify(it.ante).prettyPrint() + deupdatify(it.succ).prettyPrint()
@@ -24,14 +25,12 @@ object CounterexampleGenerator {
 
         deduped.forEach {
             val counterexample = investigateSingle(node, it, snippetID)
-            writeTestcase(counterexample, fileIndex)
-            fileIndex++
-        }
-    }
 
-    fun investigateFirst(node: SymbolicNode, snippetID: String) {
-        val uncloseable = node.collectLeaves().first { it is LogicNode && !it.evaluate() } as LogicNode
-        investigateSingle(node, uncloseable, snippetID)
+            if(!dryrun) {
+                writeTestcase(counterexample, fileIndex)
+                fileIndex++
+            }
+        }
     }
 
     private fun investigateSingle(node: SymbolicNode, uncloseable: LogicNode, snippetID: String): String {
