@@ -26,7 +26,7 @@ object CounterexampleGenerator {
         deduped.forEach {
             val counterexample = investigateSingle(node, it, snippetID)
 
-            if(!dryrun) {
+            if (!dryrun) {
                 writeTestcase(counterexample, fileIndex)
                 fileIndex++
             }

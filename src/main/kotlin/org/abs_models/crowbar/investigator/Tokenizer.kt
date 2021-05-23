@@ -22,7 +22,7 @@ object Tokenizer {
                 // z3 uses ;; to denote comments, cvc only uses a single ;
                 // we make sure that a stray ; somewhere doesn't break things by
                 // requiring single-; comments to start at the beginning of a line
-                char == ";" && (code[i-2] == '\n' || code[i] == ';') -> {
+                char == ";" && (code[i - 2] == '\n' || code[i] == ';') -> {
                     while (code[i] != '\n')
                         i += 1
                 }
