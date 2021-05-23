@@ -18,6 +18,7 @@ val valueOf = """
 """.trimIndent()
 val smtHeader = """
     ; static header
+    (set-option :produce-models true)
     (set-logic ALL)
     (declare-fun valueOf_Int (Int) Int)
     (declare-fun hasRole (Int String) Bool)
@@ -67,8 +68,6 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
 
     ((pre.iterate { it is DataTypeConst && isConcreteGeneric(it.concrType!!) } + post.iterate { it is DataTypeConst && isConcreteGeneric(it.concrType!!) }) as Set<DataTypeConst>).map {
         ADTRepos.addGeneric(it.concrType!! as DataTypeType) }
-
-
 
     val vars =  ((pre.iterate { it is ProgVar} + post.iterate { it is ProgVar   }) as Set<ProgVar>).filter {it.name != "heap" && it.name !in specialHeapKeywords}
     val heaps =  ((pre.iterate { it is Function } + post.iterate{ it is Function }) as Set<Function>).filter { it.name.startsWith("NEW") }
