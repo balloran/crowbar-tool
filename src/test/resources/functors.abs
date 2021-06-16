@@ -28,7 +28,7 @@ class C{
     [Spec : Ensures( result == DataA )]
     DataType caseSimpleSuccess(WrapComplexType p){
         DataType res = Default;
-        case wc(p){
+        switch (wc(p)){
             ComplexA => res = DataA;
             ComplexB => res = DataB;
             _        => skip;
@@ -40,7 +40,7 @@ class C{
     [Spec : Ensures( result == DataB )]
     DataType caseSimpleFail(WrapComplexType p){
         DataType res = Default;
-        case wc(p){
+        switch (wc(p)){
             ComplexA => res = DataA;
             ComplexB => res = DataB;
             _        => skip;
@@ -51,7 +51,7 @@ class C{
     [Spec : Ensures( result == Default )]
     DataType caseFail(WrapComplexType p){
         DataType res = Default;
-        case wc(p){
+        switch (wc(p)){
             ComplexA => res = DataA;
             ComplexB => res = DataB;
             _        => skip;

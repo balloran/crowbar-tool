@@ -7,7 +7,7 @@ class C{
     [Spec: Ensures(result != 0)] //success
     Int m1(Int i, Int j){
         Int k = 0;
-        case i {
+        switch (i) {
            0 => k = 5;
            j => k = 10;
            l => k = 15;
@@ -19,7 +19,7 @@ class C{
     [Spec: Ensures(result != 0)] //success
     Int m2(Int i, Int j){
         Int k = 0;
-        case i {
+        switch (i) {
            0 => k = 5;
             l => k = -i;
            _ => k = 1;
@@ -30,7 +30,7 @@ class C{
     [Spec: Ensures(result != 0)] //fail
     Int m3(Int i, Int j){
         Int k = 0;
-        case i {
+        switch (i) {
            1 => k = 5;
            l => k = -i;
            _ => skip;
@@ -40,7 +40,7 @@ class C{
     [Spec: Ensures(result != 0)] //success
     Int m4(Int i, Int j){
         Int k = 0;
-        case i {
+        switch (i) {
            0 => k = 5;
            _ => k = -i;
         }
@@ -50,7 +50,7 @@ class C{
     [Spec: Ensures(result != 0)] //fail
     Int m5(Int i, Int j){
         Int k = 0;
-        case i {
+        switch (i) {
            0 => k = 5;
            _ => skip;
         }
@@ -59,7 +59,7 @@ class C{
     [Spec: Ensures(result != 0)] //fail
     Int m6(Int i, Int j){
         Int k = 0;
-        case i {
+        switch (i) {
            1 => k = 5;
            _ => skip;
         }

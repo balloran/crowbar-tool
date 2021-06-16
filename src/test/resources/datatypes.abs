@@ -7,7 +7,7 @@ data TrivialType = Trivial;
 
 data Type = Type1(Type t) | Type2 (Type t, Bool) |Type3;
 
-def Type f(Type i) = if(i == Type3) then Type1(Type3) else Type3;
+def Type f(Type i) = when(i == Type3) then Type1(Type3) else Type3;
 
 
 [Spec : Requires( c != ComplexB )]
@@ -28,7 +28,7 @@ class C{
     [Spec : Ensures( result == DataA )]
     DataType caseSimpleSuccess(ComplexType p){
         DataType res = Default;
-        case p{
+        switch (p){
             ComplexA => res = DataA;
             ComplexB => res = DataB;
             _        => skip;
@@ -40,7 +40,7 @@ class C{
     [Spec : Ensures( result == DataB )]
     DataType caseSimpleFail(ComplexType p){
         DataType res = Default;
-        case p{
+        switch (p){
             ComplexA => res = DataA;
             ComplexB => res = DataB;
             _        => skip;
@@ -51,7 +51,7 @@ class C{
     [Spec : Ensures( result == Default )]
     DataType caseFail(ComplexType p){
         DataType res = Default;
-        case p{
+        switch (p){
             ComplexA => res = DataA;
             ComplexB => res = DataB;
             _        => skip;
@@ -104,7 +104,7 @@ class D (Int fi, Int i){
 
     [Spec : Ensure( i >= 0 && this.res != DataC )]
 	DataType mixedHeapSuccess(ComplexType p){
-        case (p){
+        switch (p){
             ComplexA => { i = 1; res = DataA; }
             ComplexB => { i = 2; res = DataB; }
             _        => skip;
@@ -142,7 +142,7 @@ class D (Int fi, Int i){
     [Spec : Ensures( result == ComplexB )]
     ComplexType caseReturnFunc(DataType p){
         ComplexType res = ComplexA;
-        case p{
+        switch (p){
             Default => res = complexA();
             _ => res = complexB();
         }

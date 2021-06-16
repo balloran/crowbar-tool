@@ -72,7 +72,7 @@ class C {
     [Spec : Ensures( result == Wrap(DataA) )]
     WrapType caseSimpleSuccess(ComplexType p){
         DataType res = Default;
-        case p{
+        switch (p){
             ComplexA => res = DataA;
             ComplexB => res = DataB;
             _        => skip;
@@ -84,7 +84,7 @@ class C {
     [Spec : Ensures( result == Wrap(DataB) )]
     WrapType caseSimpleFail(ComplexType p){
         DataType res = Default;
-        case p{
+        switch (p){
             ComplexA => res = DataA;
             ComplexB => res = DataB;
             _        => skip;
@@ -96,7 +96,7 @@ class C {
     [Spec : Ensures( result == Wrap(DataA) )]
     WrapType caseWrappedSuccess(ComplexWrapType p){
         DataType res = Default;
-        case p{
+        switch (p){
             ComplexWrap(ComplexA) => res = DataA;
             ComplexWrap(ComplexB) => res = DataB;
             _        => skip;
@@ -108,7 +108,7 @@ class C {
     [Spec : Ensures( result == Wrap(DataB) )]
     WrapType caseWrappedFail(ComplexWrapType p){
         DataType res = Default;
-        case p{
+        switch (p){
             ComplexWrap(ComplexA) => res = DataA;
             ComplexWrap(ComplexB) => res = DataB;
             _        => skip;
@@ -127,7 +127,7 @@ class C {
     [Spec : Ensures( result != WrapWrap(Wrap(DataA)) )]
     WrapWrapType caseWrappedWrappedSuccess(ComplexWrapType p){
         WrapType res = Wrap(Default);
-        case p{
+        switch (p){
             ComplexWrap(ComplexA) => res = Wrap(DataA);
             ComplexWrap(ComplexB) => res = Wrap(DataB);
             _        => skip;
@@ -138,7 +138,7 @@ class C {
     [Spec : Ensures( result != Wrap(Default) )]
     WrapType caseWrappedDoubleSuccess(WrapDoublePrim p){
         DataType res = Default;
-        case p{
+        switch (p){
             WrapDoubleInt(0,1) => res = DataA;
             WrapDoubleInt(1,0) => res = DataB;
             _        => res = DataC;
@@ -159,7 +159,7 @@ class D(Int fi){
     [Spec : Ensures( result == ComplexWrap(ComplexB) )]
     ComplexWrapType caseReturnWrappedFuncSuccess(DataType p){
         ComplexWrapType res = ComplexWrap(ComplexA);
-        case p{
+        switch (p){
             Default => res = ComplexWrap(complexA());
             _ => res = ComplexWrap(complexB());
         }
