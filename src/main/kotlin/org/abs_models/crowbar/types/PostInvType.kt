@@ -1,6 +1,7 @@
 package org.abs_models.crowbar.types
 
 import org.abs_models.crowbar.data.*
+import org.abs_models.crowbar.data.AssertStmt
 import org.abs_models.crowbar.data.AssignStmt
 import org.abs_models.crowbar.data.AwaitStmt
 import org.abs_models.crowbar.data.Function
@@ -531,6 +532,27 @@ object PITIf : Rule(Modality(
         return listOf(SymbolicNode(resThen, info = InfoIfThen(guardExpr)), SymbolicNode(resElse, info = InfoIfElse(guardExpr)))
     }
 }
+
+object PITAssert : Rule(Modality(
+    SeqStmt(AssertStmt(ExprAbstractVar("GUARD")), StmtAbstractVar("CONT")),
+    PostInvariantPair(FormulaAbstractVar("POST"), FormulaAbstractVar("OBJ")))) {
+
+    override fun transform(cond: MatchCondition, input : SymbolicState): List<SymbolicTree> {
+        val guardExpr = cond.map[ExprAbstractVar("GUARD")] as Expr
+        val guard = exprToForm(guardExpr)
+        val cont = cond.map[StmtAbstractVar("CONT")] as Stmt
+        val target = cond.map[FormulaAbstractVar("OBJ")] as Formula
+        val targetPost = cond.map[FormulaAbstractVar("POST")] as Formula
+
+
+        val lNode = LogicNode(input.condition, UpdateOnFormula(input.update, guard), info = NoInfo())
+
+        val sStat = SymbolicState(And(input.condition, UpdateOnFormula(input.update, guard)), input.update, Modality(cont, PostInvariantPair(targetPost,target)))
+
+        return listOf(lNode,SymbolicNode(sStat, info = NoInfo()))
+    }
+}
+
 
 object PITAwait : Rule(Modality(
         SeqStmt(AwaitStmt(ExprAbstractVar("GUARD"),PPAbstractVar("PP")), StmtAbstractVar("CONT")),

@@ -8,6 +8,7 @@ import org.abs_models.crowbar.main.FunctionRepos
 import org.abs_models.crowbar.main.extractSpec
 import org.abs_models.crowbar.rule.FreshGenerator
 import org.abs_models.frontend.ast.*
+import org.abs_models.frontend.ast.AssertStmt
 import org.abs_models.frontend.ast.AssignStmt
 import org.abs_models.frontend.ast.AwaitStmt
 import org.abs_models.frontend.ast.IfStmt
@@ -194,6 +195,7 @@ fun translateABSStmtToSymStmt(input: Stmt?) : org.abs_models.crowbar.data.Stmt {
         is SuspendStmt -> return org.abs_models.crowbar.data.AwaitStmt(Const("true"),FreshGenerator.getFreshPP()) // We should be able to model a suspend; as an await True;
         is ReturnStmt -> return org.abs_models.crowbar.data.ReturnStmt(translateABSExpToSymExpr(input.retExp, returnType))
         is IfStmt -> return org.abs_models.crowbar.data.IfStmt(translateABSExpToSymExpr(input.conditionNoTransform, returnType), translateABSStmtToSymStmt(input.then), translateABSStmtToSymStmt(input.`else`))
+        is AssertStmt -> return org.abs_models.crowbar.data.AssertStmt(translateABSExpToSymExpr(input.condition, returnType))
         is CaseStmt -> {
             var list : List<Branch> = emptyList()
             for (br in input.branchList) {

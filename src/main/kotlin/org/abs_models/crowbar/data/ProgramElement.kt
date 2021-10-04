@@ -163,6 +163,13 @@ data class SyncCallStmt(val lhs : Location, val target : Expr, val resExpr : Syn
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + target.iterate(f) + resExpr.iterate(f)
 }
 
+data class AssertStmt(val expr : Expr) : Stmt {
+    override fun prettyPrint(): String {
+        return "assert ${expr.prettyPrint()}}"
+    }
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + expr.iterate(f)
+}
+
 interface Expr : ProgramElement {
     var absExp: org.abs_models.frontend.ast.Exp?
 }

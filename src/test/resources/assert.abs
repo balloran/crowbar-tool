@@ -1,0 +1,43 @@
+module Assert;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+
+[Spec : Requires(f > 0)]
+[Spec : ObjInv(f > 0)]
+class C(Int f){
+
+[Spec : Ensures(True)]
+    Unit fail1(){
+        assert False;
+    }
+
+[Spec : Ensures(True)]
+    Unit fail2(){
+        assert f < 0;
+    }
+
+[Spec : Ensures(True)]
+    Unit fail3(){
+        this.f = 0;
+        assert this.f == 1;
+    }
+
+
+[Spec : Ensures(True)]
+    Unit success1(){
+        assert True;
+    }
+[Spec : Ensures(True)]
+    Unit success2(){
+        this.f = this.f + 1;
+        assert this.f >= 0;
+    }
+[Spec : Ensures(True)]
+    Unit success3(){
+        this.f = 0;
+        assert this.f == 0;
+        this.f = 1;
+    }
+}
+
+{}
