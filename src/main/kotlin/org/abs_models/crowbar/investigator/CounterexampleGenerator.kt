@@ -214,7 +214,7 @@ object CounterexampleGenerator {
 
         // This got a bit tricky with the introduction of multiple sub-heaps
         // We first parse the typed versions of all heap expressions for all used types
-        val parsedHeaps = usedTypes.map { Pair(it, ModelParser.parseArrayValues()) }.toMap()
+        val parsedHeaps = usedTypes.associateWith { ModelParser.parseArrayValues() }
 
         // And then find the correct value for every field in every heap state
         val heapMap = heapExpressions.mapIndexed { index, exp ->
@@ -247,9 +247,8 @@ object CounterexampleGenerator {
             return mapOf()
 
         val parsed = ModelParser.parseScalarValues().map { (it as MvInteger).value }
-        val objMap = parsed.zip(newExpressions).associate { it }
 
-        return objMap
+        return parsed.zip(newExpressions).associate { it }
     }
 
     private fun buildTestcase(
@@ -289,14 +288,16 @@ object CounterexampleGenerator {
         val stmtHeader = "// Snippet from: $snippetID\n"
         val stmtString = statements.joinToString("\n")
         val explainer = "\n// Proof failed here. Trying to show:\n"
-        val oblString = obligations.map { "// ${it.first}: ${NodeInfoRenderer.renderFormula(it.second)}" }.joinToString("\n")
+        val oblString =
+            obligations.joinToString("\n") { "// ${it.first}: ${NodeInfoRenderer.renderFormula(it.second)}" }
 
         // Evaluation of obligations by the solver can fail if the obligations contain quantifiers
         val subOblString = if (model.subObligations.isEmpty()) {
             "\n// Sub-obligation analysis unavailable - solver evaluation failed"
         } else {
             "\n// Failed to show the following sub-obligations:\n" +
-            model.subObligations.filter { !it.value }.map { "// ${NodeInfoRenderer.renderFormula(it.key)}" }.joinToString("\n")
+                    model.subObligations.filter { !it.value }.map { "// ${NodeInfoRenderer.renderFormula(it.key)}" }
+                        .joinToString("\n")
         }
 
         val requiredScopeCloses = NodeInfoRenderer.closeScopes() // Close scopes left open due to abrupt proof end
@@ -304,9 +305,7 @@ object CounterexampleGenerator {
         val methodContent = stmtHeader + stmtString + explainer + oblString + subOblString + requiredScopeCloses
         val methodFrame = methodFrameHeader + indent(methodContent, 1) + methodFrameFooter
 
-        val classFrame = classFrameHeader + indent(fieldDefs, 1) + "\n\n" + indent(methodFrame, 1) + classFrameFooter + mainBlock
-
-        return classFrame
+        return classFrameHeader + indent(fieldDefs, 1) + "\n\n" + indent(methodFrame, 1) + classFrameFooter + mainBlock
     }
 
     private fun renderDataTypeDefs(): String {
@@ -318,7 +317,7 @@ object CounterexampleGenerator {
                 if (args.isEmpty())
                     it.name
                 else
-                    "${it.name}(${args.map{it.type.simpleName}.joinToString(", ")})"
+                    "${it.name}(${args.joinToString(", ") { it.type.simpleName }})"
             }
             "data ${it.name} = ${constructors.joinToString(" | ")};"
         }

@@ -285,7 +285,11 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
     override fun prettyPrint(): String {
         return prettyPrintFunction(params, name)
     }
-    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f)) { acc, nx ->
+        acc + nx.iterate(
+            f
+        )
+    }
 
     override fun toSMT(indent:String): String {
         if(name == "valueOf") {
@@ -311,7 +315,7 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
             if(name.startsWith("-")) return "(- ${name.substring(1)})" //CVC4 requires -1 to be passed as (- 1)
             return name
         }
-        val list = params.fold("",{acc,nx -> acc + " ${nx.toSMT()}"})
+        val list = params.fold("") { acc, nx -> acc + " ${nx.toSMT()}" }
 
         if(name in FunctionRepos.genericFunctions) {
             return ("(${FunctionRepos.genericFunctionsName(this)} $list)")
@@ -337,16 +341,21 @@ data class DataTypeConst(val name : String, val concrType: Type?, val params : L
     }
 
     override fun prettyPrint(): String {
-        return name + ":" + concrType!!.qualifiedName+"("+params.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
+        return name + ":" + concrType!!.qualifiedName+"("+params.map { p -> p.prettyPrint() }.fold("") { acc, nx -> "$acc,$nx" }
+            .removePrefix(",") + ")"
     }
-    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f)) { acc, nx ->
+        acc + nx.iterate(
+            f
+        )
+    }
 
     override fun toSMT(indent:String): String {
 
         val back = genericSMTName(name, concrType!!)
         if(params.isEmpty())
             return back
-        val list = params.fold("",{acc,nx -> acc+ " ${nx.toSMT()}"})
+        val list = params.fold("") { acc, nx -> acc + " ${nx.toSMT()}" }
         return "($back $list)"
     }
 }
@@ -410,31 +419,35 @@ data class Case(val match : Term, val expectedType :String, val branches : List<
                 
             val firstMatchTerm = Function(wildCardName)
 
-            val branchTerm = branches.foldRight(firstMatchTerm as Term, { branchTerm: BranchTerm,acc: Term ->
+            val branchTerm = branches.foldRight(firstMatchTerm as Term) { branchTerm: BranchTerm, acc: Term ->
                 var indexOfParam = -1
                 val matchSMT =
-                    if(branchTerm.matchTerm is DataTypeConst)
-                        extractPatternMatching(match, branchTerm.matchTerm,freeVars)
-                    else if(branchTerm.matchTerm is ProgVar && branchTerm.matchTerm.name in freeVars )
+                    if (branchTerm.matchTerm is DataTypeConst)
+                        extractPatternMatching(match, branchTerm.matchTerm, freeVars)
+                    else if (branchTerm.matchTerm is ProgVar && branchTerm.matchTerm.name in freeVars)
                         Eq(match, branchTerm.matchTerm)
                     else
                         True
-                if(branchTerm.matchTerm is DataTypeConst) {
+                if (branchTerm.matchTerm is DataTypeConst) {
                     indexOfParam = branchTerm.matchTerm.params.indexOf(branchTerm.branch)
                 }
                 val branch =
-                if (branchTerm.matchTerm is DataTypeConst && indexOfParam != -1 )
-                    Function("${branchTerm.matchTerm.name}_$indexOfParam", listOf(match))
-                else
-                    branchTerm.branch
+                    if (branchTerm.matchTerm is DataTypeConst && indexOfParam != -1)
+                        Function("${branchTerm.matchTerm.name}_$indexOfParam", listOf(match))
+                    else
+                        branchTerm.branch
                 Ite(matchSMT, branch, acc)
-            })
+            }
             return branchTerm.toSMT()
 
         }else
             throw Exception("No branches")
     }
-    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + match.iterate(f) + branches.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + match.iterate(f) + branches.fold(super.iterate(f)) { acc, nx ->
+        acc + nx.iterate(
+            f
+        )
+    }
 }
 
 data class BranchTerm(val matchTerm : Term, val branch : Term) :Term {
@@ -487,7 +500,12 @@ data class Predicate(val name : String, val params : List<Term> = emptyList()) :
     override fun prettyPrint(): String {
         return prettyPrintFunction(params, name)
     }
-    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f)) { acc, nx ->
+        acc + nx.iterate(
+            f
+        )
+    }
+
     override fun toSMT(indent:String) : String {
 
 
@@ -520,7 +538,7 @@ data class Predicate(val name : String, val params : List<Term> = emptyList()) :
                 boundParam1 = boundGeneric(getReturnType(params[0]),params[1])
             }
         }
-        val list = listOf(boundParam0, boundParam1).fold("",{acc,nx -> acc+ " ${nx.toSMT()}"})
+        val list = listOf(boundParam0, boundParam1).fold("") { acc, nx -> acc + " ${nx.toSMT()}" }
         return getSMT(name, list)
     }
 }
@@ -721,36 +739,38 @@ fun getSMT(name: String, params: String): String{
 fun prettyPrintFunction(params: List<Term>, name: String):String{
     if(params.isEmpty()) return name
     if(binaries.contains(name) && params.size == 2) return params[0].prettyPrint() + name + params[1].prettyPrint()
-    return name+"("+params.map { p -> p.prettyPrint() }.fold("", { acc, nx -> "$acc,$nx" }).removePrefix(",") + ")"
+    return name+"("+params.map { p -> p.prettyPrint() }.fold("") { acc, nx -> "$acc,$nx" }.removePrefix(",") + ")"
 }
 
-fun boundGeneric(bindingType: Type,  unboundTerm:Term) : Term{
+fun boundGeneric(bindingType: Type, unboundTerm: Term): Term {
     println("boundGeneric::: $bindingType $unboundTerm")
-    if(unboundTerm is Function)
+    if (unboundTerm is Function)
         return unboundTerm
-    if(unboundTerm is ProgVar)
+    if (unboundTerm is ProgVar)
         return ProgVar(unboundTerm.name, bindingType)
-    if(unboundTerm is Field)
+    if (unboundTerm is Field)
         return Field(unboundTerm.name, bindingType)
     val bindingTypeHasArgs = bindingType is DataTypeType && bindingType.hasTypeArgs()
-    val unboundTermHasArgs = unboundTerm is DataTypeConst && unboundTerm.concrType is DataTypeType && unboundTerm.concrType.hasTypeArgs()
-    if(bindingTypeHasArgs != unboundTermHasArgs || (bindingType as DataTypeType).numTypeArgs() != ((unboundTerm as DataTypeConst).concrType as DataTypeType).numTypeArgs())
+    val unboundTermHasArgs =
+        unboundTerm is DataTypeConst && unboundTerm.concrType is DataTypeType && unboundTerm.concrType.hasTypeArgs()
+    if (bindingTypeHasArgs != unboundTermHasArgs || (bindingType as DataTypeType).numTypeArgs() != ((unboundTerm as DataTypeConst).concrType as DataTypeType).numTypeArgs())
         throw Exception("Term with unbound type \n$unboundTerm \nnot matching with binding type \n$bindingType")
 
     val bindingTypeArgs =
-    if(bindingType.simpleName != "List" && bindingType.simpleName != "Set" && bindingType.simpleName != "Map"){
+        if (bindingType.simpleName != "List" && bindingType.simpleName != "Set" && bindingType.simpleName != "Map") {
 
-        if(bindingType.numTypeArgs() < unboundTerm.params.size)
-            throw Exception("Cannot bind recursive types that are not List or Set")
-        bindingType.typeArgs
-    }else{
-        listOf(bindingType.typeArgs[0], bindingType)
-    }
+            if (bindingType.numTypeArgs() < unboundTerm.params.size)
+                throw Exception("Cannot bind recursive types that are not List or Set")
+            bindingType.typeArgs
+        } else {
+            listOf(bindingType.typeArgs[0], bindingType)
+        }
 
 
-    val res = DataTypeConst(unboundTerm.name,bindingType,bindingTypeArgs.zip(unboundTerm.params).map { boundGeneric(it.first, it.second) })
-
-    return res
+    return DataTypeConst(
+        unboundTerm.name,
+        bindingType,
+        bindingTypeArgs.zip(unboundTerm.params).map<Pair<Type, Term>, Term> { boundGeneric(it.first, it.second) })
 }
 
 /*

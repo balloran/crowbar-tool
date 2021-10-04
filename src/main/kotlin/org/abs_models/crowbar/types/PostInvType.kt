@@ -4,7 +4,6 @@ import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.AssertStmt
 import org.abs_models.crowbar.data.AssignStmt
 import org.abs_models.crowbar.data.AwaitStmt
-import org.abs_models.crowbar.data.Const
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.IfStmt
 import org.abs_models.crowbar.data.ReturnStmt
@@ -253,7 +252,7 @@ class PITSyncAssign(repos: Repository) : PITAssign(repos, Modality(
 
         if(ground != null){
             var got = resolves.vals.mapNotNull { repos.methodEnss[it] }
-                .foldRight<Pair<Formula, MethodSig>, Formula>(True, { nx, acc -> And(acc, nx.first)})
+                .foldRight<Pair<Formula, MethodSig>, Formula>(True) { nx, acc -> And(acc, nx.first) }
             val myType =  getReturnType(exprToTerm(lhs))
 
             //we do not know the caller, so we throw away the contract if any input variable is used.

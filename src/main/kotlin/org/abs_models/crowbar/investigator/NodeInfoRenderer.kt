@@ -341,7 +341,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
             postHeap == null -> "// No heap modification info available at this point"
             postHeap.isEmpty() -> "// Heap remains unchanged here"
             else -> {
-                val assignments = postHeap.map { renderModelAssignment(it.first, it.second) }.joinToString("\n")
+                val assignments = postHeap.joinToString("\n") { renderModelAssignment(it.first, it.second) }
                 "// Assume the following assignments while blocked:\n$assignments\n// End assignments"
             }
         }
@@ -455,5 +455,5 @@ fun indent(text: String, level: Int, indentString: String = "\t"): String {
     val lines = text.split("\n")
     val spacer = indentString.repeat(level)
 
-    return lines.map { "$spacer$it" }.joinToString("\n")
+    return lines.joinToString("\n") { "$spacer$it" }
 }

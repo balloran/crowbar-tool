@@ -4,7 +4,7 @@ import org.abs_models.crowbar.data.And
 import org.abs_models.crowbar.data.Formula
 
 fun collectSubObligations(form: Formula): Set<Formula> {
-    val worklist = mutableListOf<Formula>(form)
+    val worklist = mutableListOf(form)
     val collected = mutableSetOf<Formula>()
 
     while (worklist.isNotEmpty()) {

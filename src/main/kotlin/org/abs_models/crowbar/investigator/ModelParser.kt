@@ -447,6 +447,6 @@ data class MvFuture(val id: String) : ModelValue {
     override fun toString() = id
 }
 
-enum class Type() {
+enum class Type {
     INT, BOOL, ARRAY, COMPLEX, FUTURE, UNKNOWN
 }

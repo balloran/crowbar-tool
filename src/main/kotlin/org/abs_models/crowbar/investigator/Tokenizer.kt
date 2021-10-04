@@ -74,8 +74,8 @@ abstract class Token(val spelling: String) {
     override fun hashCode() = toString().hashCode()
 }
 
-class LParen() : Token("(")
-class RParen() : Token(")")
+class LParen : Token("(")
+class RParen : Token(")")
 class StringLiteral(content: String) : Token("\"$content\"")
 class Identifier(spelling: String) : Token(spelling)
 class ConcreteValue(val value: Int) : Token(value.toString())

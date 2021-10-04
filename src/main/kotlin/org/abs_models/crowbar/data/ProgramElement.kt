@@ -5,16 +5,6 @@ import org.abs_models.frontend.typechecker.UnknownType
 
 
 interface ProgramElement: Anything
-data class ProgramElementAbstractVar(val name : String) : ProgramElement, AbstractVar {
-    override fun prettyPrint(): String {
-        return name
-    }
-}
-data class ProgramElementListAbstractVar(val name : String) : ProgramElement, AbstractListVar {
-    override fun prettyPrint(): String {
-        return name
-    }
-}
 
 interface PP: ProgramElement
 data class PPId(val id: Int): PP, ProgramElement {
@@ -110,10 +100,10 @@ data class BranchList (val content : List<Branch>) : AbsBranchList {
 
 
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> =
-        content.fold(emptySet(),{acc, branch ->  acc + branch.matchTerm.iterate(f) + branch.branch.iterate(f)})
+        content.fold(emptySet()) { acc, branch -> acc + branch.matchTerm.iterate(f) + branch.branch.iterate(f) }
 
     override fun hasReturn(): Boolean =
-        content.fold(false,{acc, branch ->  acc || branch.branch.hasReturn()})
+        content.fold(false) { acc, branch -> acc || branch.branch.hasReturn() }
 }
 
 data class BranchAbstractListVar(val name : String) : AbsBranchList, AbstractVar {
@@ -201,17 +191,25 @@ data class SyncCallExprAbstractVar(val name : String) : SyncCallingExpr, Abstrac
 data class CallExpr(val met : String, val e : List<Expr>) : CallingExpr{
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
-        return met+"("+e.map { p -> p.prettyPrint() }.joinToString(",") + ")"
+        return met+"("+ e.joinToString(",") { p -> p.prettyPrint() } + ")"
     }
-    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f)) { acc, nx ->
+        acc + nx.iterate(
+            f
+        )
+    }
 }
 
 data class SyncCallExpr(val met : String, val e : List<Expr>) : SyncCallingExpr{
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
-        return met+"("+e.map { p -> p.prettyPrint() }.joinToString(",") + ")"
+        return met+"("+ e.joinToString(",") { p -> p.prettyPrint() } + ")"
     }
-    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f)) { acc, nx ->
+        acc + nx.iterate(
+            f
+        )
+    }
 }
 
 data class PollExpr(val e1 : Expr) : Expr {
@@ -226,8 +224,12 @@ data class SExpr(val op : String, val e : List<Expr>) : Expr {
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
         if(e.isEmpty()) return op
-        return op+"("+e.map { p -> p.prettyPrint() }.joinToString(",") + ")"
-    }    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
+        return op+"("+ e.joinToString(",") { p -> p.prettyPrint() } + ")"
+    }    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f)) { acc, nx ->
+        acc + nx.iterate(
+            f
+        )
+    }
 
 }
 
@@ -241,9 +243,13 @@ data class Const(val name : String)  : Expr {
 data class DataTypeExpr(val name : String, val dType : String,val concrType: Type?, val e : List<Expr>)  : Expr {
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
-        return "$name:$dType(${ e.map { p -> p.prettyPrint() }.joinToString(",") })"
+        return "$name:$dType(${e.joinToString(",") { p -> p.prettyPrint() }})"
     }
-    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = e.fold(super.iterate(f)) { acc, nx ->
+        acc + nx.iterate(
+            f
+        )
+    }
 }
 
 data class CaseExpr(val match: Expr, val expectedType:String, val content: List<BranchExpr>, val freeVars : Set<String>) : Expr{
@@ -253,7 +259,7 @@ data class CaseExpr(val match: Expr, val expectedType:String, val content: List<
         return "case ${match.prettyPrint()}{\n\t${content.joinToString("\n\t") { it.prettyPrint()} }\n}"
     }
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> =
-        content.fold(emptySet(),{ acc, branch ->  acc + branch.matchTerm.iterate(f) + branch.branch.iterate(f)})
+        content.fold(emptySet()) { acc, branch -> acc + branch.matchTerm.iterate(f) + branch.branch.iterate(f) }
 
 }
 

@@ -1,16 +1,6 @@
 package org.abs_models.crowbar.tree
 
-import org.abs_models.crowbar.data.Expr
-import org.abs_models.crowbar.data.CallExpr
-import org.abs_models.crowbar.data.SyncCallExpr
-import org.abs_models.crowbar.data.Formula
-import org.abs_models.crowbar.data.Term
-import org.abs_models.crowbar.data.Function
-import org.abs_models.crowbar.data.Location
-import org.abs_models.crowbar.data.LogicElement
-import org.abs_models.crowbar.data.UpdateElement
-import org.abs_models.crowbar.data.apply
-import org.abs_models.crowbar.data.exprToTerm
+import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.investigator.collectBaseExpressions
 
 // Abstract classes & interfaces
@@ -64,11 +54,11 @@ class InfoNullCheck(condition: Formula) : LeafInfo, SigBranch(isAnon = false, is
 
 // Other rule applications
 
-class NoInfo() : NodeInfo(isAnon = false, isHeapAnon = false) {
+class NoInfo : NodeInfo(isAnon = false, isHeapAnon = false) {
 	override fun <ReturnType> accept(visitor: NodeInfoVisitor<ReturnType>) = visitor.visit(this)
 }
 
-class InfoScopeClose() : NodeInfo(isAnon = false, isHeapAnon = false) {
+class InfoScopeClose : NodeInfo(isAnon = false, isHeapAnon = false) {
 	override fun <ReturnType> accept(visitor: NodeInfoVisitor<ReturnType>) = visitor.visit(this)
 }
 
@@ -119,14 +109,14 @@ class InfoObjAlloc(val lhs: Location, val classInit: Expr, val newSMTExpr: Strin
 
 class InfoReturn(val expression: Expr, postcondition: Formula, invariant: Formula, update: UpdateElement) : LeafInfo, NodeInfo(isAnon = false, isHeapAnon = false) {
 	val retExpr = apply(update, exprToTerm(expression)) as Term
-	val retExprComponentMap = collectBaseExpressions(expression).associate{ it to (apply(update, exprToTerm(it)) as Term)}
+	val retExprComponentMap = collectBaseExpressions(expression).associateWith { (apply(update, exprToTerm(it)) as Term) }
 	
 	override fun <ReturnType> accept(visitor: NodeInfoVisitor<ReturnType>) = visitor.visit(this)
 	override val obligations = listOf(Pair("Method postcondition", postcondition), Pair("Object invariant", invariant))
 	override val smtExpressions = listOf(retExpr) + retExprComponentMap.values
 }
 
-class InfoSkip() : NodeInfo(isAnon = false, isHeapAnon = false) {
+class InfoSkip : NodeInfo(isAnon = false, isHeapAnon = false) {
 	override fun <ReturnType> accept(visitor: NodeInfoVisitor<ReturnType>) = visitor.visit(this)
 }
 

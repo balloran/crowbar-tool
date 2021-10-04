@@ -21,9 +21,3 @@ interface DeductType: Anything {
 		return body
 	}
 }
-data class DeductAbstractVar(val name : String) : DeductType, AbstractVar{
-	override fun extractMethodNode(classDecl: ClassDecl, name : String, repos: Repository) : SymbolicNode = throw Exception("This type is not executable")
-	override fun extractInitialNode(classDecl: ClassDecl) : SymbolicNode = throw Exception("This type is not executable")
-	override fun exctractMainNode(model: Model) : SymbolicNode = throw Exception("This type is not executable")
-	override fun exctractFunctionNode(fDecl: FunctionDecl): SymbolicNode = throw Exception("This type is not executable")
-}

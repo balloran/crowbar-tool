@@ -63,7 +63,7 @@ data class SymbolicNode(
     override val info: NodeInfo = NoInfo()
 ) : InfoNode, SymbolicTree{
     override fun finishedExecution() : Boolean {
-        return children.isNotEmpty() && children.fold(true, { acc, nx -> acc && nx.finishedExecution()})
+        return children.isNotEmpty() && children.fold(true) { acc, nx -> acc && nx.finishedExecution() }
     }
 
     override fun debugString(steps : Int) : String {
@@ -75,7 +75,7 @@ data class SymbolicNode(
     }
 
     override fun hasAbstractVar() : Boolean = containsAbstractVar(content)
-    override fun collectLeaves() : List<SymbolicLeaf> = children.fold(emptyList(), { acc, nx -> acc + nx.collectLeaves()})
+    override fun collectLeaves() : List<SymbolicLeaf> = children.fold(emptyList()) { acc, nx -> acc + nx.collectLeaves() }
     override fun normalize() {
         content.modality.remainder = org.abs_models.crowbar.main.normalize(content.modality.remainder)
     }

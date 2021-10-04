@@ -100,10 +100,10 @@ interface LocalTypeType : DeductType {
 
     override fun extractInitialNode(classDecl: ClassDecl): SymbolicNode {
         // Collect all local type annotations
-        val methods = classDecl.methods.map {
+        val methods = classDecl.methods.joinToString("\n") {
             val lte = extractLocalTypeSpec(it, null)
             "${classDecl.name}.${it.methodSig.name}: ${lte?.prettyPrint() ?: "no local type annotation"}"
-        }.joinToString("\n")
+        }
 
         val emptySymState = SymbolicState(True, EmptyUpdate, Modality(SkipStmt, LocalTypeTarget(LTSkip, True)))
 

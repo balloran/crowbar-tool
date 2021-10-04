@@ -251,14 +251,17 @@ object FunctionRepos{
 				    val params = pair.value.params
 				    val eDef: ExpFunctionDef = pair.value.functionDef as ExpFunctionDef
 				    val def = eDef.rhs
-					sigs += "\t(${pair.key.replace(".", "-")} (${params.fold("",{ acc, nx -> "$acc (${nx.name} ${
+					sigs += "\t(${pair.key.replace(".", "-")} (${params.fold("") { acc, nx ->
+						"$acc (${nx.name} ${
 
-						if(isConcreteGeneric(nx.type)) {
-							ADTRepos.addGeneric(nx.type as DataTypeType)
-							genericTypeSMTName(nx.type)
-						}
-						else
-							ADTRepos.libPrefix(nx.type.qualifiedName)})" })})  ${
+							if (isConcreteGeneric(nx.type)) {
+								ADTRepos.addGeneric(nx.type as DataTypeType)
+								genericTypeSMTName(nx.type)
+							} else
+								ADTRepos.libPrefix(nx.type.qualifiedName)
+						})"
+					}
+					})  ${
 
 						if(isConcreteGeneric(def.type)) {
 							ADTRepos.addGeneric(def.type as DataTypeType)
@@ -274,7 +277,7 @@ object FunctionRepos{
     }
 
 	private fun hasContract(fDecl: FunctionDecl) : Boolean {
-		return fDecl.annotationList.filter { it.type.toString().endsWith(".Spec") }.any()
+		return fDecl.annotationList.any { it.type.toString().endsWith(".Spec") }
 	}
 
 

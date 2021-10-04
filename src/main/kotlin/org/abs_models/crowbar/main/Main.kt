@@ -157,7 +157,7 @@ class Main : CliktCommand() {
 
     override fun run() {
 
-        var start = System.currentTimeMillis()
+        val start = System.currentTimeMillis()
         tmpPath = "$tmp/"
         smtPath = smtCmd
         verbosity = Verbosity.values()[verbose]
@@ -241,9 +241,9 @@ class Main : CliktCommand() {
                 output("Crowbar  : Verification result: $closed", Verbosity.SILENT)
             }
         }
-        var end = System.currentTimeMillis()
+        val end = System.currentTimeMillis()
         output("Crowbar  : Verification time: ${end-start}ms", Verbosity.SILENT)
-        output("Crowbar  : Total number of branches: ${count}", Verbosity.SILENT)
+        output("Crowbar  : Total number of branches: $count", Verbosity.SILENT)
     }
 
     private fun runFreeAnalysis(model: Model) : Boolean{
@@ -265,8 +265,8 @@ class Main : CliktCommand() {
             }
         }
         safe.addAll(mets.filter { triviallyFree(it) }.map { it.methodSig })
-        mets.removeAll( mets.filter { triviallyFree(it) } )
-        sigs.removeAll (mets.filter { triviallyFree(it) }.map { it.methodSig })
+        mets.removeAll(mets.filter { triviallyFree(it) }.toSet())
+        sigs.removeAll (mets.filter { triviallyFree(it) }.map { it.methodSig }.toSet())
         output("Crowbar  : Potentially deadlocking methods: \n\t${mets.joinToString("\n\t") { it.contextDecl.name + "." + it.methodSig }}")
         return sigs.isEmpty()
     }

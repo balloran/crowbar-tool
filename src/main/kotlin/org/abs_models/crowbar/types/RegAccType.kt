@@ -1,7 +1,6 @@
 package org.abs_models.crowbar.types
 
 import org.abs_models.crowbar.data.*
-import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.Repository
 import org.abs_models.crowbar.main.extractInheritedSpec
 import org.abs_models.crowbar.main.extractSpec
@@ -89,7 +88,11 @@ data class AccVar(val name : String) : RegAccType{
 data class AccAtom(val fields : Set<RegAcc>) : RegAccType{
 	override fun hasAbstractVar() : Boolean = false
 	override fun prettyPrint() : String = "acc: "+fields.map { it.prettyPrint() }.toString()
-	override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = fields.fold(super.iterate(f),{ acc, nx -> acc + nx.iterate(f)})
+	override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = fields.fold(super.iterate(f)) { acc, nx ->
+		acc + nx.iterate(
+			f
+		)
+	}
 
 }
 data class AccSeq(val first : RegAccType, val second : RegAccType) : RegAccType {

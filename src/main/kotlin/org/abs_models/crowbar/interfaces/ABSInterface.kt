@@ -186,7 +186,7 @@ fun translateABSStmtToSymStmt(input: Stmt?, subst: Map<String, Expr>) : org.abs_
             if(subs.isEmpty())  return SkipStmt
             val last = subs.last()
             val tail = subs.dropLast(1)
-            return tail.foldRight( last , {nx, acc -> SeqStmt(nx, acc) })
+            return tail.foldRight( last) { nx, acc -> SeqStmt(nx, acc) }
         }
         is WhileStmt -> {
             return org.abs_models.crowbar.data.WhileStmt(translateABSExpToSymExpr(input.conditionNoTransform, returnType, subst),
@@ -219,7 +219,7 @@ fun translateABSStmtToSymStmt(input: Stmt?, subst: Map<String, Expr>) : org.abs_
 }
 
 fun extractResolves(stmt: Stmt): ConcerteStringSet{
-    val spec = stmt.annotations.firstOrNull() { it.type.toString()
+    val spec = stmt.annotations.firstOrNull { it.type.toString()
         .endsWith(".Spec") && it.value is DataConstructorExp && (it.value as DataConstructorExp).constructor == "Resolves" }
         ?: return ConcerteStringSet()
     val inner = ((spec.value as DataConstructorExp).params.getChild(0) as StringLiteral).content.split(",").map { it.trim() }
@@ -272,7 +272,7 @@ fun typeWithModule(type : String, moduleName : String) :String {
 fun filterAtomic(input: Stmt?, app : (Stmt) -> Boolean) : Set<Stmt> {
     if(input == null) return emptySet()
     return when(input){
-        is Block ->     input.stmts.fold(emptySet() , { acc, nx -> acc + filterAtomic(nx, app) })
+        is Block ->     input.stmts.fold(emptySet()) { acc, nx -> acc + filterAtomic(nx, app) }
         is WhileStmt -> filterAtomic(input.body, app)
         is IfStmt ->    filterAtomic(input.then, app) +filterAtomic(input.`else`, app)
         else -> if(app(input)) setOf(input) else emptySet()
@@ -336,7 +336,7 @@ fun directlySafe(input: Stmt?, safeCalls: List<MethodSig>, safeSyncs: MutableLis
             right.addAll(safeSyncs)
             val res = directlySafe(input.then, safeCalls, left) && directlySafe(input.`else`, safeCalls, right)
             safeSyncs.removeAll { true }
-            safeSyncs.addAll(left.intersect(right))
+            safeSyncs.addAll(left.intersect(right.toSet()))
             return res
         }
         else -> throw Exception("Analysis of ${input::class} not supported" )
