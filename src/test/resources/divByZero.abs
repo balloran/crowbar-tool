@@ -1,0 +1,46 @@
+module DivByZero;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+
+[Spec : Requires(f > 0)]
+[Spec : ObjInv(f > 0)]
+class C(Int f){
+
+[Spec : Ensures(True)]
+    Unit fail1(){
+        Rat i = 1/0;
+    }
+
+[Spec : Ensures(True)]
+    Unit fail2(){
+        Rat i = 1/(this.f-1);
+    }
+
+[Spec : Ensures(True)]
+    Unit fail3(){
+    Int i = 100;
+    Int j = -this.f;
+        [Spec: WhileInv(i <= 100)]
+        while( i > 100/j) {
+            i = i - 1;
+            j = j + 1;
+        }
+    }
+[Spec : Ensures(True)]
+    Unit fail4(){
+        Int i = 100;
+        if(i/(this.f-1) == 0) skip;
+    }
+
+
+[Spec : Ensures(True)]
+    Unit success1(){
+        Rat i = 1/1;
+    }
+[Spec : Ensures(True)]
+    Unit success2(){
+        Rat i = 1/this.f;
+    }
+}
+
+{}

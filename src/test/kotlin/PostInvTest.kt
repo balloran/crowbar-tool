@@ -453,5 +453,23 @@ class PostInvTest : StringSpec ({
 			res = classDecl.extractMethodNode(postInv,"success3", repos)
 			executeNode(res, repos, postInv) shouldBe true
 		}
+		"$smt divByZero"{
+			smtPath = smt
+			val (model, repos) = load(listOf(Paths.get("src/test/resources/divByZero.abs")))
+			val classDecl = model.extractClassDecl("DivByZero", "C")
+
+			var res = classDecl.extractMethodNode(postInv,"fail1", repos)
+			executeNode(res, repos, postInv) shouldBe false
+			res = classDecl.extractMethodNode(postInv,"fail2", repos)
+			executeNode(res, repos, postInv) shouldBe false
+			res = classDecl.extractMethodNode(postInv,"fail3", repos)
+			executeNode(res, repos, postInv) shouldBe false
+			res = classDecl.extractMethodNode(postInv,"fail4", repos)
+			executeNode(res, repos, postInv) shouldBe false
+			res = classDecl.extractMethodNode(postInv,"success1", repos)
+			executeNode(res, repos, postInv) shouldBe true
+			res = classDecl.extractMethodNode(postInv,"success2", repos)
+			executeNode(res, repos, postInv) shouldBe true
+		}
 	}
 })
