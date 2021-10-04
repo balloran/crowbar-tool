@@ -1,0 +1,39 @@
+module Resolve;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool) | Resolves(String);
+
+
+interface I{
+    [Spec : Ensures(result == 0)]
+    Int m();
+    Int n();
+}
+
+class C(){
+
+    [Spec : Ensures(result == 0)]
+    Int success1(Fut<Int> f){
+        [Spec : Resolves("Resolve.I.m")]
+        Int i = f.get;
+        return i;
+    }
+    [Spec : Ensures(result == 0)]
+    Int fail1(Fut<Int> f){
+        Int i = f.get;
+        return i;
+    }
+    [Spec : Ensures(result == 1)]
+    Int fail2(Fut<Int> f){
+        [Spec : Resolves("Resolve.I.m")]
+        Int i = f.get;
+        return i;
+    }
+    [Spec : Ensures(result == 0)]
+    Int fail3(Fut<Int> f){
+        [Spec : Resolves("Resolve.I.n")]
+        Int i = f.get;
+        return i;
+    }
+}
+
+{}

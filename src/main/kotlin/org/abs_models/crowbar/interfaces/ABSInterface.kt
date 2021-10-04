@@ -222,7 +222,7 @@ fun extractResolves(stmt: Stmt): ConcerteStringSet{
     val spec = stmt.annotations.firstOrNull() { it.type.toString()
         .endsWith(".Spec") && it.value is DataConstructorExp && (it.value as DataConstructorExp).constructor == "Resolves" }
         ?: return ConcerteStringSet()
-    val inner = (spec.value as StringLiteral).content.split(",").map { it.trim() }
+    val inner = ((spec.value as DataConstructorExp).params.getChild(0) as StringLiteral).content.split(",").map { it.trim() }
     return ConcerteStringSet(inner.toSet())
 }
 

@@ -245,14 +245,28 @@ class PITSyncAssign(repos: Repository) : PITAssign(repos, Modality(
         val ground = if(resolves.vals.isNotEmpty()){
             StaticNode("Must resolve: $pp contract $resolves")
         } else null
-        println(ground)
 
         // Generate SMT representation of the future expression to get its model value later
         val futureSMTExpr = apply(input.update, rhs) as Term
         val info = InfoGetAssign(lhs, rhsExpr, futureSMTExpr)
+        var cond = input.condition
 
-        val zeros  = divByZeroNodes(listOf(rhsExpr), input)
-        return listOf(symbolicNext(lhs, rhs, remainder, target, input.condition, input.update, info)) + zeros
+        if(ground != null){
+            var got = resolves.vals.mapNotNull { repos.methodEnss[it] }
+                .foldRight<Pair<Formula, MethodSig>, Formula>(True, { nx, acc -> And(acc, nx.first)})
+            val myType =  getReturnType(exprToTerm(lhs))
+
+            //we do not know the caller, so we throw away the contract if any input variable is used.
+            //this can be made a bit more precise using the usual projection
+            if(got.iterate { it is ProgVar && it.name != "result"}.isNotEmpty())
+                got = True
+            else
+                got = subst(got, mapOf(Pair(ReturnVar(myType.qualifiedName, myType), rhs))) as Formula
+            cond = And(cond, apply(input.update, got) as Formula)
+        }
+        var zeros : List<SymbolicTree>  = divByZeroNodes(listOf(rhsExpr), input)
+        if (ground != null) zeros = zeros + ground
+        return listOf(symbolicNext(lhs, rhs, remainder, target, cond, input.update, info)) + zeros
     }
 
 }

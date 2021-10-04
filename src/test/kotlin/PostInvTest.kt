@@ -16,7 +16,21 @@ class PostInvTest : StringSpec ({
 	val z3: String = System.getenv("Z3") ?: "z3"
 	for (smt in listOf(z3, cvc)) {
 		println("testing with: $smt as backend")
-		
+
+		"$smt resolves"{
+			smtPath = smt
+			val (model, repos) = load(listOf(Paths.get("src/test/resources/resolves.abs")))
+			val classDecl = model.extractClassDecl("Resolve", "C")
+
+			var res = classDecl.extractMethodNode(postInv,"success1", repos)
+			executeNode(res, repos, postInv) shouldBe true
+			res = classDecl.extractMethodNode(postInv,"fail1", repos)
+			executeNode(res, repos, postInv) shouldBe false
+			res = classDecl.extractMethodNode(postInv,"fail2", repos)
+			executeNode(res, repos, postInv) shouldBe false
+			res = classDecl.extractMethodNode(postInv,"fail3", repos)
+			executeNode(res, repos, postInv) shouldBe false
+		}
 		"$smt success"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/success.abs")))
