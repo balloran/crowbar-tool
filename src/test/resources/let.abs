@@ -1,0 +1,45 @@
+module Let;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+
+[Spec : Requires(f > 0)]
+[Spec : ObjInv(f > 0)]
+class C(Int f){
+
+[Spec : Ensures(True)]
+    Unit fail1(){
+        assert (let Int x = 2 in x+x) <= 0;
+    }
+[Spec : Ensures(True)]
+    Unit fail2(){
+        assert (let Int x = 2, Int y = 2 in y+x) <= 0;
+    }
+[Spec : Ensures(True)]
+    Unit fail3(){
+        assert (let Int x = 2 in let Int y = 2 in y+x) <= 0;
+    }
+
+[Spec : Ensures(let Int x = 2 in result == x)]
+    Int fail4(){
+        return 3;
+    }
+
+[Spec : Ensures(True)]
+    Unit success1(){
+        assert (let Int x = 2 in x+x) >= 0;
+    }
+[Spec : Ensures(True)]
+    Unit success2(){
+        assert (let Int x = 2, Int y = 2 in y+x) >= 0;
+    }
+[Spec : Ensures(True)]
+    Unit success3(){
+        assert (let Int x = 2 in let Int y = 2 in y+x) >= 0;
+    }
+[Spec : Ensures(let Int x = 2 in result == x)]
+    Int success4(){
+        return 2;
+    }
+}
+
+{}

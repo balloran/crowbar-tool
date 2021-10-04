@@ -16,7 +16,7 @@ interface DeductType: Anything {
 	fun exctractFunctionNode(fDecl: FunctionDecl): SymbolicNode
 
 	fun getNormalizedStatement(st : Block?): Stmt {
-		var body = translateABSStmtToSymStmt(st)
+		var body = translateABSStmtToSymStmt(st, emptyMap())
 		if(!body.hasReturn()) body = appendStmt(body, ReturnStmt(unitExpr()))
 		return body
 	}

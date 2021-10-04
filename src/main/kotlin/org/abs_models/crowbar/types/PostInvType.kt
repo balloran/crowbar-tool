@@ -114,7 +114,7 @@ interface PostInvType : DeductType{
         for (fieldDecl in classDecl.fields){
             if(fieldDecl.hasInitExp()){
                 val nextBody = AssignStmt(Field(fieldDecl.name+"_f", fieldDecl.type),
-                        translateABSExpToSymExpr(fieldDecl.initExp, UnknownType.INSTANCE))
+                        translateABSExpToSymExpr(fieldDecl.initExp, UnknownType.INSTANCE, emptyMap()))
                 body = SeqStmt(nextBody,body)
             }
         }
@@ -145,7 +145,7 @@ interface PostInvType : DeductType{
             exitProcess(-1)
         }
 
-        val v = appendStmt(translateABSStmtToSymStmt(model.mainBlock), SkipStmt)
+        val v = appendStmt(translateABSStmtToSymStmt(model.mainBlock, emptyMap()), SkipStmt)
         return SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(v, PostInvariantPair(True, True))), emptyList())
     }
 
@@ -161,7 +161,7 @@ interface PostInvType : DeductType{
             if(fDef is BuiltinFunctionDef){
                 throw Exception("error during translation, cannot handle builtin yet")
             }else if(fDef is ExpFunctionDef){
-                body = ReturnStmt(translateABSExpToSymExpr(fDef.rhs, fDecl.type))
+                body = ReturnStmt(translateABSExpToSymExpr(fDef.rhs, fDecl.type, emptyMap()))
             }
         }catch (e: Exception) {
             e.printStackTrace()

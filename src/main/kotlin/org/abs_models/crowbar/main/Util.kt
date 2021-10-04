@@ -94,7 +94,7 @@ fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : 
             }
             val annotated = annotation.value as DataConstructorExp
             if(annotated.constructor != expectedSpec) continue
-            val next = exprToForm(translateABSExpToSymExpr(annotated.getParam(0) as Exp,decl.type))
+            val next = exprToForm(translateABSExpToSymExpr(annotated.getParam(0) as Exp,decl.type, emptyMap()))
             ret = if(ret == null) next else And(ret, next)
             if(!multipleAllowed) break
         }
@@ -108,7 +108,7 @@ fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : 
             }
             val annotated = annotation.value as DataConstructorExp
             if(annotated.constructor != expectedSpec) continue
-            val next = exprToForm(translateABSExpToSymExpr(annotated.getParam(0) as Exp,returnType))
+            val next = exprToForm(translateABSExpToSymExpr(annotated.getParam(0) as Exp,returnType, emptyMap()))
             ret = if(ret == null) next else And(ret, next)
             if(!multipleAllowed) break
         }
