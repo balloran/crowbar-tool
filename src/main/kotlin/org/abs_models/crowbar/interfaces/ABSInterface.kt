@@ -1,6 +1,5 @@
 package org.abs_models.crowbar.interfaces
 
-import org.abs_models.backend.java.lib.expr.Let
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Const
 import org.abs_models.crowbar.data.SkipStmt
@@ -16,7 +15,6 @@ import org.abs_models.frontend.ast.IfStmt
 import org.abs_models.frontend.ast.ReturnStmt
 import org.abs_models.frontend.ast.Stmt
 import org.abs_models.frontend.ast.WhileStmt
-import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
 
@@ -152,20 +150,20 @@ fun translateABSStmtToSymStmt(input: Stmt?, subst: Map<String, Expr>) : org.abs_
             val exp = input.exp
             val type = input.type
             return when(exp) {
-                is GetExp       -> SyncStmt(loc, translateABSExpToSymExpr(exp, returnType, subst))
+                is GetExp       -> SyncStmt(loc, translateABSExpToSymExpr(exp, returnType, subst), extractResolves(input), FreshGenerator.getFreshPP())
                 is NewExp       -> AllocateStmt(loc, translateABSExpToSymExpr(exp, returnType, subst))
                 is AsyncCall    -> CallStmt(loc, translateABSExpToSymExpr(exp.callee, returnType, subst), translateABSExpToSymExpr(exp, returnType, subst) as CallExpr)
-                is SyncCall     -> desugaring(loc, type, exp, returnType, subst)
+                is SyncCall     -> desugar(loc, type, exp, returnType, subst)
                 else -> throw Exception("Translation of ${input.exp::class} in an expression statement is not supported" )
                 }
         }
         is VarDeclStmt -> {
             val loc = ProgVar(input.varDecl.name, input.varDecl.type)
             return when(val exp = input.varDecl.initExp ?: NullExp()) {
-                is GetExp       -> SyncStmt(loc, translateABSExpToSymExpr(exp, returnType, subst))
+                is GetExp       -> SyncStmt(loc, translateABSExpToSymExpr(exp, returnType, subst), extractResolves(input), FreshGenerator.getFreshPP())
                 is NewExp       -> AllocateStmt(loc, translateABSExpToSymExpr(exp, returnType, subst))
                 is AsyncCall    -> CallStmt(loc, translateABSExpToSymExpr(exp.callee, returnType, subst), translateABSExpToSymExpr(exp, returnType, subst) as CallExpr)
-                is SyncCall     -> desugaring(loc, input.type, exp, returnType, subst)
+                is SyncCall     -> desugar(loc, input.type, exp, returnType, subst)
                 else -> org.abs_models.crowbar.data.AssignStmt(loc, translateABSExpToSymExpr(exp, returnType, subst))
             }
         }
@@ -176,10 +174,10 @@ fun translateABSStmtToSymStmt(input: Stmt?, subst: Map<String, Expr>) : org.abs_
                 input.varNoTransform.type
             )
             return when(val exp = input.valueNoTransform) {
-                is GetExp       -> SyncStmt(loc, translateABSExpToSymExpr(exp, returnType, subst))
+                is GetExp       -> SyncStmt(loc, translateABSExpToSymExpr(exp, returnType, subst), extractResolves(input), FreshGenerator.getFreshPP())
                 is NewExp       -> AllocateStmt(loc, translateABSExpToSymExpr(exp, returnType, subst))
                 is AsyncCall    -> CallStmt(loc, translateABSExpToSymExpr(exp.callee, returnType, subst), translateABSExpToSymExpr(exp, returnType, subst) as CallExpr)
-                is SyncCall     -> desugaring(loc, input.type, exp, returnType, subst)
+                is SyncCall     -> desugar(loc, input.type, exp, returnType, subst)
                 else -> org.abs_models.crowbar.data.AssignStmt(loc, translateABSExpToSymExpr(exp, returnType, subst))
             }
         }
@@ -210,9 +208,9 @@ fun translateABSStmtToSymStmt(input: Stmt?, subst: Map<String, Expr>) : org.abs_
             }
             return BranchStmt(translateABSExpToSymExpr(input.expr, returnType, subst), BranchList(list))
         }
+        is DieStmt -> return org.abs_models.crowbar.data.AssertStmt(Const("False"))
         is MoveCogToStmt -> throw Exception("Statements ${input::class} are not coreABS" )
         is DurationStmt -> throw Exception("Statements ${input::class} are not coreABS" )
-        is DieStmt -> throw Exception("Statements ${input::class} are not supported yet" )
         is ThrowStmt -> throw Exception("Statements ${input::class} are not supported yet" )
         is TryCatchFinallyStmt -> throw Exception("Statements ${input::class} are not supported yet" )
         //this is the foreach statement only
@@ -220,8 +218,16 @@ fun translateABSStmtToSymStmt(input: Stmt?, subst: Map<String, Expr>) : org.abs_
     }
 }
 
+fun extractResolves(stmt: Stmt): ConcerteStringSet{
+    val spec = stmt.annotations.firstOrNull() { it.type.toString()
+        .endsWith(".Spec") && it.value is DataConstructorExp && (it.value as DataConstructorExp).constructor == "Resolves" }
+        ?: return ConcerteStringSet()
+    val inner = (spec.value as StringLiteral).content.split(",").map { it.trim() }
+    return ConcerteStringSet(inner.toSet())
+}
 
-fun desugaring(loc: Location, type: Type, syncCall: SyncCall, returnType :Type, subst: Map<String, Expr>) : org.abs_models.crowbar.data.Stmt{
+
+fun desugar(loc: Location, type: Type, syncCall: SyncCall, returnType :Type, subst: Map<String, Expr>) : org.abs_models.crowbar.data.Stmt{
     val calleeExpr = translateABSExpToSymExpr(syncCall.callee, returnType, subst)
     val callExpr = translateABSExpToSymExpr(syncCall, returnType, subst)
 
@@ -230,7 +236,7 @@ fun desugaring(loc: Location, type: Type, syncCall: SyncCall, returnType :Type, 
 
     val fut = FreshGenerator.getFreshProgVar(type)
     val callStmt = CallStmt(fut, calleeExpr, callExpr as CallExpr)
-    val syncStmt = SyncStmt(loc, readFut(fut))
+    val syncStmt = SyncStmt(loc, readFut(fut), ConcerteStringSet(setOf(syncCall.methodSig.name)), FreshGenerator.getFreshPP())
     return SeqStmt(callStmt, syncStmt)
 }
 

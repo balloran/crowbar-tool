@@ -53,7 +53,7 @@ data class AllocateStmt(val lhs : Location, val rhs : Expr) : Stmt {
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + lhs.iterate(f) + rhs.iterate(f)
 }
 
-data class SyncStmt(val lhs : Location, val rhs : Expr) : Stmt {
+data class SyncStmt(val lhs : Location, val rhs : Expr, val resolves : ConcerteStringSet, val pp : PP) : Stmt {
     override fun prettyPrint(): String {
         return lhs.prettyPrint()+" =  "+rhs.prettyPrint()+".get"
     }

@@ -1,73 +1,15 @@
 package org.abs_models.crowbar.types
 
-import kotlin.system.exitProcess
-import org.abs_models.crowbar.data.AbstractVar
-import org.abs_models.crowbar.data.AllocateStmt
-import org.abs_models.crowbar.data.And
+import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.AssignStmt
 import org.abs_models.crowbar.data.AwaitStmt
-import org.abs_models.crowbar.data.BranchAbstractListVar
-import org.abs_models.crowbar.data.BranchList
-import org.abs_models.crowbar.data.BranchStmt
-import org.abs_models.crowbar.data.CallExpr
-import org.abs_models.crowbar.data.CallExprAbstractVar
-import org.abs_models.crowbar.data.CallStmt
-import org.abs_models.crowbar.data.ChainUpdate
-import org.abs_models.crowbar.data.DeductType
-import org.abs_models.crowbar.data.ElementaryUpdate
-import org.abs_models.crowbar.data.EmptyUpdate
-import org.abs_models.crowbar.data.Expr
-import org.abs_models.crowbar.data.ExprAbstractVar
-import org.abs_models.crowbar.data.Field
-import org.abs_models.crowbar.data.Formula
-import org.abs_models.crowbar.data.FormulaAbstractVar
 import org.abs_models.crowbar.data.Function
-import org.abs_models.crowbar.data.Heap
 import org.abs_models.crowbar.data.IfStmt
-import org.abs_models.crowbar.data.LTCallContext
-import org.abs_models.crowbar.data.LTCommonContext
-import org.abs_models.crowbar.data.LTGetContext
-import org.abs_models.crowbar.data.LTPatternCall
-import org.abs_models.crowbar.data.LTPatternGet
-import org.abs_models.crowbar.data.LTPatternPut
-import org.abs_models.crowbar.data.LTPatternRep
-import org.abs_models.crowbar.data.LTPatternSusp
-import org.abs_models.crowbar.data.LTRep
-import org.abs_models.crowbar.data.LTSkip
-import org.abs_models.crowbar.data.LastHeap
-import org.abs_models.crowbar.data.LocalType
-import org.abs_models.crowbar.data.Location
-import org.abs_models.crowbar.data.LocationAbstractVar
-import org.abs_models.crowbar.data.LogicElement
-import org.abs_models.crowbar.data.Modality
-import org.abs_models.crowbar.data.Not
-import org.abs_models.crowbar.data.OldHeap
-import org.abs_models.crowbar.data.PPAbstractVar
-import org.abs_models.crowbar.data.Predicate
-import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.crowbar.data.ReturnStmt
-import org.abs_models.crowbar.data.ReturnVar
-import org.abs_models.crowbar.data.SExpr
-import org.abs_models.crowbar.data.ScopeMarker
-import org.abs_models.crowbar.data.SeqStmt
 import org.abs_models.crowbar.data.SkipStmt
 import org.abs_models.crowbar.data.Stmt
-import org.abs_models.crowbar.data.StmtAbstractVar
-import org.abs_models.crowbar.data.SymbolicState
-import org.abs_models.crowbar.data.SyncStmt
-import org.abs_models.crowbar.data.Term
-import org.abs_models.crowbar.data.True
-import org.abs_models.crowbar.data.UpdateElement
-import org.abs_models.crowbar.data.UpdateOnFormula
 import org.abs_models.crowbar.data.WhileStmt
-import org.abs_models.crowbar.data.anon
-import org.abs_models.crowbar.data.appendStmt
-import org.abs_models.crowbar.data.apply
-import org.abs_models.crowbar.data.exprToForm
-import org.abs_models.crowbar.data.exprToTerm
-import org.abs_models.crowbar.data.store
-import org.abs_models.crowbar.data.subst
-import org.abs_models.crowbar.data.valueOfFunc
+import kotlin.system.exitProcess
 import org.abs_models.crowbar.interfaces.LocalTypeParser
 import org.abs_models.crowbar.main.Repository
 import org.abs_models.crowbar.main.Verbosity
@@ -225,7 +167,7 @@ class LTTLocAssign(repos: Repository) : LTTAssign(repos, Modality(
 }
 
 class LTTSyncAssign(repos: Repository) : LTTAssign(repos, Modality(
-    SeqStmt(SyncStmt(LocationAbstractVar("LHS"), ExprAbstractVar("EXPR")),
+    SeqStmt(SyncStmt(LocationAbstractVar("LHS"), ExprAbstractVar("EXPR"), AbstractStringSet("RESOLVE"), PPAbstractVar("PP")),
         StmtAbstractVar("CONT")),
     LocalTypeAbstractTarget("TYPE"))) {
 

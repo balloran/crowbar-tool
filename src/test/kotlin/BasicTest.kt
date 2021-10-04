@@ -6,6 +6,7 @@ import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.Repository
 import org.abs_models.crowbar.main.load
+import org.abs_models.crowbar.rule.FreshGenerator
 import org.abs_models.crowbar.rule.MatchCondition
 import org.abs_models.crowbar.rule.containsAbstractVar
 import org.abs_models.crowbar.rule.match
@@ -135,6 +136,16 @@ class BasicTest : StringSpec() {
             match(Const("v"), StmtAbstractVar("A"), cond)
             assert(cond.failure)
             cond.failReason shouldBe "AbstractVar A failed unification because of a type error: v"
+        }
+        "matchSet"{
+            val stmt = SyncStmt(ProgVar("v"),  ProgVar("w"), ConcerteStringSet(), FreshGenerator.getFreshPP())
+            val schablone = SyncStmt(LocationAbstractVar("LHS"), ExprAbstractVar("EXPR"), AbstractStringSet("RESOLVES"), PPAbstractVar("PP"))
+            val cond = MatchCondition()
+            match(stmt, schablone, cond)
+            println(cond.failReason)
+            assert(cond.map[AbstractStringSet("RESOLVES")] != null)
+            assert(cond.map[AbstractStringSet("RESOLVES")] is ConcerteStringSet)
+            assert((cond.map[AbstractStringSet("RESOLVES")] as ConcerteStringSet).vals.isEmpty())
         }
         "containsAbstractVar"{
             assert(!containsAbstractVar(conc))

@@ -23,3 +23,6 @@ data class SymbolicState(val condition: Formula, val update: UpdateElement, val 
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + condition.iterate(f) + update.iterate(f) + modality.iterate(f)
 }
 
+open class ConcerteStringSet(val vals : Set<String> = emptySet()) : Anything
+
+data class AbstractStringSet(val name : String) : ConcerteStringSet(), AbstractVar

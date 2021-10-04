@@ -230,7 +230,7 @@ class PITLocAssign(repos: Repository) : PITAssign(repos,Modality(
 }
 
 class PITSyncAssign(repos: Repository) : PITAssign(repos, Modality(
-    SeqStmt(SyncStmt(LocationAbstractVar("LHS"), ExprAbstractVar("EXPR")),
+    SeqStmt(SyncStmt(LocationAbstractVar("LHS"), ExprAbstractVar("EXPR"), AbstractStringSet("RESOLVES"), PPAbstractVar("PP")),
         StmtAbstractVar("CONT")),
     PostInvAbstractVar("TYPE"))) {
 
@@ -240,6 +240,12 @@ class PITSyncAssign(repos: Repository) : PITAssign(repos, Modality(
         val rhs = exprToTerm(rhsExpr)
         val remainder = cond.map[StmtAbstractVar("CONT")] as Stmt
         val target = cond.map[PostInvAbstractVar("TYPE")] as DeductType
+        val resolves = cond.map[AbstractStringSet("RESOLVES")] as ConcerteStringSet
+        val pp = cond.map[PPAbstractVar("PP")] as PP
+        val ground = if(resolves.vals.isNotEmpty()){
+            StaticNode("Must resolve: $pp contract $resolves")
+        } else null
+        println(ground)
 
         // Generate SMT representation of the future expression to get its model value later
         val futureSMTExpr = apply(input.update, rhs) as Term

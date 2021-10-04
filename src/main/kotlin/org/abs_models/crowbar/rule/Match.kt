@@ -55,6 +55,7 @@ fun match(concrete : Anything, pattern : Anything, matchCond : MatchCondition) {
         if (pattern is AbstractVar) {
             //The following checks that we have the right kind of AbstractVar by checking the implemented super class
             //todo: this is buggy because the superclasses[0] access returns Java.lang.Object
+            println(pattern::class.superclasses)
             if (pattern::class.superclasses[0].isInstance(concrete)) {
                 //This catches abstract variables bound multiple times
                 if (matchCond.map.containsKey(pattern) && matchCond.map[pattern] != concrete) {
@@ -94,6 +95,9 @@ fun match(concrete : Anything, pattern : Anything, matchCond : MatchCondition) {
             else if (!Anything::class.java.isAssignableFrom(field.type)) {
                 val f1 = field.get(concrete)
                 val f2 = field.get(pattern)
+                if(f2 is AbstractVar && f1 is Anything){
+                    matchCond.map[f2] = f1
+                } else
                 if (f1 != f2) {
                     matchCond.failReason = "Value mismatch: ${concrete.prettyPrint()} and ${pattern.prettyPrint()}"
                     return
