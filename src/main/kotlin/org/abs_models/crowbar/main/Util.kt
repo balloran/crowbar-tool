@@ -18,14 +18,18 @@ import kotlin.reflect.full.companionObject
 import kotlin.reflect.full.memberFunctions
 import kotlin.system.exitProcess
 
-
+/*
+A number of utility functions for user interaction and proof setup
+ */
 fun output(text : String, level : Verbosity = Verbosity.NORMAL){
     if(verbosity >= level)
         println(text)
 }
 
+/*
+Loads an ABS model and returns the AST and the initialized repository.
+ */
 fun load(paths : List<Path>) : Pair<Model,Repository> {
-
     output("Crowbar  : loading files....")
     val input = paths.map{ File(it.toString()) }
     if(input.any { !it.exists() }) {
@@ -55,10 +59,15 @@ fun load(paths : List<Path>) : Pair<Model,Repository> {
     return Pair(model, repos)
 }
 
+
+/***************************
+ The following functions extract some specification from the AST.
+ We only consider formulas as specification, other specifications do not need inheritance and can be directly retrieved.
+ ****************************/
 fun extractInheritedSpec(iDecl : InterfaceTypeUse, expectedSpec : String, mSig: MethodSig, default:Formula) : Formula? {
-    for( miSig in iDecl.decl.findChildren(MethodSig::class.java)){
+    for( miSig in iDecl.decl.findChildren(MethodSig::class.java))
         if(miSig.matches(mSig)) return extractSpec(miSig, expectedSpec,mSig.type, default)
-    }
+
     if(iDecl.decl.getChild(1) !is org.abs_models.frontend.ast.List<*>) throw Exception("Invalid specification AST ${iDecl.decl}")
 
     @Suppress("UNCHECKED_CAST")
@@ -141,17 +150,16 @@ fun extractRoleSpec(classDecl: ClassDecl): Formula {
 }
 
 
-fun Model.extractAllClasses() : List<ClassDecl>{
-    var l = emptyList<ClassDecl>()
-    for( module in this.moduleDecls){
-        if(module.name.startsWith("ABS.")) continue
-        for( decl in module.decls){
-            if(decl is ClassDecl)
-                l = l + decl
-        }
-    }
-    return l
-}
+
+
+
+/***************************
+Utility to extract
+ ****************************/
+fun Model.extractAllClasses() : List<ClassDecl> =
+     this.moduleDecls.filter { !it.name.startsWith("ABS.") }
+                     .map { it.decls.filterIsInstance<ClassDecl>() }
+                     .foldRight(emptyList()) { a, b -> a + b }
 
 fun Model.extractFunctionDecl(moduleName: String, funcName: String) : FunctionDecl {
     val moduleDecl = moduleDecls.firstOrNull { it.name == moduleName }
@@ -204,9 +212,15 @@ fun ClassDecl.extractMethodNode(usedType: KClass<out DeductType>, name : String,
     val obj = usedType.companionObject!!.objectInstance
     return callTarget.call(obj, this, name, repos) as SymbolicNode
 }
-var count = 0
-fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out DeductType>, identifier: String = "unknown") : Boolean{ //todo: this should handle inference and static leafs now
 
+
+
+
+/***************************
+Utility to start the symbolic execution
+ ****************************/
+var count = 0
+fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out DeductType>, identifier: String = "unknown") : Boolean{
     output("Crowbar  : starting symbolic execution....")
     val pit = getStrategy(usedType,repos)
     pit.execute(node)
@@ -228,17 +242,11 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
                 count++
                 output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
                 closed = closed && l.evaluate()
-                output("Crowbar-v: verified? ${l.evaluate()}", Verbosity.V)
             }
             is StaticNode -> {
                 output("Crowbar: open static leaf ${l.str}", Verbosity.SILENT)
             }
-            else -> {
-                System.err.println("Crowbar-v: non-logical analysis nodes not supported")
-                throw Exception("Crowbar-v: non-logical analysis nodes not supported")
-            }
         }
-
     }
 
     if(!closed && investigate) {
@@ -263,41 +271,26 @@ fun ClassDecl.executeAll(repos: Repository, usedType: KClass<out DeductType>): B
     return totalClosed
 }
 
-fun normalize(st : Stmt) : Stmt {
-    return when(st){
-        is SeqStmt -> {
+
+/***************************
+General utility
+ ****************************/
+fun normalize(st : Stmt) : Stmt =
+    when(st){
+        is SeqStmt ->
             when(st.first){
-                is SeqStmt -> {
-                    val a = st.first.first
-                    val b = st.first.second
-                    val c = st.second
-                    normalize(SeqStmt(a,SeqStmt(b,c)))
-                }
+                is SeqStmt -> normalize(SeqStmt(st.first.first,SeqStmt(st.first.second,st.second)))
                 else -> SeqStmt(st.first, normalize(st.second))
             }
-        }
         else -> st
     }
-}
 
-
-fun getDeclaration(mSig: MethodSig, cDecl : ClassDecl): InterfaceDecl? {
-    for(iiDecl  in cDecl.implementedInterfaceUses.map{ it.decl }){
-        val next = iiDecl as InterfaceDecl
-        val ret = getIDeclaration(mSig,next)
-        if(ret != null) return ret
-    }
-    return null
-}
+fun getDeclaration(mSig: MethodSig, cDecl : ClassDecl): InterfaceDecl? =
+     cDecl.implementedInterfaceUses.map{ getIDeclaration(mSig, it.decl as InterfaceDecl) }.firstOrNull()
 
 fun getIDeclaration(mSig: MethodSig, iDecl : InterfaceDecl): InterfaceDecl?{
     for(mDecl in iDecl.allMethodSigs){
         if(mDecl.matches(mSig)) return iDecl
     }
-    for(iiDecl in iDecl.extendedInterfaceUseList){
-        val next = iiDecl.decl as InterfaceDecl
-        val ret = getIDeclaration(mSig,next)
-        if(ret != null) return ret
-    }
-    return null
+    return iDecl.extendedInterfaceUseList.map{ getIDeclaration(mSig, it.decl as InterfaceDecl) }.firstOrNull()
 }

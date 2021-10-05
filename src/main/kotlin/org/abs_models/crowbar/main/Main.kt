@@ -13,14 +13,10 @@ import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import com.github.ajalt.clikt.parameters.types.restrictTo
-import org.abs_models.crowbar.data.Formula
-import org.abs_models.crowbar.data.True
 import org.abs_models.crowbar.interfaces.filterAtomic
 import org.abs_models.crowbar.types.LocalTypeType
 import org.abs_models.crowbar.types.PostInvType
-import org.abs_models.crowbar.types.RegAccType
 import org.abs_models.frontend.ast.*
-import org.abs_models.frontend.typechecker.UnknownType
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 
@@ -32,83 +28,6 @@ var smtPath  = "z3"
 var verbosity = Verbosity.NORMAL
 var investigate = false
 var conciseProofs = false
-
-//todo: once allowedTypes is not needed anymore, the repository needs to be passed to fewer places
-data class Repository(private val model : Model?,
-                      val allowedTypes : MutableList<String> =  mutableListOf("ABS.StdLib.Int",
-                                                                              "ABS.StdLib.Bool",
-                                                                              "ABS.StdLib.Unit",
-                                                                              "ABS.StdLib.Fut<ABS.StdLib.Int>",
-                                                                              "ABS.StdLib.Fut<ABS.StdLib.Bool>",
-                                                                              "ABS.StdLib.Fut<ABS.StdLib.Unit>"),
-                      val classReqs : MutableMap<String,Pair<Formula,ClassDecl>> = mutableMapOf(),
-                      val methodReqs : MutableMap<String,Pair<Formula,MethodSig>> = mutableMapOf(),
-                      val methodEnss : MutableMap<String,Pair<Formula,MethodSig>> = mutableMapOf(),
-
-                      val syncMethodReqs : MutableMap<String,Pair<Formula,MethodSig>> = mutableMapOf(),
-                      val syncMethodEnss : MutableMap<String,Pair<Formula,MethodSig>> = mutableMapOf()){
-    init{
-        if(model != null) {
-            populateAllowedTypes(model)
-        }
-    }
-    fun populateClassReqs(model: Model) {
-        for(moduleDecl in model.moduleDecls) {
-            if(moduleDecl.name.startsWith("ABS.")) continue
-            for (decl in moduleDecl.decls) {
-                if (decl is ClassDecl) {
-                    val spec = extractSpec(decl,"Requires", UnknownType.INSTANCE)
-                    classReqs[decl.name] = Pair(spec,decl) //todo: use fully qualified name here
-                }
-            }
-        }
-    }
-    fun populateMethodReqs(model: Model) {
-        for(moduleDecl in model.moduleDecls) {
-            if(moduleDecl.name.startsWith("ABS.")) continue
-            for (decl in moduleDecl.decls) {
-                if (decl is InterfaceDecl) {
-                    for (mDecl in decl.allMethodSigs) {
-                        val spec = extractSpec(mDecl, "Requires", mDecl.type)
-                        val spec2 = extractSpec(mDecl, "Ensures", mDecl.type)
-                        methodReqs[decl.qualifiedName+"."+mDecl.name] = Pair(spec, mDecl)
-                        methodEnss[decl.qualifiedName+"."+mDecl.name] = Pair(spec2, mDecl)
-                    }
-                }
-                if(decl is ClassDecl){
-                    for(mImpl in decl.methods){
-                        val iUse = getDeclaration(mImpl.methodSig,mImpl.contextDecl as ClassDecl)
-                        val syncSpecReq = extractSpec(mImpl, "Requires", mImpl.type)
-                        val syncSpecEns = extractSpec(mImpl, "Ensures", mImpl.type)
-                        syncMethodReqs[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(syncSpecReq, mImpl.methodSig)
-                        syncMethodEnss[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(syncSpecEns, mImpl.methodSig)
-                        if(iUse == null){
-                            methodReqs[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(True, mImpl.methodSig)
-                            methodEnss[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(True, mImpl.methodSig)
-                        } else {
-                            val spec = extractSpec(iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }, "Requires",
-                                    iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }.type)
-                            methodReqs[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(spec, mImpl.methodSig)
-                            val spec2 = extractSpec(iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }, "Ensures",
-                                    iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }.type)
-                            methodEnss[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(spec2, mImpl.methodSig)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private fun populateAllowedTypes(model: Model) {
-        for(moduleDecl in model.moduleDecls){
-            if(moduleDecl.name.startsWith("ABS.")) continue
-            for(decl in moduleDecl.decls){
-                allowedTypes += decl.qualifiedName
-                allowedTypes += decl.name
-            }
-        }
-    }
-}
 
 sealed class CrowOption{
     data class MethodOption(val path : String) : CrowOption()
@@ -143,16 +62,15 @@ class Main : CliktCommand() {
                 lazyMessage = {"invalid fully qualified function name $it"}) },
         option(help="Verifies the main block of the model").switch("--main" to CrowOption.MainBlockOption),
         option(help="Verifies the full model").switch("--full" to CrowOption.FullOption)
- //       option(help="Verifies the full functional layer (experimental)").switch("--full-function" to CrowOption.FullOption)
     ).single().required()
 
    // private val timeout     by   option("--timeout","-to",help="timeout for a single SMT prover invocation in seconds").int().default(timeoutS)
     private val tmp        by   option("--tmp", "-t", help="path to a directory used to store .smt and counterexample files").path().default(Paths.get(tmpPath))
     private val smtCmd     by   option("--smt", "-s", help="command to start SMT solver").default(smtPath)
     private val verbose    by   option("--verbose", "-v", help="verbosity output level").int().restrictTo(Verbosity.values().indices).default(Verbosity.NORMAL.ordinal)
-    private val deductType by   option("--deduct", "-d", help="Used Deductive Type").choice("PostInv","RegAcc","LocalType").convert { when(it){"PostInv" -> PostInvType::class; "RegAcc" -> RegAccType::class; "LocalType" -> LocalTypeType::class; else -> throw Exception(); } }.default(PostInvType::class)
+    private val deductType by   option("--deduct", "-d", help="Used Deductive Type").choice("PostInv","LocalType").convert { when(it){"PostInv" -> PostInvType::class; "LocalType" -> LocalTypeType::class; else -> throw Exception(); } }.default(PostInvType::class)
     private val freedom    by   option("--freedom", "-fr", help="Performs a simple check for potentially deadlocking methods").flag()
-    private val invFlag    by  option("--investigate", "-inv", help="Generate counterexamples for uncloseable branches").flag()
+    private val invFlag    by   option("--investigate", "-inv", help="Generate counterexamples for uncloseable branches").flag()
     private val conciseProofsFlag    by  option("--concise_proofs", "-cp", help="Generate concise proofs omitting unused declarations").flag()
 
     override fun run() {

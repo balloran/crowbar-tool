@@ -12,7 +12,6 @@ interface Anything /*: Cloneable*/ {
     fun<T : Any> collectAll(clazz : KClass<T>) : Set<Anything> = iterate { clazz.isInstance(it) }
 }
 interface AbstractVar
-interface AbstractListVar
 
 data class Modality(var remainder: Stmt, val target: DeductType) : Anything {
     override fun prettyPrint() : String{ return "["+remainder.prettyPrint()+" || "+target.prettyPrint()+"]"}

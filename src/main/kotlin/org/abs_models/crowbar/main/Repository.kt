@@ -8,10 +8,14 @@ import org.abs_models.crowbar.types.getReturnType
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
+import org.abs_models.frontend.typechecker.UnknownType
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 
-
+/*
+We need to keep track of ADTs because SMT-LIB has no polymorphic heaps, so we need to generate several heaps per type
+TODO: document
+*/
 object ADTRepos {
 
 	var model:Model? = null
@@ -169,7 +173,6 @@ object ADTRepos {
 
 object FunctionRepos{
     val known : MutableMap<String, FunctionDecl> = mutableMapOf()
-
 	val genericFunctions = mutableMapOf<String,Triple<DataTypeType, List<Type>, Function>>()
 
     fun isKnown(str: String) = known.containsKey(str)
@@ -317,6 +320,81 @@ object FunctionRepos{
 		val additionalName = concreteTypes.joinToString("_") { cT -> genericTypeSMTName(cT!!)}
 		return "${function.name}_$additionalName"
 	}
+}
 
+//todo: once allowedTypes is not needed anymore, the repository needs to be passed to fewer places
+data class Repository(private val model : Model?,
+					  val allowedTypes : MutableList<String> =  mutableListOf("ABS.StdLib.Int",
+                                                                              "ABS.StdLib.Bool",
+                                                                              "ABS.StdLib.Unit",
+                                                                              "ABS.StdLib.Fut<ABS.StdLib.Int>",
+                                                                              "ABS.StdLib.Fut<ABS.StdLib.Bool>",
+                                                                              "ABS.StdLib.Fut<ABS.StdLib.Unit>"),
+					  val classReqs : MutableMap<String,Pair<Formula, ClassDecl>> = mutableMapOf(),
+					  val methodReqs : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
+					  val methodEnss : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
 
+					  val syncMethodReqs : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
+					  val syncMethodEnss : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf()){
+    init{
+        if(model != null) populateAllowedTypes(model)
+    }
+    fun populateClassReqs(model: Model) {
+        for(moduleDecl in model.moduleDecls) {
+            if(moduleDecl.name.startsWith("ABS.")) continue
+            for (decl in moduleDecl.decls) {
+                if (decl is ClassDecl) {
+                    val spec = extractSpec(decl, "Requires", UnknownType.INSTANCE)
+                    classReqs[decl.name] = Pair(spec,decl) //todo: use fully qualified name here
+                }
+            }
+        }
+    }
+    fun populateMethodReqs(model: Model) {
+        for(moduleDecl in model.moduleDecls) {
+            if(moduleDecl.name.startsWith("ABS.")) continue
+            for (decl in moduleDecl.decls) {
+                if (decl is InterfaceDecl) {
+                    for (mDecl in decl.allMethodSigs) {
+                        val spec = extractSpec(mDecl, "Requires", mDecl.type)
+                        val spec2 = extractSpec(mDecl, "Ensures", mDecl.type)
+                        methodReqs[decl.qualifiedName+"."+mDecl.name] = Pair(spec, mDecl)
+                        methodEnss[decl.qualifiedName+"."+mDecl.name] = Pair(spec2, mDecl)
+                    }
+                }
+                if(decl is ClassDecl){
+                    for(mImpl in decl.methods){
+                        val iUse = getDeclaration(mImpl.methodSig, mImpl.contextDecl as ClassDecl)
+                        val syncSpecReq = extractSpec(mImpl, "Requires", mImpl.type)
+                        val syncSpecEns = extractSpec(mImpl, "Ensures", mImpl.type)
+                        syncMethodReqs[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(syncSpecReq, mImpl.methodSig)
+                        syncMethodEnss[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(syncSpecEns, mImpl.methodSig)
+                        if(iUse == null){
+                            methodReqs[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(True, mImpl.methodSig)
+                            methodEnss[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(True, mImpl.methodSig)
+                        } else {
+                            val spec = extractSpec(iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }, "Requires",
+								iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }.type
+							)
+                            methodReqs[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(spec, mImpl.methodSig)
+                            val spec2 = extractSpec(iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }, "Ensures",
+								iUse.allMethodSigs.first { it.matches(mImpl.methodSig) }.type
+							)
+                            methodEnss[decl.qualifiedName+"."+mImpl.methodSig.name] = Pair(spec2, mImpl.methodSig)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun populateAllowedTypes(model: Model) {
+        for(moduleDecl in model.moduleDecls){
+            if(moduleDecl.name.startsWith("ABS.")) continue
+            for(decl in moduleDecl.decls){
+                allowedTypes += decl.qualifiedName
+                allowedTypes += decl.name
+            }
+        }
+    }
 }

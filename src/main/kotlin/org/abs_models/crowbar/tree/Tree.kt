@@ -6,22 +6,24 @@ import org.abs_models.crowbar.data.SymbolicState
 import org.abs_models.crowbar.interfaces.evaluateSMT
 import org.abs_models.crowbar.rule.containsAbstractVar
 
+/* general interface for all kinds of nodes */
 interface SymbolicTree{
     fun finishedExecution() : Boolean
     fun debugString(steps : Int) : String
     fun collectLeaves() : List<SymbolicLeaf>
     fun hasAbstractVar() : Boolean
     fun normalize()
-    fun collectInferenceLeaves() : List<InferenceLeaf> = this.collectLeaves().filterIsInstance<InferenceLeaf>()
+    fun collectInferenceLeaves() : List<StaticNode> = this.collectLeaves().filterIsInstance<StaticNode>()
 }
 
+
+/* general interface for all kinds of leaves */
 interface SymbolicLeaf : SymbolicTree{
     fun evaluate() : Boolean
 }
 
-interface InferenceLeaf : SymbolicLeaf
 
-data class StaticNode(val str : String) : InferenceLeaf{
+data class StaticNode(val str : String) : SymbolicLeaf{
     override fun finishedExecution() : Boolean = true
     override fun debugString(steps : Int) : String = "NOT IMPLEMENTED"
     override fun collectLeaves() : List<SymbolicLeaf> = listOf(this)

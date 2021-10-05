@@ -4,7 +4,14 @@ import org.abs_models.crowbar.data.AbstractVar
 import org.abs_models.crowbar.data.Anything
 import kotlin.reflect.full.superclasses
 
+/*
+This file contains the unification/matching algorithm.
+We use the `AbstractVar` interface to mark variables, which are then unified with a concrete structure.
+The algorithm works on arbitrary structures using reflection, which is a bit slow, but easy to extend:
+If a class C is added to the Anything hierarchy, one adds an interface I with C <: i and a class AbstractC <: AbstractVar, I.
+ */
 
+/* Keeps track of the unifier and failure reason */
 class MatchCondition{
     var map = mutableMapOf<AbstractVar, Anything>()
     var failReason = "No failure occurred"
@@ -15,46 +22,13 @@ class MatchCondition{
     var failure = false
 }
 
-fun containsAbstractVar(concrete: Anything) : Boolean{
-    return concrete.collectAll(AbstractVar::class).isNotEmpty()
-}
-
-
-/*
-*   For reasons unknown, the clone part throws a java.lang.VerifyError
-*   This may be a versioning error in the classPath
-*   However, this function is currently not used anyway
-*
-fun apply(pattern : Anything, matchCond : MatchCondition) : Any{
-
-    if(pattern is AbstractVar){
-        if(matchCond.map.containsKey(pattern))
-           return matchCond.map.getValue(pattern)
-        return pattern
-    }
-
-    val next = pattern.clone()
-
-    for(field in pattern::class.java.declaredFields) {
-        field.isAccessible = true
-        val f = field.get(pattern)
-
-        if(!Anything::class.java.isAssignableFrom(field.type)) {
-            field.set(next, f)
-        }else{
-            field.set(next, apply(f as Anything, matchCond))
-        }
-    }
-    return next
-}*/
-
+fun containsAbstractVar(concrete: Anything) : Boolean = concrete.collectAll(AbstractVar::class).isNotEmpty()
 
 fun match(concrete : Anything, pattern : Anything, matchCond : MatchCondition) {
 
     fun inMatch(concrete : Anything, pattern : Anything, matchCond : MatchCondition) {
         if (pattern is AbstractVar) {
             //The following checks that we have the right kind of AbstractVar by checking the implemented super class
-            //todo: this is buggy because the superclasses[0] access returns Java.lang.Object
             if (pattern::class.superclasses[0].isInstance(concrete)) {
                 //This catches abstract variables bound multiple times
                 if (matchCond.map.containsKey(pattern) && matchCond.map[pattern] != concrete) {
@@ -96,8 +70,7 @@ fun match(concrete : Anything, pattern : Anything, matchCond : MatchCondition) {
                 val f2 = field.get(pattern)
                 if(f2 is AbstractVar && f1 is Anything){
                     matchCond.map[f2] = f1
-                } else
-                if (f1 != f2) {
+                } else if (f1 != f2) {
                     matchCond.failReason = "Value mismatch: ${concrete.prettyPrint()} and ${pattern.prettyPrint()}"
                     return
                 }

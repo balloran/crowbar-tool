@@ -3,8 +3,12 @@ package org.abs_models.crowbar.tree
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.investigator.collectBaseExpressions
 
-// Abstract classes & interfaces
+/*
+These classes record the information needed for the CEG.
+NodeInfo instances are annotated by the rules so we are able to reconstruct the statements.
+ */
 
+// Abstract classes & interfaces
 abstract class NodeInfo(val isAnon: Boolean, val isHeapAnon: Boolean) {
 	open val isSignificantBranch = false // Indicates a proof branch showing an obligation other than the main postcondition
 	open val initAfter = false // Indicates that initial state information should be rendered _after_ the node rendering
@@ -22,7 +26,6 @@ interface LeafInfo {
 }
 
 // Significant branches
-
 class InfoInvariant(invariant: Formula) : LeafInfo, SigBranch(isAnon = false, isHeapAnon = false) {
 	override fun <ReturnType> accept(visitor: NodeInfoVisitor<ReturnType>) = visitor.visit(this)
 	override val obligations = listOf(Pair("Object invariant", invariant))
@@ -53,7 +56,6 @@ class InfoNullCheck(condition: Formula) : LeafInfo, SigBranch(isAnon = false, is
 }
 
 // Other rule applications
-
 class NoInfo : NodeInfo(isAnon = false, isHeapAnon = false) {
 	override fun <ReturnType> accept(visitor: NodeInfoVisitor<ReturnType>) = visitor.visit(this)
 }
@@ -123,4 +125,28 @@ class InfoSkip : NodeInfo(isAnon = false, isHeapAnon = false) {
 class InfoSkipEnd(postcondition: Formula) : LeafInfo, NodeInfo(isAnon = false, isHeapAnon = false) {
 	override fun <ReturnType> accept(visitor: NodeInfoVisitor<ReturnType>) = visitor.visit(this)
 	override val obligations = listOf(Pair("Loop invariant", postcondition))
+}
+
+interface NodeInfoVisitor<ReturnType> {
+    fun visit(info: InfoAwaitUse): ReturnType
+    fun visit(info: InfoBranch): ReturnType
+    fun visit(info: InfoCallAssign): ReturnType
+    fun visit(info: InfoClassPrecondition): ReturnType
+    fun visit(info: InfoGetAssign): ReturnType
+    fun visit(info: InfoIfElse): ReturnType
+    fun visit(info: InfoIfThen): ReturnType
+    fun visit(info: InfoInvariant): ReturnType
+    fun visit(info: InfoLocAssign): ReturnType
+    fun visit(info: InfoLoopInitial): ReturnType
+    fun visit(info: InfoLoopPreserves): ReturnType
+    fun visit(info: InfoLoopUse): ReturnType
+    fun visit(info: InfoMethodPrecondition): ReturnType
+    fun visit(info: InfoNullCheck): ReturnType
+    fun visit(info: InfoObjAlloc): ReturnType
+    fun visit(info: InfoReturn): ReturnType
+    fun visit(info: InfoScopeClose): ReturnType
+    fun visit(info: InfoSkip): ReturnType
+    fun visit(info: InfoSkipEnd): ReturnType
+    fun visit(info: InfoSyncCallAssign): ReturnType
+    fun visit(info: NoInfo): ReturnType
 }
