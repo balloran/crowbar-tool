@@ -13,9 +13,7 @@ import org.abs_models.crowbar.rule.match
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.nextPITStrategy
 import org.abs_models.crowbar.types.PostInvariantPair
-import org.abs_models.frontend.ast.Model
 import java.nio.file.Paths
-import kotlin.system.exitProcess
 
 class BasicTest : StringSpec() {
 
@@ -138,14 +136,14 @@ class BasicTest : StringSpec() {
             cond.failReason shouldBe "AbstractVar A failed unification because of a type error: v"
         }
         "matchSet"{
-            val stmt = SyncStmt(ProgVar("v"),  ProgVar("w"), ConcerteStringSet(), FreshGenerator.getFreshPP())
+            val stmt = SyncStmt(ProgVar("v"),  ProgVar("w"), ConcreteStringSet(), FreshGenerator.getFreshPP())
             val schablone = SyncStmt(LocationAbstractVar("LHS"), ExprAbstractVar("EXPR"), AbstractStringSet("RESOLVES"), PPAbstractVar("PP"))
             val cond = MatchCondition()
             match(stmt, schablone, cond)
             println(cond.failReason)
             assert(cond.map[AbstractStringSet("RESOLVES")] != null)
-            assert(cond.map[AbstractStringSet("RESOLVES")] is ConcerteStringSet)
-            assert((cond.map[AbstractStringSet("RESOLVES")] as ConcerteStringSet).vals.isEmpty())
+            assert(cond.map[AbstractStringSet("RESOLVES")] is ConcreteStringSet)
+            assert((cond.map[AbstractStringSet("RESOLVES")] as ConcreteStringSet).vals.isEmpty())
         }
         "containsAbstractVar"{
             assert(!containsAbstractVar(conc))

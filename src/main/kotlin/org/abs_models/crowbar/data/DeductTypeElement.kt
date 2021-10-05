@@ -1,6 +1,6 @@
 package org.abs_models.crowbar.data
 
-import org.abs_models.crowbar.interfaces.translateABSStmtToSymStmt
+import org.abs_models.crowbar.interfaces.translateStatement
 import org.abs_models.crowbar.main.Repository
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.frontend.ast.Block
@@ -16,7 +16,7 @@ interface DeductType: Anything {
 	fun exctractFunctionNode(fDecl: FunctionDecl): SymbolicNode
 
 	fun getNormalizedStatement(st : Block?): Stmt {
-		var body = translateABSStmtToSymStmt(st, emptyMap())
+		var body = translateStatement(st, emptyMap())
 		if(!body.hasReturn()) body = appendStmt(body, ReturnStmt(unitExpr()))
 		return body
 	}

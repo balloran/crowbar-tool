@@ -344,14 +344,10 @@ data class DataTypeConst(val name : String, val concrType: Type?, val params : L
         return name + ":" + concrType!!.qualifiedName+"("+params.map { p -> p.prettyPrint() }.fold("") { acc, nx -> "$acc,$nx" }
             .removePrefix(",") + ")"
     }
-    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f)) { acc, nx ->
-        acc + nx.iterate(
-            f
-        )
-    }
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f))
+    { acc, nx ->  acc + nx.iterate(f) }
 
     override fun toSMT(indent:String): String {
-
         val back = genericSMTName(name, concrType!!)
         if(params.isEmpty())
             return back
@@ -361,12 +357,10 @@ data class DataTypeConst(val name : String, val concrType: Type?, val params : L
 }
 
 fun genericTypeSMTName(type :Type) :String{
-
     return genericSMTName(if(!type.qualifiedName.contains(".")) type.toString() else type.qualifiedName, type)
 }
 
 fun genericSMTName(name :String, type :Type) :String{
-
     val ret =
 
         if(isGeneric(type)){
@@ -380,8 +374,7 @@ fun genericSMTName(name :String, type :Type) :String{
                     genericTypeSMTName(it)
                 }
             }}"
-        }else
-            name
+        }else name
 
     return ret
 }
@@ -772,32 +765,3 @@ fun boundGeneric(bindingType: Type, unboundTerm: Term): Term {
         bindingType,
         bindingTypeArgs.zip(unboundTerm.params).map<Pair<Type, Term>, Term> { boundGeneric(it.first, it.second) })
 }
-
-/*
-fun subst(input: LogicElement, elem : ProgVar, term : Term) : LogicElement {
-    when(input){
-        elem                -> return term
-        is EmptyUpdate -> return EmptyUpdate
-        is ElementaryUpdate -> return ElementaryUpdate(input.lhs, subst(input.rhs, elem, term) as Term)
-        is ChainUpdate -> {
-            if(input.left.assigns(elem)) return ChainUpdate(subst(input.left, elem, term) as UpdateElement, input.right)
-            return ChainUpdate(subst(input.left, elem, term) as UpdateElement, subst(input.right, elem, term) as UpdateElement)
-        }
-        is Function -> return Function(input.name, input.params.map { p -> subst(p, elem, term) as Term })
-        is Predicate -> return Predicate(input.name, input.params.map { p -> subst(p, elem, term) as Term })
-        is Impl -> return Impl(subst(input.left, elem, term) as Formula, subst(input.right, elem, term) as Formula)
-        is And -> return And(subst(input.left, elem, term) as Formula, subst(input.right, elem, term) as Formula)
-        is Or -> return Or(subst(input.left, elem, term) as Formula, subst(input.right, elem, term) as Formula)
-        is Not -> return Not(subst(input.left, elem, term) as Formula)
-        is UpdateOnTerm -> {
-            if(input.update.assigns(elem)) return UpdateOnTerm(subst(input.update, elem, term) as UpdateElement, input.target)
-            return UpdateOnTerm(subst(input.update, elem, term) as UpdateElement, subst(input.target, elem, term) as Term)
-        }
-        is UpdateOnFormula -> {
-            if(input.update.assigns(elem)) return UpdateOnFormula(subst(input.update, elem, term) as UpdateElement, input.target)
-            return UpdateOnFormula(subst(input.update, elem, term) as UpdateElement, subst(input.target, elem, term) as Formula)
-        }
-        else                -> return input
-    }
-}
- */

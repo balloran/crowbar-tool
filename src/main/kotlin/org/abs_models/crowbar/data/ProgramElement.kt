@@ -43,7 +43,7 @@ data class AllocateStmt(val lhs : Location, val rhs : Expr) : Stmt {
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + lhs.iterate(f) + rhs.iterate(f)
 }
 
-data class SyncStmt(val lhs : Location, val rhs : Expr, val resolves : ConcerteStringSet, val pp : PP) : Stmt {
+data class SyncStmt(val lhs : Location, val rhs : Expr, val resolves : ConcreteStringSet, val pp : PP) : Stmt {
     override fun prettyPrint(): String {
         return lhs.prettyPrint()+" =  "+rhs.prettyPrint()+".get"
     }
@@ -306,7 +306,7 @@ open class ProgVar(open val name: String, open val concrType: Type = UnknownType
         return "$name:${concrType.qualifiedName}"
     }
 
-    //this ignores the type and that is ok for now
+    //this ignores the type
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

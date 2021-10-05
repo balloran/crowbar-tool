@@ -272,7 +272,7 @@ object FunctionRepos{
 						}
 						else
 							ADTRepos.libPrefix(def.type.qualifiedName)})\n"
-					defs += "\t${exprToTerm(translateABSExpToSymExpr(def, def.type, emptyMap())).toSMT()}\n"
+					defs += "\t${exprToTerm(translateExpression(def, def.type, emptyMap())).toSMT()}\n"
 			    }
 				ret += "\n(define-funs-rec(\n$sigs)(\n$defs))"
 		    }

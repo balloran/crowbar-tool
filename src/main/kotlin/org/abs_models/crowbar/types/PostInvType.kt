@@ -10,8 +10,8 @@ import org.abs_models.crowbar.data.ReturnStmt
 import org.abs_models.crowbar.data.SkipStmt
 import org.abs_models.crowbar.data.Stmt
 import org.abs_models.crowbar.data.WhileStmt
-import org.abs_models.crowbar.interfaces.translateABSExpToSymExpr
-import org.abs_models.crowbar.interfaces.translateABSStmtToSymStmt
+import org.abs_models.crowbar.interfaces.translateExpression
+import org.abs_models.crowbar.interfaces.translateStatement
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.rule.FreshGenerator
 import org.abs_models.crowbar.rule.MatchCondition
@@ -113,7 +113,7 @@ interface PostInvType : DeductType{
         for (fieldDecl in classDecl.fields){
             if(fieldDecl.hasInitExp()){
                 val nextBody = AssignStmt(Field(fieldDecl.name+"_f", fieldDecl.type),
-                        translateABSExpToSymExpr(fieldDecl.initExp, UnknownType.INSTANCE, emptyMap()))
+                        translateExpression(fieldDecl.initExp, UnknownType.INSTANCE, emptyMap()))
                 body = SeqStmt(nextBody,body)
             }
         }
@@ -144,7 +144,7 @@ interface PostInvType : DeductType{
             exitProcess(-1)
         }
 
-        val v = appendStmt(translateABSStmtToSymStmt(model.mainBlock, emptyMap()), SkipStmt)
+        val v = appendStmt(translateStatement(model.mainBlock, emptyMap()), SkipStmt)
         return SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(v, PostInvariantPair(True, True))), emptyList())
     }
 
@@ -160,7 +160,7 @@ interface PostInvType : DeductType{
             if(fDef is BuiltinFunctionDef){
                 throw Exception("error during translation, cannot handle builtin yet")
             }else if(fDef is ExpFunctionDef){
-                body = ReturnStmt(translateABSExpToSymExpr(fDef.rhs, fDecl.type, emptyMap()))
+                body = ReturnStmt(translateExpression(fDef.rhs, fDecl.type, emptyMap()))
             }
         }catch (e: Exception) {
             e.printStackTrace()
@@ -239,7 +239,7 @@ class PITSyncAssign(repos: Repository) : PITAssign(repos, Modality(
         val rhs = exprToTerm(rhsExpr)
         val remainder = cond.map[StmtAbstractVar("CONT")] as Stmt
         val target = cond.map[PostInvAbstractVar("TYPE")] as DeductType
-        val resolves = cond.map[AbstractStringSet("RESOLVES")] as ConcerteStringSet
+        val resolves = cond.map[AbstractStringSet("RESOLVES")] as ConcreteStringSet
         val pp = cond.map[PPAbstractVar("PP")] as PP
         val ground = if(resolves.vals.isNotEmpty()){
             StaticNode("Must resolve: $pp contract $resolves")

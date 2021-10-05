@@ -3,10 +3,7 @@ package org.abs_models.crowbar.data
 import kotlin.reflect.KClass
 
 //General Elements
-interface Anything /*: Cloneable*/ {
-   /* public override fun clone(): Any {
-        return super.clone()
-    }*/
+interface Anything {
     fun prettyPrint() : String { return toString() }
     fun iterate(f: (Anything) -> Boolean) : Set<Anything> = if(f(this)) setOf(this) else emptySet()
     fun<T : Any> collectAll(clazz : KClass<T>) : Set<Anything> = iterate { clazz.isInstance(it) }
@@ -22,6 +19,6 @@ data class SymbolicState(val condition: Formula, val update: UpdateElement, val 
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + condition.iterate(f) + update.iterate(f) + modality.iterate(f)
 }
 
-open class ConcerteStringSet(val vals : Set<String> = emptySet()) : Anything
+open class ConcreteStringSet(val vals : Set<String> = emptySet()) : Anything
 
-data class AbstractStringSet(val name : String) : ConcerteStringSet(), AbstractVar
+data class AbstractStringSet(val name : String) : ConcreteStringSet(), AbstractVar

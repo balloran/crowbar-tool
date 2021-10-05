@@ -3,7 +3,7 @@ package org.abs_models.crowbar.main
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.Stmt
-import org.abs_models.crowbar.interfaces.translateABSExpToSymExpr
+import org.abs_models.crowbar.interfaces.translateExpression
 import org.abs_models.crowbar.investigator.CounterexampleGenerator
 import org.abs_models.crowbar.tree.LogicNode
 import org.abs_models.crowbar.tree.StaticNode
@@ -103,7 +103,7 @@ fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : 
             }
             val annotated = annotation.value as DataConstructorExp
             if(annotated.constructor != expectedSpec) continue
-            val next = exprToForm(translateABSExpToSymExpr(annotated.getParam(0) as Exp,decl.type, emptyMap()))
+            val next = exprToForm(translateExpression(annotated.getParam(0) as Exp,decl.type, emptyMap()))
             ret = if(ret == null) next else And(ret, next)
             if(!multipleAllowed) break
         }
@@ -117,7 +117,7 @@ fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : 
             }
             val annotated = annotation.value as DataConstructorExp
             if(annotated.constructor != expectedSpec) continue
-            val next = exprToForm(translateABSExpToSymExpr(annotated.getParam(0) as Exp,returnType, emptyMap()))
+            val next = exprToForm(translateExpression(annotated.getParam(0) as Exp,returnType, emptyMap()))
             ret = if(ret == null) next else And(ret, next)
             if(!multipleAllowed) break
         }
