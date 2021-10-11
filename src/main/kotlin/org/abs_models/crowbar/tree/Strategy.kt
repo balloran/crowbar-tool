@@ -48,7 +48,7 @@ fun getStrategy(clazz: KClass<out DeductType>, repos: Repository) : Strategy =
 fun nextPITStrategy(repos: Repository) : Strategy =
     DefaultStrategy(listOf(PITBranch, PITSyncAssign(repos), PITLocAssign(repos), PITAllocAssign(repos),
                            PITCallAssign(repos), PITSyncCallAssign(repos), PITReturn, PITSkip, PITIf, PITAssert,
-                           PITAwait, PITSkipSkip, PITWhile, PITScopeSkip))
+                           PITAwait, PITSkipSkip, PITWhile, PITScopeSkip, PITTryPush, PITTryPop, PITThrow))
 
 //local session types
 fun nextLTTStrategy(repos: Repository) : Strategy =

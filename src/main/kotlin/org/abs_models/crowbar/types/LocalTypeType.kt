@@ -24,6 +24,7 @@ import org.abs_models.crowbar.tree.*
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
+import java.util.*
 
 // Declaration
 interface LocalTypeType : DeductType {
@@ -64,7 +65,7 @@ interface LocalTypeType : DeductType {
             return emptySymNode()
 
         val updateOldHeap = ChainUpdate(ElementaryUpdate(LastHeap, Heap), ElementaryUpdate(OldHeap, Heap))
-        symb = SymbolicState(And(And(objInv, metpre), roles), updateOldHeap, Modality(body, LocalTypeTarget(ltexp, roles, objInv)))
+        symb = SymbolicState(And(And(objInv, metpre), roles), updateOldHeap, Modality(body, LocalTypeTarget(ltexp, roles, objInv)), listOf())
 
         val usedSpec = StaticNode("Using specification of ${classDecl.qualifiedName}.$name:\nObject Invariant: ${objInv.prettyPrint()}\nRequires: ${metpre.prettyPrint()}")
 
@@ -105,7 +106,7 @@ interface LocalTypeType : DeductType {
             "${classDecl.name}.${it.methodSig.name}: ${lte?.prettyPrint() ?: "no local type annotation"}"
         }
 
-        val emptySymState = SymbolicState(True, EmptyUpdate, Modality(SkipStmt, LocalTypeTarget(LTSkip, True)))
+        val emptySymState = SymbolicState(True, EmptyUpdate, Modality(SkipStmt, LocalTypeTarget(LTSkip, True)), listOf())
 
         return SymbolicNode(emptySymState, listOf(StaticNode("Expected projection result:\n$methods")))
     }
@@ -115,7 +116,7 @@ interface LocalTypeType : DeductType {
     override fun exctractFunctionNode(fDecl: FunctionDecl) = emptySymNode()
 
     fun emptySymNode(): SymbolicNode {
-        val emptySymState = SymbolicState(True, EmptyUpdate, Modality(SkipStmt, LocalTypeTarget(LTSkip, True)))
+        val emptySymState = SymbolicState(True, EmptyUpdate, Modality(SkipStmt, LocalTypeTarget(LTSkip, True)), listOf())
         return SymbolicNode(emptySymState, listOf())
     }
 }
@@ -146,7 +147,7 @@ abstract class LTTAssign(protected val repos: Repository, conclusion: Modality) 
             iForm,
             ChainUpdate(iUp, assignFor(loc, rhs)),
             Modality(remainder, target)
-        ), info = infoObj)
+            , listOf()), info = infoObj)
     }
 }
 
@@ -342,7 +343,7 @@ object LTTSkipSkip : Rule(Modality(
     override fun transform(cond: MatchCondition, input: SymbolicState): List<SymbolicTree> {
         val cont = cond.map[StmtAbstractVar("CONT")] as Stmt
         val target = cond.map[LocalTypeAbstractTarget("TYPE")] as DeductType
-        val res = SymbolicNode(SymbolicState(input.condition, input.update, Modality(cont, target)), info = InfoSkip())
+        val res = SymbolicNode(SymbolicState(input.condition, input.update, Modality(cont, target), listOf()), info = InfoSkip())
         return listOf(res)
     }
 }
@@ -354,7 +355,7 @@ object LTTScopeSkip : Rule(Modality(
     override fun transform(cond: MatchCondition, input: SymbolicState): List<SymbolicTree> {
         val cont = cond.map[StmtAbstractVar("CONT")] as Stmt
         val target = cond.map[LocalTypeAbstractTarget("TYPE")] as DeductType
-        val res = SymbolicNode(SymbolicState(input.condition, input.update, Modality(cont, target)), info = InfoScopeClose())
+        val res = SymbolicNode(SymbolicState(input.condition, input.update, Modality(cont, target), listOf()), info = InfoScopeClose())
         return listOf(res)
     }
 }
@@ -417,14 +418,14 @@ object LTTIf : Rule(Modality(
         val bodyYes = SeqStmt(cond.map[StmtAbstractVar("THEN")] as Stmt, contBody)
         val updateYes = input.update
         val typeYes = cond.map[LocalTypeAbstractTarget("TYPE")] as DeductType
-        val resThen = SymbolicState(And(input.condition, UpdateOnFormula(updateYes, guardYes)), updateYes, Modality(bodyYes, typeYes))
+        val resThen = SymbolicState(And(input.condition, UpdateOnFormula(updateYes, guardYes)), updateYes, Modality(bodyYes, typeYes), listOf())
 
         // else
         val guardNo = Not(exprToForm(guardExpr))
         val bodyNo = SeqStmt(cond.map[StmtAbstractVar("ELSE")] as Stmt, contBody)
         val updateNo = input.update
         val typeNo = cond.map[LocalTypeAbstractTarget("TYPE")] as DeductType
-        val resElse = SymbolicState(And(input.condition, UpdateOnFormula(updateNo, guardNo)), updateNo, Modality(bodyNo, typeNo))
+        val resElse = SymbolicState(And(input.condition, UpdateOnFormula(updateNo, guardNo)), updateNo, Modality(bodyNo, typeNo), listOf())
         return listOf(SymbolicNode(resThen, info = InfoIfThen(guardExpr)), SymbolicNode(resElse, info = InfoIfElse(guardExpr)))
     }
 }
@@ -464,7 +465,7 @@ object LTTAwait : Rule(Modality(
         val context = LTCommonContext(input.condition, input.update)
         val newTarget = target.updateLTE(ltexp.readTransform(LTPatternSusp, context))
 
-        val sState = SymbolicState(newInputCondition, newUpdate, Modality(cont, newTarget))
+        val sState = SymbolicState(newInputCondition, newUpdate, Modality(cont, newTarget), listOf())
 
         return listOf(SymbolicNode(sState, info = InfoAwaitUse(guardExpr, anonHeapExpr)))
     }
@@ -524,7 +525,7 @@ object LTTWhile : Rule(Modality(
             And(invariant, And(guard, target.roleInv)),
             EmptyUpdate,
             Modality(appendStmt(body, SeqStmt(ScopeMarker, SkipStmt)), preservesTarget)
-        )
+            , listOf())
 
         // Use Case
         val useInfo = InfoLoopUse(guardExpr, invariant)
@@ -532,7 +533,7 @@ object LTTWhile : Rule(Modality(
             And(invariant, And(Not(guard), target.roleInv)),
             EmptyUpdate,
             Modality(cont, useTarget)
-        )
+            , listOf())
 
         return listOf(
             initial,
@@ -560,7 +561,7 @@ object LTTBranch : Rule(Modality(
             val preCond = Predicate("=", listOf(match, exprToTerm(br.matchTerm)))
             // Add two scope close markers for counterexample generation (one for branch, one for switch)
             val contBody = SeqStmt(br.branch, SeqStmt(ScopeMarker, SeqStmt(ScopeMarker, cont)))
-            val ss = SymbolicState(And(no, And(input.condition, UpdateOnFormula(update, preCond))), update, Modality(contBody, type))
+            val ss = SymbolicState(And(no, And(input.condition, UpdateOnFormula(update, preCond))), update, Modality(contBody, type), listOf())
             ress = ress + SymbolicNode(ss, info = InfoBranch(matchExpr, br.matchTerm, no))
             no = And(no, Not(preCond))
         }

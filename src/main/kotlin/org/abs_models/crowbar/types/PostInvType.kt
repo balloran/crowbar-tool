@@ -9,6 +9,7 @@ import org.abs_models.crowbar.data.IfStmt
 import org.abs_models.crowbar.data.ReturnStmt
 import org.abs_models.crowbar.data.SkipStmt
 import org.abs_models.crowbar.data.Stmt
+import org.abs_models.crowbar.data.ThrowStmt
 import org.abs_models.crowbar.data.WhileStmt
 import org.abs_models.crowbar.interfaces.translateExpression
 import org.abs_models.crowbar.interfaces.translateStatement
@@ -21,6 +22,7 @@ import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
+import java.util.*
 import kotlin.system.exitProcess
 
 
@@ -65,7 +67,7 @@ interface PostInvType : DeductType{
         output("Crowbar-v: method post-condition: ${metpost.prettyPrint()}", Verbosity.V)
         output("Crowbar-v: object invariant: ${objInv.prettyPrint()}",Verbosity.V)
         val updateOldHeap = ChainUpdate(ElementaryUpdate(LastHeap,Heap), ElementaryUpdate(OldHeap, Heap))
-        symb = SymbolicState(And(And(objInv,metpre),roles), updateOldHeap, Modality(body, PostInvariantPair(metpost, objInv)))
+        symb = SymbolicState(And(And(objInv,metpre),roles), updateOldHeap, Modality(body, PostInvariantPair(metpost, objInv)), listOf())
         if(hasPre && (overlapsSet == null || succeedsSet == null)){
             output("Crowbar: Method ${mDecl.methodSig.name} has a heap precondition but does not fully specify its context.")
             val full = classDecl.allMethodSigs.joinToString(",") { it.name }
@@ -133,7 +135,7 @@ interface PostInvType : DeductType{
             output("Crowbar-v: object precondition: ${objPre.prettyPrint()}")
             output("Crowbar-v: object invariant: ${objInv.prettyPrint()}")
         }
-        val symb = SymbolicState(objPre, EmptyUpdate, Modality(body, PostInvariantPair(True, objInv)))
+        val symb = SymbolicState(objPre, EmptyUpdate, Modality(body, PostInvariantPair(True, objInv)), listOf())
         return SymbolicNode(symb, emptyList())
     }
 
@@ -145,7 +147,7 @@ interface PostInvType : DeductType{
         }
 
         val v = appendStmt(translateStatement(model.mainBlock, emptyMap()), SkipStmt)
-        return SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(v, PostInvariantPair(True, True))), emptyList())
+        return SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(v, PostInvariantPair(True, True)), listOf()), emptyList())
     }
 
     override fun exctractFunctionNode(fDecl: FunctionDecl): SymbolicNode {
@@ -168,7 +170,7 @@ interface PostInvType : DeductType{
             throw e
         }
         if(body != null) {
-            symb = SymbolicState(funpre, EmptyUpdate, Modality(body, PostInvariantPair(funpost, True)))
+            symb = SymbolicState(funpre, EmptyUpdate, Modality(body, PostInvariantPair(funpost, True)), listOf())
             return SymbolicNode(symb, emptyList())
         }else{
             throw Exception("error during translation of function contract")
@@ -202,11 +204,13 @@ abstract class PITAssign(protected val repos: Repository,
                      target : DeductType,
                      iForm : Formula,
                      iUp : UpdateElement,
-                     infoObj: NodeInfo) : SymbolicNode{
+                     infoObj: NodeInfo,
+                     scopes: List<ConcreteExceptionScope>) : SymbolicNode{
         return SymbolicNode(SymbolicState(
             iForm,
             ChainUpdate(iUp, assignFor(loc,rhs)),
-            Modality(remainder, target)
+            Modality(remainder, target),
+            scopes
         ), info = infoObj)
     }
 }
@@ -224,7 +228,7 @@ class PITLocAssign(repos: Repository) : PITAssign(repos,Modality(
         val target = cond.map[PostInvAbstractVar("TYPE")] as DeductType
         val info = InfoLocAssign(lhs, rhsExpr)
         val zeros  = divByZeroNodes(listOf(rhsExpr), input)
-        return listOf(symbolicNext(lhs, rhs, remainder, target, input.condition, input.update, info)) + zeros
+        return listOf(symbolicNext(lhs, rhs, remainder, target, input.condition, input.update, info, input.exceptionScopes)) + zeros
     }
 }
 
@@ -265,7 +269,7 @@ class PITSyncAssign(repos: Repository) : PITAssign(repos, Modality(
         }
         var zeros : List<SymbolicTree>  = divByZeroNodes(listOf(rhsExpr), input)
         if (ground != null) zeros = zeros + ground
-        return listOf(symbolicNext(lhs, rhs, remainder, target, cond, input.update, info)) + zeros
+        return listOf(symbolicNext(lhs, rhs, remainder, target, cond, input.update, info, input.exceptionScopes)) + zeros
     }
 
 }
@@ -311,7 +315,7 @@ class PITAllocAssign(repos: Repository) : PITAssign(repos, Modality(
                                             target,
                                             And(input.condition, UpdateOnFormula(input.update, Not(Predicate("=", listOf(nextRhs, Function("0")))))),
                                             ChainUpdate(input.update, assignFor(lhs, nextRhs)),
-                                            InfoObjAlloc(lhs, rhsExpr, constructorSMTExpr))
+                                            InfoObjAlloc(lhs, rhsExpr, constructorSMTExpr), input.exceptionScopes)
 
         val zeros  = divByZeroNodes(listOf(rhsExpr), input)
         return listOf<SymbolicTree>(pre, next) + zeros
@@ -384,7 +388,7 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
                                             target,
                                             And(input.condition, UpdateOnFormula(input.update,UpdateOnFormula(updateNew,subst(postCond, substPostMap) as Formula))),
                                             input.update,
-                                            InfoCallAssign(lhs, calleeExpr, call, freshFut.name))
+                                            InfoCallAssign(lhs, calleeExpr, call, freshFut.name), input.exceptionScopes)
         if (isNonNull) return listOf(pre, next)
         val zeros  = divByZeroNodes(call.e, input)
         return listOf<SymbolicTree>(nonenull,pre,next) + zeros
@@ -447,7 +451,7 @@ class PITSyncCallAssign(repos: Repository) : PITAssign(repos, Modality(
                 target,
                 And(input.condition, updateOnFormula),
                 updateRightNext,
-                InfoSyncCallAssign(lhs, calleeExpr, call, anonHeapExpr, returnValExpr))
+                InfoSyncCallAssign(lhs, calleeExpr, call, anonHeapExpr, returnValExpr), input.exceptionScopes)
 
         val zeros  = divByZeroNodes(call.e, input)
         return listOf<SymbolicTree>(first,next) + zeros
@@ -492,7 +496,7 @@ object PITSkipSkip : Rule(Modality(
     override fun transform(cond: MatchCondition, input : SymbolicState): List<SymbolicTree> {
         val cont = cond.map[StmtAbstractVar("CONT")] as Stmt
         val pitype = cond.map[PostInvAbstractVar("TYPE")] as DeductType
-        val res = SymbolicNode(SymbolicState(input.condition, input.update, Modality(cont, pitype)), info = InfoSkip())
+        val res = SymbolicNode(SymbolicState(input.condition, input.update, Modality(cont, pitype), input.exceptionScopes), info = InfoSkip())
         return listOf(res)
     }
 }
@@ -504,7 +508,7 @@ object PITScopeSkip : Rule(Modality(
     override fun transform(cond: MatchCondition, input : SymbolicState): List<SymbolicTree> {
         val cont = cond.map[StmtAbstractVar("CONT")] as Stmt
         val pitype = cond.map[PostInvAbstractVar("TYPE")] as DeductType
-        val res = SymbolicNode(SymbolicState(input.condition, input.update, Modality(cont, pitype)), info = InfoScopeClose())
+        val res = SymbolicNode(SymbolicState(input.condition, input.update, Modality(cont, pitype), input.exceptionScopes), info = InfoScopeClose())
         return listOf(res)
     }
  }
@@ -547,14 +551,14 @@ object PITIf : Rule(Modality(
         val bodyYes = SeqStmt(cond.map[StmtAbstractVar("THEN")] as Stmt, contBody)
         val updateYes = input.update
         val typeYes = cond.map[PostInvAbstractVar("TYPE")] as DeductType
-        val resThen = SymbolicState(And(input.condition, UpdateOnFormula(updateYes, guardYes)), updateYes, Modality(bodyYes, typeYes))
+        val resThen = SymbolicState(And(input.condition, UpdateOnFormula(updateYes, guardYes)), updateYes, Modality(bodyYes, typeYes), input.exceptionScopes)
 
         //else
         val guardNo = Not(exprToForm(guardExpr))
         val bodyNo = SeqStmt(cond.map[StmtAbstractVar("ELSE")] as Stmt, contBody)
         val updateNo = input.update
         val typeNo = cond.map[PostInvAbstractVar("TYPE")] as DeductType
-        val resElse = SymbolicState(And(input.condition, UpdateOnFormula(updateNo, guardNo)), updateNo, Modality(bodyNo, typeNo))
+        val resElse = SymbolicState(And(input.condition, UpdateOnFormula(updateNo, guardNo)), updateNo, Modality(bodyNo, typeNo), input.exceptionScopes)
 
         val zeros  = divByZeroNodes(listOf(guardExpr), input)
         return listOf<SymbolicTree>(SymbolicNode(resThen, info = InfoIfThen(guardExpr)), SymbolicNode(resElse, info = InfoIfElse(guardExpr))) + zeros
@@ -575,7 +579,7 @@ object PITAssert : Rule(Modality(
 
         val lNode = LogicNode(input.condition, UpdateOnFormula(input.update, guard), info = NoInfo())
 
-        val sStat = SymbolicState(And(input.condition, UpdateOnFormula(input.update, guard)), input.update, Modality(cont, PostInvariantPair(targetPost,target)))
+        val sStat = SymbolicState(And(input.condition, UpdateOnFormula(input.update, guard)), input.update, Modality(cont, PostInvariantPair(targetPost,target)), input.exceptionScopes)
 
         val zeros  = divByZeroNodes(listOf(guardExpr), input)
         return listOf<SymbolicTree>(lNode,SymbolicNode(sStat, info = NoInfo())) + zeros
@@ -610,9 +614,51 @@ object PITAwait : Rule(Modality(
                         )
                 ),
                 ChainUpdate(input.update, ChainUpdate(ElementaryUpdate(Heap,anon(Heap)),updateLastHeap)),
-                Modality(cont, PostInvariantPair(targetPost,target)))
+                Modality(cont, PostInvariantPair(targetPost,target)), input.exceptionScopes)
         val zeros  = divByZeroNodes(listOf(guardExpr), input)
         return listOf<SymbolicTree>(lNode,SymbolicNode(sStat, info = InfoAwaitUse(guardExpr, anonHeapExpr))) + zeros
+    }
+}
+
+object PITTryPush: Rule(Modality(
+    SeqStmt(TryPushStmt(ConcreteExceptionScope(BranchAbstractListVar("BRANCHES"), StmtAbstractVar("FINALLY"), PPAbstractVar("PP"))),StmtAbstractVar("CONT")),
+    PostInvAbstractVar("TYPE"))) {
+
+    override fun transform(cond: MatchCondition, input : SymbolicState): List<SymbolicTree> {
+        val type = cond.map[PostInvAbstractVar("TYPE")] as DeductType
+        val cont = cond.map[StmtAbstractVar("CONT")] as Stmt
+        val finally = cond.map[StmtAbstractVar("FINALLY")] as Stmt
+        val branches = cond.map[BranchAbstractListVar("BRANCHES")] as BranchList
+        val pp = cond.map[PPAbstractVar("PP")] as PP
+        val res = SymbolicState(input.condition, input.update, Modality(cont, type), listOf(ConcreteExceptionScope(branches, finally, pp)) + input.exceptionScopes)
+        return listOf<SymbolicTree>(SymbolicNode(res))
+    }
+}
+object PITTryPop: Rule(Modality(
+    SeqStmt(TryPopStmt(PPAbstractVar("PP")),StmtAbstractVar("CONT")),
+    PostInvAbstractVar("TYPE"))) {
+
+    override fun transform(cond: MatchCondition, input : SymbolicState): List<SymbolicTree> {
+        val cont = cond.map[StmtAbstractVar("CONT")] as Stmt
+        val type = cond.map[PostInvAbstractVar("TYPE")] as DeductType
+        val pp = cond.map[PPAbstractVar("PP")] as PP
+        val scope = input.exceptionScopes.firstOrNull { it.id == pp }
+        val res : SymbolicState = if(scope == null)
+            SymbolicState(
+                input.condition,
+                input.update,
+                Modality(cont, type),
+                input.exceptionScopes
+            )
+        else {
+            SymbolicState(
+                input.condition,
+                input.update,
+                Modality(appendStmt(scope.finally, cont), type),
+                input.exceptionScopes.filter { it.id != pp }
+            )
+        }
+        return listOf<SymbolicTree>(SymbolicNode(res))
     }
 }
 
@@ -643,13 +689,13 @@ object PITWhile : Rule(Modality(
         val preservesInfo = InfoLoopPreserves(guardExpr, targetInv)
         val preserves = SymbolicState(And(And(targetInv, form), guard),
                                       EmptyUpdate,
-                                      Modality(appendStmt(body,SeqStmt(ScopeMarker, SkipStmt)), PostInvariantPair(And(targetInv, form),target)))
+                                      Modality(appendStmt(body,SeqStmt(ScopeMarker, SkipStmt)), PostInvariantPair(And(targetInv, form),target)), input.exceptionScopes)
 
         //Use Case
         val useInfo = InfoLoopUse(guardExpr, targetInv)
         val use = SymbolicState(And(And(targetInv, form),Not(guard)),
                                   EmptyUpdate,
-                                  Modality(cont, PostInvariantPair(targetPost,target)))
+                                  Modality(cont, PostInvariantPair(targetPost,target)), input.exceptionScopes)
 
         return listOf(
             initial,
@@ -679,12 +725,37 @@ object PITBranch : Rule(Modality(
             val preCond = Predicate("=",listOf(match, exprToTerm(br.matchTerm)))
             // Add two scope close markers for counterexample generation (one for branch, one for switch)
             val contBody = SeqStmt(br.branch, SeqStmt(ScopeMarker, SeqStmt(ScopeMarker, cont)))
-            val ss = SymbolicState(And(no,And(input.condition, UpdateOnFormula(update, preCond))), update, Modality(contBody, type))
+            val ss = SymbolicState(And(no,And(input.condition, UpdateOnFormula(update, preCond))), update, Modality(contBody, type), input.exceptionScopes)
             ress = ress + SymbolicNode(ss, info = InfoBranch(matchExpr, br.matchTerm, no))
             no = And(no, Not(preCond))
         }
+        //if there is no default branch, add one by hand
+        if(!branches.content.any { it.matchTerm is ProgVar }){
+            val myBody = appendStmt(ThrowStmt(SExpr("ABS.StdLib.PatternMatchFailException", listOf())), cont)
+            val newStmt = SymbolicState(no, update, Modality(myBody, type), input.exceptionScopes)
+            ress = ress + SymbolicNode(newStmt, info = InfoBranch(matchExpr, SExpr("ABS.StdLib.PatternMatchFailException", listOf()), no))
+        }
+        println(no.prettyPrint())
         val zeros  = divByZeroNodes(listOf(matchExpr), input)
         return ress + zeros
+    }
+}
+
+
+object PITThrow : Rule(Modality(
+    SeqStmt(ThrowStmt(ExprAbstractVar("EXCEP")),StmtAbstractVar("CONT")),
+    PostInvAbstractVar("TYPE"))) {
+
+    override fun transform(cond: MatchCondition, input: SymbolicState): List<SymbolicTree> {
+        val matchExpr = cond.map[ExprAbstractVar("EXCEP")] as Expr
+        val type = cond.map[PostInvAbstractVar("TYPE")] as DeductType
+        val cont = cond.map[StmtAbstractVar("CONT")] as Stmt
+        if(input.exceptionScopes.isEmpty()){
+            return listOf<SymbolicTree>(LogicNode(input.condition, UpdateOnFormula(input.update, False)))
+        }
+        val transform = buildMatchForScope(matchExpr, input.exceptionScopes, cont)
+        val res = SymbolicState(input.condition, input.update, Modality(transform, type),  input.exceptionScopes.drop(1))
+        return listOf<SymbolicTree>(SymbolicNode(res))
     }
 }
 
@@ -729,3 +800,10 @@ fun divByZeroFormula(expr: Expr, input : SymbolicState) : LogicNode =
     LogicNode(input.condition, UpdateOnFormula(input.update, innerDivByZeroFormula(expr)))
 fun innerDivByZeroFormula(expr: Expr) : Formula =
      Not(Eq(exprToTerm(expr), Function("0")))
+
+
+
+fun buildMatchForScope(thrown : Expr, active : List<ConcreteExceptionScope>, cont : Stmt) : Stmt {
+    val first = active[0]
+    return appendStmt(appendStmt(BranchStmt(thrown, first.scopes), first.finally), cont)
+}

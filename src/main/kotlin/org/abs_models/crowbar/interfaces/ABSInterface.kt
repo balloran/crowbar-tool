@@ -14,6 +14,7 @@ import org.abs_models.frontend.ast.AwaitStmt
 import org.abs_models.frontend.ast.IfStmt
 import org.abs_models.frontend.ast.ReturnStmt
 import org.abs_models.frontend.ast.Stmt
+import org.abs_models.frontend.ast.ThrowStmt
 import org.abs_models.frontend.ast.WhileStmt
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
@@ -93,10 +94,22 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.
         is DieStmt -> return org.abs_models.crowbar.data.AssertStmt(Const("False"))
         is MoveCogToStmt -> throw Exception("Statements ${input::class} are not coreABS" )
         is DurationStmt -> throw Exception("Statements ${input::class} are not coreABS" )
-        is ThrowStmt -> throw Exception("Statements ${input::class} are not supported yet" )
-        is TryCatchFinallyStmt -> throw Exception("Statements ${input::class} are not supported yet" )
+        is ThrowStmt -> return org.abs_models.crowbar.data.ThrowStmt(translateExpression(input.reason, returnType, subst))
+        is TryCatchFinallyStmt -> {
+            val inner = translateStatement(input.body, subst)
+            var list : List<Branch> = emptyList()
+            for (br in input.catchList) {
+                val patt = translatePattern(br.left, returnType, input.model.exceptionType, subst)
+                val next = translateStatement(br.right, subst)
+                list = list + Branch(patt, next)
+            }
+            val pp = FreshGenerator.getFreshPP()
+            val finally = translateStatement(input.finally, subst)
+            val sFirst = TryPushStmt(ConcreteExceptionScope(BranchList(list), finally, pp))
+            return appendStmt(appendStmt(sFirst, inner), TryPopStmt(pp))
+        }
         //this is the foreach statement only
-        else -> throw Exception("Translation of ${input::class} not supported, please unfold the model before passing it to Crowbar" )
+        else -> throw Exception("Translation of ${input::class} not supported, please flatten the model before passing it to Crowbar" )
     }
 }
 
@@ -235,7 +248,10 @@ fun translatePattern(pattern : Pattern, overrideType : Type, returnType:Type, su
         is PatternVar -> ProgVar(pattern.`var`.name, pattern.type)
         is LiteralPattern -> translateExpression(pattern.literal, returnType, subst)
         is UnderscorePattern ->  FreshGenerator.getFreshProgVar(overrideType)
-        is ConstructorPattern -> DataTypeExpr(typeWithModule(pattern.constructor, pattern.moduleDecl.name),pattern.type.qualifiedName,pattern.type,pattern.params.map { translatePattern(it,it.inhType, returnType, subst) })
+        is ConstructorPattern -> {
+            val qualName = if(returnType == pattern.moduleDecl.model.exceptionType) "ABS.StdLib.Exceptions.${pattern.constructor}" else typeWithModule(pattern.constructor, pattern.moduleDecl.name)
+            DataTypeExpr(qualName,pattern.type.qualifiedName,pattern.type,pattern.params.map { translatePattern(it,it.inhType, returnType, subst) })
+        }
         else -> throw Exception("Translation of complex constructors is not supported")
         }
 

@@ -23,6 +23,7 @@ object ADTRepos {
 	private val dtypeMap: MutableMap<String,  HeapDecl> = mutableMapOf()
 	val dTypesDecl = mutableListOf<DataTypeDecl>()
 	val primitiveDtypesDecl = mutableListOf<DataTypeDecl>()
+	val exceptionDecl = mutableListOf<ExceptionDecl>()
 
 	private val concreteGenerics :MutableMap<String, DataTypeType> = mutableMapOf()
 	private val usedHeaps = mutableSetOf<String>()
@@ -125,17 +126,18 @@ object ADTRepos {
 	}
 
 	fun dTypesToSMT() :String{
-		return DataTypesDecl(dTypesDecl).toSMT()
+		return DataTypesDecl(dTypesDecl, exceptionDecl).toSMT()
 	}
 
 	override fun toString() : String {
-		return DataTypesDecl(dTypesDecl).toSMT()
+		return DataTypesDecl(dTypesDecl, exceptionDecl).toSMT()
 	}
 
 	fun initBuiltIn(){
 		dtypeMap.clear()
 		dTypesDecl.clear()
 		primitiveDtypesDecl.clear()
+		exceptionDecl.clear()
 		dtypeMap["ABS.StdLib.Int"] = HeapDecl("ABS.StdLib.Int")
 		dtypeMap["ABS.StdLib.Fut"] = HeapDecl("ABS.StdLib.Fut")//todo:required by basicTest
 	}
@@ -144,11 +146,10 @@ object ADTRepos {
 		initBuiltIn()
 		for(moduleDecl in parModel.moduleDecls){
 
-			if((moduleDecl.name.startsWith("ABS.")
-				&& !moduleDecl.name.startsWith("ABS.StdLib"))
-				|| moduleDecl.name.startsWith("ABS.StdLib.Exceptions")) continue
+			if(moduleDecl.name.startsWith("ABS.")
+				&& !moduleDecl.name.startsWith("ABS.StdLib")) continue
 			for(decl in moduleDecl.decls){
-				if(decl is DataTypeDecl && decl.name != "Spec" && decl.qualifiedName !in ignorableBuiltInDataTypes){
+				if(!moduleDecl.name.startsWith("ABS.StdLib.Exceptions") && decl is DataTypeDecl && decl.name != "Spec" && decl.qualifiedName !in ignorableBuiltInDataTypes){
 					if(!isBuildInType(decl.type)) {
 						if (decl.hasDataConstructor())
 							dTypesDecl.add(decl)
@@ -157,6 +158,7 @@ object ADTRepos {
 					}
 					dtypeMap[decl.qualifiedName] = HeapDecl(decl.type.qualifiedName)
 				}
+				if(decl is ExceptionDecl) exceptionDecl.add(decl)
 			}
 		}
 

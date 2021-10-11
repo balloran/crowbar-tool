@@ -85,10 +85,32 @@ data class IfStmt(val guard : Expr, val thenStmt : Stmt, val elseStmt : Stmt) : 
     override fun hasReturn(): Boolean = thenStmt.hasReturn() || elseStmt.hasReturn()
 }
 
-data class Branch(val matchTerm : Expr, val branch : Stmt) {
-    fun prettyPrint(): String {
+data class Branch(val matchTerm : Expr, val branch : Stmt) : Anything {
+    override fun prettyPrint(): String {
         return matchTerm.prettyPrint()+" => "+branch.prettyPrint()
     }
+
+    override fun iterate(f: (Anything) -> Boolean): Set<Anything> {
+        return super.iterate(f) + matchTerm.iterate(f) + branch.iterate(f)
+    }
+}
+
+data class TryPushStmt(val scope: ConcreteExceptionScope) : Stmt {
+    override fun prettyPrint(): String {
+        return "excepPush " + scope.prettyPrint()
+    }
+}
+
+data class ThrowStmt(val excep : Expr) : Stmt {
+    override fun prettyPrint(): String {
+        return "throw " + excep.prettyPrint()
+    }
+    override fun iterate(f: (Anything) -> Boolean): Set<Anything> {
+        return super.iterate(f) + excep.iterate(f)
+    }
+}
+data class TryPopStmt(val id : PP) : Stmt {
+    override fun prettyPrint(): String = "excepPop($id)"
 }
 interface AbsBranchList : Anything{
     fun hasReturn(): Boolean

@@ -1,0 +1,47 @@
+module M;
+
+data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+
+class C(Int i){
+	[Spec : Ensures(result >= 0)]
+    Int success1(){
+        Int res = 0;
+        try{
+            res = -1;
+            throw AssertionFailException;
+        } catch {
+            AssertionFailException => res = 2;
+        }
+        return res;
+    }
+	[Spec : Ensures(result >= 0)]
+    Int fail1(){
+        Int res = 0;
+        throw AssertionFailException;
+        return res;
+    }
+	[Spec : Ensures(result >= 0)]
+    Int fail2(){
+        Int res = 0;
+        try{
+            res = -1;
+            throw AssertionFailException;
+        } catch {
+            AssertionFailException => skip;
+        }
+        return res;
+    }
+	[Spec : Ensures(result >= 0)]
+    Int fail3(){
+        Int res = 0;
+        try{
+            res = -1;
+            throw AssertionFailException;
+        } catch {
+            DivisionByZeroException => skip;
+        }
+        return res;
+    }
+}
+
+{}

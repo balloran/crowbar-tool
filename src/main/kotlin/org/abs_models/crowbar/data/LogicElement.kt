@@ -6,6 +6,7 @@ import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.FunctionRepos
 import org.abs_models.crowbar.types.getReturnType
 import org.abs_models.frontend.ast.DataTypeDecl
+import org.abs_models.frontend.ast.ExceptionDecl
 import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
 
@@ -131,12 +132,22 @@ data class GenericTypeDecl(val dTypeDecl : DataTypeDecl, val concreteMap : Map<T
 
 
 
-data class DataTypesDecl(val dTypesDecl : List<DataTypeDecl>) : ProofElement{
+data class DataTypesDecl(val dTypesDecl: List<DataTypeDecl>, val exceptionDecl: MutableList<ExceptionDecl>) : ProofElement{
     override fun toSMT(indent:String): String {
         var valueOfs = ""
         if(dTypesDecl.isNotEmpty()) {
             val dTypeDecl = mutableListOf<ArgsSMT>()
             val dTypeValsDecl = mutableListOf<Term>()
+            //exceptions
+            dTypeDecl.add(ArgsSMT("ABS.StdLib.Exception", listOf(Function("0"))))
+            val dTypeValDecl = mutableListOf<Term>()
+            for(ex in exceptionDecl){
+                val v = ArgsSMT(ex.qualifiedName, listOf())
+                dTypeValDecl.add(v)
+            }
+            dTypeValsDecl.add(ArgSMT(dTypeValDecl))
+
+            //normal data types
             for (dType in dTypesDecl) {
                 valueOfs += "(declare-fun   valueOf_${dType.qualifiedName.replace(".","_")} (ABS.StdLib.Fut) ${dType.qualifiedName})\n"
                 dTypeDecl.add(ArgsSMT(dType.qualifiedName, listOf(Function("0"))))

@@ -14,6 +14,7 @@ import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.nextPITStrategy
 import org.abs_models.crowbar.types.PostInvariantPair
 import java.nio.file.Paths
+import java.util.*
 
 class BasicTest : StringSpec() {
 
@@ -62,7 +63,7 @@ class BasicTest : StringSpec() {
                     True,
                     EmptyUpdate,
                     Modality(prog, PostInvariantPair(Predicate(">=", listOf(select(Field("f",int)), Function("0"))),
-                            True))
+                            True)), listOf()
             )
 
             val strategy = nextPITStrategy(Repository(null))
