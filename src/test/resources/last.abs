@@ -1,6 +1,5 @@
 module Last;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 interface LastI{
     Int incr();

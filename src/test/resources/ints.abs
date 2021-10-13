@@ -1,6 +1,5 @@
 module Ints;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 [Spec : ObjInv(f)]
 [Spec : Requires(this.f)]

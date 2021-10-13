@@ -441,14 +441,14 @@ class PostInvTest : StringSpec ({
 			executeNode(res, repos, postInv) shouldBe false
 		}
 
-		"$smt nullable"{
+		/*"$smt nullable"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/nullable.abs")))
 			val classDecl = model.extractClassDecl("Nullable", "K")
 
 			val res = classDecl.extractMethodNode(postInv,"m", repos)
 			executeNode(res, repos, postInv) shouldBe true
-		}
+		}*/ //TODO: disabled until Daniel's version is merged
 		"$smt assert"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/assert.abs")))

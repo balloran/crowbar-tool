@@ -1,6 +1,5 @@
 module Context;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool) | Succeeds(List<String>) | Overlaps(List<String>) ;
 
 interface I{
     Int m1(Int j);

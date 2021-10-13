@@ -1,6 +1,5 @@
 module TargetField;
 
-data Spec = Ensures(Bool) | Requires(Bool);
 
 interface I {  [Spec : Ensures(result == 0)] Int n(); }
 

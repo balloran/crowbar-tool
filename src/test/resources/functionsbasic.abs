@@ -22,7 +22,6 @@ def Int multUnspec(Int x, Int y) = x*y;
 [Spec : Ensures(result != 0)]
 def Int multFail(Int x, Int y) = x*(y-y);
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 interface I {
 	[Spec : Requires(y == 1)]

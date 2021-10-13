@@ -1,6 +1,5 @@
 module Guard;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 
 class C{

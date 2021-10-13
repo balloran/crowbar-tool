@@ -1,7 +1,5 @@
 module Assert;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
-
 [Spec : Requires(f > 0)]
 [Spec : ObjInv(f > 0)]
 class C(Int f){

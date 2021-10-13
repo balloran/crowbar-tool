@@ -1,6 +1,5 @@
 module Functors;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 data TrivialType = Trivial;
 data WrapTrivialType = WrapTrivial(TrivialType wt);
 data ComplexType = ComplexA | ComplexB;

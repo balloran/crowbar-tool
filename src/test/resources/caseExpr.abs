@@ -1,6 +1,5 @@
 module CaseExpr;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 data Type = Type1(Type t) | Type2 (Type t) |Type3;
 data DType = DType1(DType dt,DType) | DType2 (DType dt) |DType3 | DType4;

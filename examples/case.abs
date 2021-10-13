@@ -1,6 +1,5 @@
 module M;
 
-data Spec = Ensures(Bool);
 
 class Testcase {
   Int dontTouch = 0;

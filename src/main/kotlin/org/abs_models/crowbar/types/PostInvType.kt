@@ -81,7 +81,7 @@ interface PostInvType : DeductType{
     }
 
     fun hasHeapPre(mDecl: MethodImpl) : Boolean{
-        for (annotation in mDecl.nodeAnnotations) {
+        for (annotation in mDecl.methodSig.nodeAnnotations) {
             if (!annotation.type.toString().endsWith(".Spec") || annotation.value !is DataConstructorExp) continue
             val annotated = annotation.value as DataConstructorExp
             if (annotated.constructor == "Requires") return true
@@ -339,7 +339,7 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val notNullCondition = Not(Predicate("=", listOf(callee,Function("0", emptyList()))))
 
         val absExp = calleeExpr.absExp
-        val isNonNull = absExp?.nonNull() ?: false
+        val isNonNull = false //absExp?.nonNull() ?: false
         val nonenull = LogicNode(
             input.condition,
             UpdateOnFormula(input.update, notNullCondition),

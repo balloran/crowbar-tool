@@ -1,6 +1,5 @@
 module Susp;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool);
 
 class C{
     Int f = 0;

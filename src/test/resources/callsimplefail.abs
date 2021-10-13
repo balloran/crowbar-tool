@@ -1,5 +1,4 @@
 module CallF;
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 interface I { 
 	[Spec : Requires(mi > mj)] 

@@ -1,6 +1,5 @@
 module LocalTypeTest;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool) | Local(String) | Role(String, Object);
 
 data ComplexType = ComplexA | ComplexB;
 data ComplexWrapType = ComplexWrap(ComplexType);

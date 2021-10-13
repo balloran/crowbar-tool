@@ -1,6 +1,5 @@
 module Call;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 interface I {
 	[Spec : Ensures(False)]

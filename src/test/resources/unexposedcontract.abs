@@ -1,6 +1,5 @@
 module UnexposedContract;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool);
 
 class UnexposedContractC {
     Int f = 0;

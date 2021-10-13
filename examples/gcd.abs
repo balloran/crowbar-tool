@@ -2,7 +2,6 @@ module CallS;
 
 //Verifies that Euclid's algorithm returns a positive number if run on positives input
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 interface GcdI { 
 	[Spec : Requires(p1 >= 0)] 

@@ -1,6 +1,5 @@
 module DTypes;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 data ComplexType = ComplexA | ComplexB;
 data DataType = Default | DataA | DataB | DataC;
 data TrivialType = Trivial;

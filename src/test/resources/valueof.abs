@@ -1,6 +1,5 @@
 module Values;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 interface I1 {
 	[Spec : Ensures(result == 1)]

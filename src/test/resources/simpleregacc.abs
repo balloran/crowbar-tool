@@ -1,6 +1,5 @@
 module RegAcc;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 
 [Spec : ObjInv(this.g >= 0 && this.f >= 0)] 

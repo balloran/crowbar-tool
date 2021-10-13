@@ -1,6 +1,5 @@
 module M;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool);
 
 class C{
 

@@ -1,6 +1,5 @@
 module Values;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 data Type = Type1 | Type2 | Type3;
 

@@ -88,7 +88,7 @@ interface LocalTypeType : DeductType {
     }
 
     fun extractLocalTypeSpec(mDecl: MethodImpl, context: Pair<Type, Map<String, Type>>?): LocalType? {
-        val annotations = mDecl.nodeAnnotations.filter {
+        val annotations = mDecl.methodSig.nodeAnnotations.filter {
             it.type.toString().endsWith(".Spec") && it.value is DataConstructorExp && (it.value as DataConstructorExp).constructor == "Local"
         }.map { it.value as DataConstructorExp }
 
@@ -241,7 +241,7 @@ class LTTCallAssign(repos: Repository) : LTTAssign(repos, Modality(
         val target = cond.map[LocalTypeAbstractTarget("TYPE")] as LocalTypeTarget
 
         // Check that receiving object is non-null
-        val isNonNull = calleeExpr.absExp?.nonNull() ?: false // call might already be non-null asserted by typechecker
+        val isNonNull = false //calleeExpr.absExp?.nonNull() ?: false // call might already be non-null asserted by typechecker
         val notNullCondition = Not(Predicate("=", listOf(callee, Function("0", emptyList()))))
         val nonenull = LogicNode(
             input.condition,

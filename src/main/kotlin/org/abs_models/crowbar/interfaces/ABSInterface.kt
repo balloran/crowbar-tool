@@ -37,7 +37,7 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.
                 is NewExp       -> AllocateStmt(loc, translateExpression(exp, returnType, subst))
                 is AsyncCall    -> CallStmt(loc, translateExpression(exp.callee, returnType, subst), translateExpression(exp, returnType, subst) as CallExpr)
                 is SyncCall     -> desugar(loc, type, exp, returnType, subst)
-                else -> throw Exception("Translation of ${input.exp::class} in an expression statement is not supported" )
+                else -> SkipStmt //throw Exception("Translation of ${input.exp::class} in an expression statement is not supported" )
             }
         }
         is VarDeclStmt -> {

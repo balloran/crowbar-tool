@@ -1,4 +1,4 @@
-@file:Suppress("KotlinDeprecation", "KotlinDeprecation", "KotlinDeprecation")
+@file:Suppress("KotlinDeprecation")
 
 package org.abs_models.crowbar.main
 
@@ -44,7 +44,7 @@ class Main : CliktCommand() {
 
     //the casts in convert and validate are added to make the type checker happy
     private val target : CrowOption by mutuallyExclusiveOptions<CrowOption>(
-        option("--method","-m",help="Verifies a single method <module>.<class.<method>")
+        option("--method","-m",help="Verifies a single method <module>.<class>.<method>")
                 .convert { CrowOption.MethodOption(it) as CrowOption }
                 .validate { require((it as CrowOption.MethodOption).path.split(".").size == 3,
                     lazyMessage = {"invalid fully qualified method name $it"}) },
@@ -65,10 +65,10 @@ class Main : CliktCommand() {
     ).single().required()
 
    // private val timeout     by   option("--timeout","-to",help="timeout for a single SMT prover invocation in seconds").int().default(timeoutS)
-    private val tmp        by   option("--tmp", "-t", help="path to a directory used to store .smt and counterexample files").path().default(Paths.get(tmpPath))
-    private val smtCmd     by   option("--smt", "-s", help="command to start SMT solver").default(smtPath)
-    private val verbose    by   option("--verbose", "-v", help="verbosity output level").int().restrictTo(Verbosity.values().indices).default(Verbosity.NORMAL.ordinal)
-    private val deductType by   option("--deduct", "-d", help="Used Deductive Type").choice("PostInv","LocalType").convert { when(it){"PostInv" -> PostInvType::class; "LocalType" -> LocalTypeType::class; else -> throw Exception(); } }.default(PostInvType::class)
+    private val tmp        by   option("--tmp", "-t", help="Path to a directory used to store .smt and counterexample files").path().default(Paths.get(tmpPath))
+    private val smtCmd     by   option("--smt", "-s", help="Command to start SMT solver").default(smtPath)
+    private val verbose    by   option("--verbose", "-v", help="Verbosity output level").int().restrictTo(Verbosity.values().indices).default(Verbosity.NORMAL.ordinal)
+    private val deductType by   option("--deduct", "-d", help="Used deductive system").choice("PostInv","LocalType").convert { when(it){"PostInv" -> PostInvType::class; "LocalType" -> LocalTypeType::class; else -> throw Exception(); } }.default(PostInvType::class)
     private val freedom    by   option("--freedom", "-fr", help="Performs a simple check for potentially deadlocking methods").flag()
     private val invFlag    by   option("--investigate", "-inv", help="Generate counterexamples for uncloseable branches").flag()
     private val conciseProofsFlag    by  option("--concise_proofs", "-cp", help="Generate concise proofs omitting unused declarations").flag()

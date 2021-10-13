@@ -1,6 +1,6 @@
 module M;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
+import * from ABS.StdLib;
 
 class C(Int i){
 	[Spec : Ensures(result >= 0)]

@@ -1,6 +1,5 @@
 module Func;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 def Int f(Int n) = anAdd(n,10)-9;
 def Int anAdd(Int x, Int y) =x + y;

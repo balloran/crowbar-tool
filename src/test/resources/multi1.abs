@@ -4,7 +4,6 @@ module Multi1;
 import * from Multi2;
 export *;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 [Spec : Requires(this.k > 0)]
 [Spec : ObjInv(this.k > 0)]

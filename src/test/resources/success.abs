@@ -1,6 +1,5 @@
 module Success;
 
-data Spec = ObjInv(Bool) | Ensures(Bool) | Requires(Bool) | WhileInv(Bool);
 
 [Spec : ObjInv(this.f >= 0 )]
 [Spec : ObjInv(this.f3 >= 0)]
