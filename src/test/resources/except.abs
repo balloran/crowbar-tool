@@ -20,6 +20,16 @@ class C(Int i){
         return 1;
     }
 	[Spec : Ensures(result >= 0)]
+    Int success3(){
+        Int res = 0;
+        try{
+            0/0;
+        } catch {
+            DivisionByZeroException => skip;
+        }
+        return res;
+    }
+	[Spec : Ensures(result >= 0)]
     Int fail1(){
         Int res = 0;
         throw AssertionFailException;

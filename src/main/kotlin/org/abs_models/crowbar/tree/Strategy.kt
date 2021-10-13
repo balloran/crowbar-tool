@@ -46,9 +46,10 @@ fun getStrategy(clazz: KClass<out DeductType>, repos: Repository) : Strategy =
 
 //standard verification
 fun nextPITStrategy(repos: Repository) : Strategy =
-    DefaultStrategy(listOf(PITBranch, PITSyncAssign(repos), PITLocAssign(repos), PITAllocAssign(repos),
-                           PITCallAssign(repos), PITSyncCallAssign(repos), PITReturn, PITSkip, PITIf, PITAssert,
-                           PITAwait, PITSkipSkip, PITWhile, PITScopeSkip, PITTryPush, PITTryPop, PITThrow, PITExpr))
+    DefaultStrategy(listOf(PITBranch(repos), PITSyncAssign(repos), PITLocAssign(repos), PITAllocAssign(repos),
+                           PITCallAssign(repos), PITSyncCallAssign(repos), PITReturn(repos), PITSkip, PITIf(repos),
+                           PITAssert(repos), PITAwait(repos), PITSkipSkip, PITWhile, PITScopeSkip, PITTryPush,
+                           PITTryPop, PITThrow, PITExpr(repos)))
 
 //local session types
 fun nextLTTStrategy(repos: Repository) : Strategy =

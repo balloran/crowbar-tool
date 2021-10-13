@@ -22,7 +22,6 @@ import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
-import java.util.*
 import kotlin.system.exitProcess
 
 
@@ -227,7 +226,7 @@ class PITLocAssign(repos: Repository) : PITAssign(repos,Modality(
         val remainder = cond.map[StmtAbstractVar("CONT")] as Stmt
         val target = cond.map[PostInvAbstractVar("TYPE")] as DeductType
         val info = InfoLocAssign(lhs, rhsExpr)
-        val zeros  = divByZeroNodes(listOf(rhsExpr), input)
+        val zeros  = divByZeroNodes(listOf(rhsExpr), remainder, input, repos)
         return listOf(symbolicNext(lhs, rhs, remainder, target, input.condition, input.update, info, input.exceptionScopes)) + zeros
     }
 }
@@ -267,7 +266,7 @@ class PITSyncAssign(repos: Repository) : PITAssign(repos, Modality(
                 got = subst(got, mapOf(Pair(ReturnVar(myType.qualifiedName, myType), rhs))) as Formula
             cond = And(cond, apply(input.update, got) as Formula)
         }
-        var zeros : List<SymbolicTree>  = divByZeroNodes(listOf(rhsExpr), input)
+        var zeros : List<SymbolicTree>  = divByZeroNodes(listOf(rhsExpr), remainder, input, repos)
         if (ground != null) zeros = zeros + ground
         return listOf(symbolicNext(lhs, rhs, remainder, target, cond, input.update, info, input.exceptionScopes)) + zeros
     }
@@ -317,7 +316,7 @@ class PITAllocAssign(repos: Repository) : PITAssign(repos, Modality(
                                             ChainUpdate(input.update, assignFor(lhs, nextRhs)),
                                             InfoObjAlloc(lhs, rhsExpr, constructorSMTExpr), input.exceptionScopes)
 
-        val zeros  = divByZeroNodes(listOf(rhsExpr), input)
+        val zeros  = divByZeroNodes(listOf(rhsExpr), remainder, input, repos)
         return listOf<SymbolicTree>(pre, next) + zeros
     }
 }
@@ -390,7 +389,7 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
                                             input.update,
                                             InfoCallAssign(lhs, calleeExpr, call, freshFut.name), input.exceptionScopes)
         if (isNonNull) return listOf(pre, next)
-        val zeros  = divByZeroNodes(call.e, input)
+        val zeros  = divByZeroNodes(call.e, remainder, input, repos)
         return listOf<SymbolicTree>(nonenull,pre,next) + zeros
     }
 }
@@ -453,7 +452,7 @@ class PITSyncCallAssign(repos: Repository) : PITAssign(repos, Modality(
                 updateRightNext,
                 InfoSyncCallAssign(lhs, calleeExpr, call, anonHeapExpr, returnValExpr), input.exceptionScopes)
 
-        val zeros  = divByZeroNodes(call.e, input)
+        val zeros  = divByZeroNodes(call.e, remainder, input, repos)
         return listOf<SymbolicTree>(first,next) + zeros
     }
 }
@@ -513,7 +512,7 @@ object PITScopeSkip : Rule(Modality(
     }
  }
 
-object PITReturn : Rule(Modality(
+class PITReturn(val repos: Repository) : Rule(Modality(
         ReturnStmt(ExprAbstractVar("RET")),
         PostInvariantPair(FormulaAbstractVar("POST"), FormulaAbstractVar("OBJ")))) {
 
@@ -531,12 +530,12 @@ object PITReturn : Rule(Modality(
             ),
             info = InfoReturn(retExpr, targetPost, target, input.update)
         )
-        val zeros  = divByZeroNodes(listOf(retExpr), input)
+        val zeros  = divByZeroNodes(listOf(retExpr), SkipStmt, input, repos)
         return listOf(res) + zeros
     }
 }
 
-object PITIf : Rule(Modality(
+class PITIf(val repos: Repository) : Rule(Modality(
         SeqStmt(IfStmt(ExprAbstractVar("LHS"), StmtAbstractVar("THEN"), StmtAbstractVar("ELSE")),
                 StmtAbstractVar("CONT")),
         PostInvAbstractVar("TYPE"))) {
@@ -560,12 +559,12 @@ object PITIf : Rule(Modality(
         val typeNo = cond.map[PostInvAbstractVar("TYPE")] as DeductType
         val resElse = SymbolicState(And(input.condition, UpdateOnFormula(updateNo, guardNo)), updateNo, Modality(bodyNo, typeNo), input.exceptionScopes)
 
-        val zeros  = divByZeroNodes(listOf(guardExpr), input)
+        val zeros  = divByZeroNodes(listOf(guardExpr), contBody, input, repos)
         return listOf<SymbolicTree>(SymbolicNode(resThen, info = InfoIfThen(guardExpr)), SymbolicNode(resElse, info = InfoIfElse(guardExpr))) + zeros
     }
 }
 
-object PITAssert : Rule(Modality(
+class PITAssert(val repos: Repository) : Rule(Modality(
     SeqStmt(AssertStmt(ExprAbstractVar("GUARD")), StmtAbstractVar("CONT")),
     PostInvariantPair(FormulaAbstractVar("POST"), FormulaAbstractVar("OBJ")))) {
 
@@ -581,12 +580,12 @@ object PITAssert : Rule(Modality(
 
         val sStat = SymbolicState(And(input.condition, UpdateOnFormula(input.update, guard)), input.update, Modality(cont, PostInvariantPair(targetPost,target)), input.exceptionScopes)
 
-        val zeros  = divByZeroNodes(listOf(guardExpr), input)
+        val zeros  = divByZeroNodes(listOf(guardExpr), cont, input, repos)
         return listOf<SymbolicTree>(lNode,SymbolicNode(sStat, info = NoInfo())) + zeros
     }
 }
 
-object PITExpr : Rule(Modality(
+class PITExpr(val repos: Repository) : Rule(Modality(
     SeqStmt(ExprStmt(ExprAbstractVar("EXPR")), StmtAbstractVar("CONT")),
     PostInvariantPair(FormulaAbstractVar("POST"), FormulaAbstractVar("OBJ")))) {
 
@@ -598,13 +597,13 @@ object PITExpr : Rule(Modality(
 
         val sStat = SymbolicState(input.condition, input.update, Modality(cont, PostInvariantPair(targetPost,target)), input.exceptionScopes)
 
-        val zeros  = divByZeroNodes(listOf(guardExpr), input)
+        val zeros  = divByZeroNodes(listOf(guardExpr), cont, input, repos)
         return listOf<SymbolicTree>(SymbolicNode(sStat, info = NoInfo())) + zeros
     }
 }
 
 
-object PITAwait : Rule(Modality(
+class PITAwait(val repos: Repository) : Rule(Modality(
         SeqStmt(AwaitStmt(ExprAbstractVar("GUARD"),PPAbstractVar("PP")), StmtAbstractVar("CONT")),
         PostInvariantPair(FormulaAbstractVar("POST"), FormulaAbstractVar("OBJ")))) {
 
@@ -632,7 +631,7 @@ object PITAwait : Rule(Modality(
                 ),
                 ChainUpdate(input.update, ChainUpdate(ElementaryUpdate(Heap,anon(Heap)),updateLastHeap)),
                 Modality(cont, PostInvariantPair(targetPost,target)), input.exceptionScopes)
-        val zeros  = divByZeroNodes(listOf(guardExpr), input)
+        val zeros  = divByZeroNodes(listOf(guardExpr), cont, input, repos)
         return listOf<SymbolicTree>(lNode,SymbolicNode(sStat, info = InfoAwaitUse(guardExpr, anonHeapExpr))) + zeros
     }
 }
@@ -724,7 +723,7 @@ object PITWhile : Rule(Modality(
 }
 
 
-object PITBranch : Rule(Modality(
+class PITBranch(val repos: Repository) : Rule(Modality(
     SeqStmt(BranchStmt(ExprAbstractVar("LHS"),
         BranchAbstractListVar("BRANCHES")),StmtAbstractVar("CONT")),
     PostInvAbstractVar("TYPE"))) {
@@ -753,7 +752,7 @@ object PITBranch : Rule(Modality(
             ress = ress + SymbolicNode(newStmt, info = InfoBranch(matchExpr, SExpr("ABS.StdLib.PatternMatchFailException", listOf()), no))
         }
         println(no.prettyPrint())
-        val zeros  = divByZeroNodes(listOf(matchExpr), input)
+        val zeros  = divByZeroNodes(listOf(matchExpr), cont, input, repos)
         return ress + zeros
     }
 }
@@ -807,16 +806,19 @@ fun getReturnType(term: Term) : Type {
         throw java.lang.Exception("Term $term not allowed as return ")
 }
 
-fun divByZeroNodes(exprs: List<Expr>, input : SymbolicState) : List<LogicNode> =
-    exprs.flatMap { getDivisors(it) }.foldRight(emptyList()) { nx, acc -> acc + divByZeroFormula(nx, input) }
+fun divByZeroNodes(exprs: List<Expr>, next : Stmt, input : SymbolicState, repos: Repository) : List<SymbolicTree> =
+    exprs.flatMap { getDivisors(it) }.foldRight(emptyList()) { nx, acc -> acc + divByZeroSingleNode(nx, next, input, repos) }
 
 fun getDivisors(expr : Expr) : List<Expr> =
      (expr.iterate { it is SExpr && it.op == "/" } as Set<SExpr>).map { it.e[1] }
 
-fun divByZeroFormula(expr: Expr, input : SymbolicState) : LogicNode =
-    LogicNode(input.condition, UpdateOnFormula(input.update, innerDivByZeroFormula(expr)))
+fun divByZeroSingleNode(expr: Expr, next : Stmt, input : SymbolicState, repos: Repository) : SymbolicTree =
+    SymbolicNode(SymbolicState(And(input.condition, UpdateOnFormula(input.update, innerDivByZeroFormula(expr))), input.update, Modality(
+        appendStmt(ThrowStmt(DataTypeExpr("ABS.StdLib.Exceptions.DivisionByZeroException","ABS.StdLib.Exception", repos.model?.exceptionType, listOf())),
+            next), input.modality.target), input.exceptionScopes))
+
 fun innerDivByZeroFormula(expr: Expr) : Formula =
-     Not(Eq(exprToTerm(expr), Function("0")))
+     Eq(exprToTerm(expr), Function("0"))
 
 
 

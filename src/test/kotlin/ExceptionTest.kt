@@ -20,6 +20,8 @@ class ExceptionTest : StringSpec({
             executeNode(res, repos, postInv) shouldBe true
             res = classDecl.extractMethodNode(postInv, "success2", repos)
             executeNode(res, repos, postInv) shouldBe true
+            res = classDecl.extractMethodNode(postInv, "success3", repos)
+            executeNode(res, repos, postInv) shouldBe true
             for (i in 1..4) {
                 res = classDecl.extractMethodNode(postInv, "fail$i", repos)
                 executeNode(res, repos, postInv) shouldBe false

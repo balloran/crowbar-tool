@@ -16,7 +16,7 @@ data class Modality(var remainder: Stmt, val target: DeductType) : Anything {
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + remainder.iterate(f) + target.iterate(f)
 }
 data class SymbolicState(val condition: Formula, val update: UpdateElement, val modality: Modality, val exceptionScopes: List<ConcreteExceptionScope>) : Anything {
-    override fun prettyPrint() : String = condition.prettyPrint()+"\n==>\n{"+update.prettyPrint()+"}"+modality.prettyPrint()+"\n exc: \n"+exceptionScopes.joinToString("; ") {it.scopes.prettyPrint()}
+    override fun prettyPrint() : String = /*condition.prettyPrint()+"\n==>\n{"+update.prettyPrint()+"}"+*/modality.prettyPrint() //+"\n exc: \n"+exceptionScopes.joinToString("; ") {it.scopes.prettyPrint()}
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = condition.iterate(f) + update.iterate(f) + modality.iterate(f) + exceptionScopes.fold( super.iterate(f)) { acc, nx -> nx.iterate(f) + acc}
 }
 

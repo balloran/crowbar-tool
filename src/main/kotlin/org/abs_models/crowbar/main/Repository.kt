@@ -325,7 +325,7 @@ object FunctionRepos{
 }
 
 //todo: once allowedTypes is not needed anymore, the repository needs to be passed to fewer places
-data class Repository(private val model : Model?,
+data class Repository(val model : Model?,
 					  val allowedTypes : MutableList<String> =  mutableListOf("ABS.StdLib.Int",
                                                                               "ABS.StdLib.Bool",
                                                                               "ABS.StdLib.Unit",
