@@ -335,15 +335,15 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val remainder = cond.map[StmtAbstractVar("CONT")] as Stmt
         val target = cond.map[PostInvAbstractVar("TYPE")] as DeductType
 
-        val notNullCondition = Not(Predicate("=", listOf(callee,Function("0", emptyList()))))
+        val notNullCondition = Predicate("=", listOf(callee,Function("0", emptyList())))
 
         val absExp = calleeExpr.absExp
         val isNonNull = false //absExp?.nonNull() ?: false
-        val nonenull = LogicNode(
-            input.condition,
-            UpdateOnFormula(input.update, notNullCondition),
-            info = InfoNullCheck(notNullCondition)
-        )
+        val nonNull =
+        SymbolicNode(SymbolicState(And(input.condition, UpdateOnFormula(input.update, notNullCondition)), input.update, Modality(
+            appendStmt(ThrowStmt(DataTypeExpr("ABS.StdLib.Exceptions.NullPointerException","ABS.StdLib.Exception", repos.model?.exceptionType, listOf())),
+                remainder), input.modality.target), input.exceptionScopes),
+            info = InfoNullCheck(notNullCondition))
 
         //construct precondition check of the call
         val precond = repos.methodReqs.getValue(call.met).first
@@ -390,7 +390,7 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
                                             InfoCallAssign(lhs, calleeExpr, call, freshFut.name), input.exceptionScopes)
         if (isNonNull) return listOf(pre, next)
         val zeros  = divByZeroNodes(call.e, remainder, input, repos)
-        return listOf<SymbolicTree>(nonenull,pre,next) + zeros
+        return listOf<SymbolicTree>(nonNull,pre,next) + zeros
     }
 }
 

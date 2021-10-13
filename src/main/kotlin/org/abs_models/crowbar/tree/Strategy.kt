@@ -21,8 +21,16 @@ class DefaultStrategy(private val rules: List<Rule>) : Strategy{
             //this is a depth first strategy: apply the matching rule and then recurse on the result
             for (rule in rules) {
                 if (rule.isApplicable(symbolicNode.content)) {
-                    val next = rule.apply(symbolicNode.content)
+                    var next = rule.apply(symbolicNode.content)
                     if (next != null) {
+                        if(symbolicNode.info is LeafInfo) {
+                            println("Prop: "+ symbolicNode.info)
+                            next.forEach {
+                                if (it.info is NoInfo) {
+                                    it.info = symbolicNode.info
+                                }
+                            }
+                        }
                         symbolicNode.children = next
                         for (node in next) {
                             if (node is SymbolicNode)

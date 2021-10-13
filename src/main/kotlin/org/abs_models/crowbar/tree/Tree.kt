@@ -7,7 +7,7 @@ import org.abs_models.crowbar.interfaces.evaluateSMT
 import org.abs_models.crowbar.rule.containsAbstractVar
 
 /* general interface for all kinds of nodes */
-interface SymbolicTree{
+interface SymbolicTree : InfoNode{
     fun finishedExecution() : Boolean
     fun debugString(steps : Int) : String
     fun collectLeaves() : List<SymbolicLeaf>
@@ -30,16 +30,17 @@ data class StaticNode(val str : String) : SymbolicLeaf{
     override fun evaluate() : Boolean = false
     override fun hasAbstractVar() : Boolean = false
     override fun normalize() = Unit
+    override var info: NodeInfo  = NoInfo()
 }
 
 interface InfoNode {
-    val info: NodeInfo
+    var info: NodeInfo
 }
 
 data class LogicNode(
     val ante: Formula,
     val succ : Formula,
-    override val info: NodeInfo = NoInfo()
+    override var info: NodeInfo = NoInfo()
 ) : InfoNode, SymbolicLeaf{
     private var isEvaluated = false
     private var isValid = false
@@ -62,7 +63,7 @@ data class LogicNode(
 data class SymbolicNode(
     val content : SymbolicState,
     var children : List<SymbolicTree> = emptyList(),
-    override val info: NodeInfo = NoInfo()
+    override var info: NodeInfo = NoInfo()
 ) : InfoNode, SymbolicTree{
     override fun finishedExecution() : Boolean {
         return children.isNotEmpty() && children.fold(true) { acc, nx -> acc && nx.finishedExecution() }

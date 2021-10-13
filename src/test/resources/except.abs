@@ -1,7 +1,7 @@
 module M;
 
 import * from ABS.StdLib;
-
+interface I { Unit m(); }
 class C(Int i){
 	[Spec : Ensures(result >= 0)]
     Int success1(){
@@ -26,6 +26,16 @@ class C(Int i){
             0/0;
         } catch {
             DivisionByZeroException => skip;
+        }
+        return res;
+    }
+	[Spec : Ensures(result >= 0)]
+    Int success4(I i){
+        Int res = 0;
+        try{
+            i!m();
+        } catch {
+            NullPointerException => skip;
         }
         return res;
     }
@@ -61,6 +71,12 @@ class C(Int i){
     Int fail4(){
         1/0;
         return 1;
+    }
+	[Spec : Ensures(result >= 0)]
+    Int fail5(I i){
+        Int res = 0;
+        i!m();
+        return res;
     }
 }
 
