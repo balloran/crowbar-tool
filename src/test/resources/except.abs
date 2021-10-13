@@ -15,6 +15,11 @@ class C(Int i){
         return res;
     }
 	[Spec : Ensures(result >= 0)]
+    Int success2(){
+        1/1;
+        return 1;
+    }
+	[Spec : Ensures(result >= 0)]
     Int fail1(){
         Int res = 0;
         throw AssertionFailException;
@@ -41,6 +46,11 @@ class C(Int i){
             DivisionByZeroException => skip;
         }
         return res;
+    }
+	[Spec : Ensures(result >= 0)]
+    Int fail4(){
+        1/0;
+        return 1;
     }
 }
 

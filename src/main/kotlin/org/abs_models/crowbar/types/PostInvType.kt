@@ -586,6 +586,23 @@ object PITAssert : Rule(Modality(
     }
 }
 
+object PITExpr : Rule(Modality(
+    SeqStmt(ExprStmt(ExprAbstractVar("EXPR")), StmtAbstractVar("CONT")),
+    PostInvariantPair(FormulaAbstractVar("POST"), FormulaAbstractVar("OBJ")))) {
+
+    override fun transform(cond: MatchCondition, input : SymbolicState): List<SymbolicTree> {
+        val guardExpr = cond.map[ExprAbstractVar("EXPR")] as Expr
+        val cont = cond.map[StmtAbstractVar("CONT")] as Stmt
+        val target = cond.map[FormulaAbstractVar("OBJ")] as Formula
+        val targetPost = cond.map[FormulaAbstractVar("POST")] as Formula
+
+        val sStat = SymbolicState(input.condition, input.update, Modality(cont, PostInvariantPair(targetPost,target)), input.exceptionScopes)
+
+        val zeros  = divByZeroNodes(listOf(guardExpr), input)
+        return listOf<SymbolicTree>(SymbolicNode(sStat, info = NoInfo())) + zeros
+    }
+}
+
 
 object PITAwait : Rule(Modality(
         SeqStmt(AwaitStmt(ExprAbstractVar("GUARD"),PPAbstractVar("PP")), StmtAbstractVar("CONT")),

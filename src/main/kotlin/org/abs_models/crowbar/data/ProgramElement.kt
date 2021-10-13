@@ -24,9 +24,12 @@ interface Stmt: ProgramElement {
 }
 
 data class StmtAbstractVar(val name : String) : Stmt, AbstractVar {
-    override fun prettyPrint(): String {
-        return name
-    }
+    override fun prettyPrint(): String = name
+}
+
+
+data class ExprStmt(val expr: Expr) : Stmt {
+    override fun prettyPrint(): String = expr.prettyPrint()
 }
 
 data class AssignStmt(val lhs : Location, val rhs : Expr) : Stmt {

@@ -18,7 +18,9 @@ class ExceptionTest : StringSpec({
 
             var res = classDecl.extractMethodNode(postInv, "success1", repos)
             executeNode(res, repos, postInv) shouldBe true
-            for (i in 1..3) {
+            res = classDecl.extractMethodNode(postInv, "success2", repos)
+            executeNode(res, repos, postInv) shouldBe true
+            for (i in 1..4) {
                 res = classDecl.extractMethodNode(postInv, "fail$i", repos)
                 executeNode(res, repos, postInv) shouldBe false
             }
