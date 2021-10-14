@@ -2,6 +2,7 @@ package org.abs_models.crowbar.investigator
 
 import java.io.File
 import org.abs_models.crowbar.data.*
+import org.abs_models.crowbar.interfaces.filterHeapTypes
 import org.abs_models.crowbar.interfaces.generateSMT
 import org.abs_models.crowbar.interfaces.plainSMTCommand
 import org.abs_models.crowbar.main.*

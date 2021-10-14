@@ -466,7 +466,7 @@ object LTTAwait : Rule(Modality(
     }
 }
 
-// todo: warning: this is the throwaway variant of loop invariants
+// warning: this is the throwaway variant of loop invariants
 object LTTWhile : Rule(Modality(
         SeqStmt(
             WhileStmt(

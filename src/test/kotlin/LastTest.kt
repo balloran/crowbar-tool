@@ -11,7 +11,7 @@ class LastTest : StringSpec({
     for (smt in listOf(z3, cvc)) {
         println("testing with: $smt as backend")
         val fails = listOf("noLastFail")
-        val successes = listOf( //todo: refactor the test as the others
+        val successes = listOf(
             "simpleSuccess",
             "lastIfSuccess",
             "lastWithUpdateSuccess",

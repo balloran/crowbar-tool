@@ -243,7 +243,7 @@ fun translateGuard(input: Guard, returnType: Type, subst: Map<String, Expr>) : E
         is ExpGuard -> translateExpression(input.pureExp, returnType, subst)
         is AndGuard -> SExpr("&&",listOf(translateGuard(input.left, returnType, subst), translateGuard(input.right, returnType, subst)))
         is ClaimGuard -> {
-            val placeholder = SExpr("=",listOf(Const("1", input.varNoTransform.model.intType), Const("1", input.varNoTransform.model.intType))) //todo: proper translation
+            val placeholder = Const("true")
             placeholder.absExp = input.`var` // Save reference to original guard expression
             placeholder
         }

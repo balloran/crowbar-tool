@@ -405,10 +405,11 @@ class PITSyncCallAssign(repos: Repository) : PITAssign(repos, Modality(
         val call = cond.map[SyncCallExprAbstractVar("CALL")] as SyncCallExpr
         val calleeExpr = cond.map[ExprAbstractVar("CALLEE")] as Expr
         val remainder = cond.map[StmtAbstractVar("CONT")] as Stmt
-        val target = cond.map[PostInvAbstractVar("TYPE")] as DeductType
+        val target = cond.map[PostInvAbstractVar("TYPE")] as PostInvariantPair
 
 
-        val precond = repos.syncMethodReqs.getValue(call.met).first //Todo: objInv
+        var precond = repos.syncMethodReqs.getValue(call.met).first
+        precond = And(precond, target.objInvariant)
         val targetPreDecl = repos.syncMethodReqs.getValue(call.met).second
 
         val freshVar = FreshGenerator.getFreshProgVar(targetPreDecl.type)//ASK<<
@@ -425,13 +426,13 @@ class PITSyncCallAssign(repos: Repository) : PITAssign(repos, Modality(
                 info = InfoMethodPrecondition(precondSubst)
         )
 
-        val postCond = repos.syncMethodEnss[call.met]?.first ?: True //Todo: objInv
+        var postCond = repos.syncMethodEnss[call.met]?.first ?: True
+        postCond = And(postCond, target.objInvariant)
         val targetPostDecl = repos.syncMethodEnss[call.met]!!.second
         val substPostMap = mapSubstPar(call, targetPostDecl)
 
         val anon = ElementaryUpdate(Heap, anon(Heap))
 
-        //XXX handle  last here as well
         val someHeap = FreshGenerator.getFreshProgVar(Heap.concrType)
         val heapUpdate = ChainUpdate(ElementaryUpdate(OldHeap,Heap), ElementaryUpdate(LastHeap,someHeap))
 
@@ -681,7 +682,7 @@ object PITTryPop: Rule(Modality(
     }
 }
 
-//todo: warning: this is the throwaway variant of loop invariants
+//warning: this is the throwaway variant of loop invariants
 object PITWhile : Rule(Modality(
         SeqStmt(WhileStmt(ExprAbstractVar("GUARD"),
                           StmtAbstractVar("BODY"),

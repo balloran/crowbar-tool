@@ -93,8 +93,6 @@ fun extractInheritedSpec(mSig : MethodSig, expectedSpec : String, default:Formul
 
 fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : String, returnType: Type, default:Formula = True, multipleAllowed:Boolean = true) : Formula {
     var ret : Formula? = null
-    //TODO: this seems to be a problem with annotations in the functional layer in the ABS AST
-    //TODO: refactor the code duplication
     if(decl is FunctionDecl){
         for(annotation in decl.annotationList){
             if(!annotation.type.toString().endsWith(".Spec")) continue
@@ -127,7 +125,7 @@ fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : 
         if(verbosity >= Verbosity.VVV)
             println("Crowbar-v: Could not extract $expectedSpec specification, using ${default.prettyPrint()}")
     }
-    return ret //Todo: add warning for old and last in precondition
+    return ret
 }
 
 fun extractRoleSpec(classDecl: ClassDecl): Formula {

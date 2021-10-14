@@ -87,7 +87,7 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
             genericTypeSMTName(it.concrType)
         }
         else
-            libPrefix(it.concrType.qualifiedName)})"} //todo: fix this, it is needed from Basic Test
+            libPrefix(it.concrType.qualifiedName)})"}
     val objectsDecl = heaps.joinToString("\n\t"){"(declare-fun ${it.name} (${it.params.joinToString (" "){
         term ->
         if(term is DataTypeConst) {

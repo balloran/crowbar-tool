@@ -20,7 +20,7 @@ object ADTRepos {
 
 	var model:Model? = null
 
-	private val dtypeMap: MutableMap<String,  HeapDecl> = mutableMapOf()
+	private val dtypeMap: MutableMap<String, HeapDecl> = mutableMapOf()
 	val dTypesDecl = mutableListOf<DataTypeDecl>()
 	val primitiveDtypesDecl = mutableListOf<DataTypeDecl>()
 	val exceptionDecl = mutableListOf<ExceptionDecl>()
@@ -104,7 +104,7 @@ object ADTRepos {
 		}
 		val decl = Function(
 			"declare-datatypes", (
-					listOf(ArgSMT(names),ArgSMT(decls))))
+					listOf(ArgSMT(names), ArgSMT(decls))))
 		return if(names.isNotEmpty())
 			decl.toSMT() + "\n${valueOf.joinToString("") { it.toSMT("\n") }}"
 		else
@@ -139,7 +139,6 @@ object ADTRepos {
 		primitiveDtypesDecl.clear()
 		exceptionDecl.clear()
 		dtypeMap["ABS.StdLib.Int"] = HeapDecl("ABS.StdLib.Int")
-		dtypeMap["ABS.StdLib.Fut"] = HeapDecl("ABS.StdLib.Fut")//todo:required by basicTest
 	}
 	fun init(parModel: Model){
 		model = parModel
@@ -319,28 +318,18 @@ object FunctionRepos{
 
 		val mapGenericConcrete = genericParams.zip(concreteParams).filter { pair -> pair.first != pair.second }.toMap()
 		val concreteTypes = genericType.typeArgs.map { gT :Type -> if(gT in mapGenericConcrete) mapGenericConcrete[gT] else gT }
-		val additionalName = concreteTypes.joinToString("_") { cT -> genericTypeSMTName(cT!!)}
+		val additionalName = concreteTypes.joinToString("_") { cT -> genericTypeSMTName(cT!!) }
 		return "${function.name}_$additionalName"
 	}
 }
 
-//todo: once allowedTypes is not needed anymore, the repository needs to be passed to fewer places
 data class Repository(val model : Model?,
-					  val allowedTypes : MutableList<String> =  mutableListOf("ABS.StdLib.Int",
-                                                                              "ABS.StdLib.Bool",
-                                                                              "ABS.StdLib.Unit",
-                                                                              "ABS.StdLib.Fut<ABS.StdLib.Int>",
-                                                                              "ABS.StdLib.Fut<ABS.StdLib.Bool>",
-                                                                              "ABS.StdLib.Fut<ABS.StdLib.Unit>"),
 					  val classReqs : MutableMap<String,Pair<Formula, ClassDecl>> = mutableMapOf(),
 					  val methodReqs : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
 					  val methodEnss : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
-
 					  val syncMethodReqs : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
 					  val syncMethodEnss : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf()){
-    init{
-        if(model != null) populateAllowedTypes(model)
-    }
+
     fun populateClassReqs(model: Model) {
         for(moduleDecl in model.moduleDecls) {
             if(moduleDecl.name.startsWith("ABS.")) continue
@@ -386,16 +375,6 @@ data class Repository(val model : Model?,
                         }
                     }
                 }
-            }
-        }
-    }
-
-    private fun populateAllowedTypes(model: Model) {
-        for(moduleDecl in model.moduleDecls){
-            if(moduleDecl.name.startsWith("ABS.")) continue
-            for(decl in moduleDecl.decls){
-                allowedTypes += decl.qualifiedName
-                allowedTypes += decl.name
             }
         }
     }
