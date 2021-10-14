@@ -203,7 +203,9 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
                     throw Exception("Unknown declaration of function ${input.name}")
             } else if (FunctionRepos.isKnown(input.decl.qualifiedName)) {
                 SExpr(input.decl.qualifiedName.replace(".", "-"), input.params.map { translateExpression(it, returnType, subst) })
-            } else throw Exception("Translation of FnApp is not fully supported, term is $input with function ${input.name}")
+            } else if(input.decl.qualifiedName == "ABS.StdLib.random"){
+                FreshGenerator.getFreshProgVar(input.model.intType)
+            } else throw Exception("Translation of FnApp is not fully supported, term is $input with function ${input.decl.qualifiedName}")
         is IfExp -> SExpr("ite", listOf(translateExpression(input.condExp, returnType, subst),translateExpression(input.thenExp, returnType, subst),translateExpression(input.elseExp, returnType, subst)))
         is Call -> {
             val met = input.methodSig.contextDecl.qualifiedName+"."+input.methodSig.name
