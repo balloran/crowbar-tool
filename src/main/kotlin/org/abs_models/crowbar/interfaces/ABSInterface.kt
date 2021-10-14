@@ -78,7 +78,7 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.
                 extractSpec(input,"WhileInv", returnType))
         }
         is AwaitStmt -> return org.abs_models.crowbar.data.AwaitStmt(translateGuard(input.guard, returnType, subst),FreshGenerator.getFreshPP())
-        is SuspendStmt -> return org.abs_models.crowbar.data.AwaitStmt(Const("true"),FreshGenerator.getFreshPP()) // We should be able to model a suspend; as an await True;
+        is SuspendStmt -> return org.abs_models.crowbar.data.AwaitStmt(Const("true", input.model.boolType),FreshGenerator.getFreshPP()) // We should be able to model a suspend; as an await True;
         is ReturnStmt -> return org.abs_models.crowbar.data.ReturnStmt(translateExpression(input.retExp, returnType, subst))
         is IfStmt -> return org.abs_models.crowbar.data.IfStmt(translateExpression(input.conditionNoTransform, returnType, subst), translateStatement(input.then, subst), translateStatement(input.`else`, subst))
         is AssertStmt -> return org.abs_models.crowbar.data.AssertStmt(translateExpression(input.condition, returnType, subst))
@@ -91,7 +91,7 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.
             }
             return BranchStmt(translateExpression(input.expr, returnType, subst), BranchList(list))
         }
-        is DieStmt -> return org.abs_models.crowbar.data.AssertStmt(Const("False"))
+        is DieStmt -> return org.abs_models.crowbar.data.AssertStmt(Const("False", input.model.boolType))
         is MoveCogToStmt -> throw Exception("Statements ${input::class} are not coreABS" )
         is DurationStmt -> throw Exception("Statements ${input::class} are not coreABS" )
         is ThrowStmt -> return org.abs_models.crowbar.data.ThrowStmt(translateExpression(input.reason, returnType, subst))
@@ -129,11 +129,11 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
         }
         is LetExp          ->
             translateExpression(input.exp, returnType, subst + Pair(input.`var`.name, translateExpression(input.`val`, returnType, subst))) //this handles the overwrite correctly
-        is IntLiteral      -> Const(input.content)
+        is IntLiteral      -> Const(input.content, input.model.intType)
         is GetExp          -> readFut(translateExpression(input.pureExp, returnType, subst))
         is NewExp          -> FreshGenerator.getFreshObjectId(input.className, input.paramList.map { translateExpression(it, returnType, subst) })
-        is NullExp         -> Const("0")
-        is ThisExp         -> Const("1")
+        is NullExp         -> Const("0", input.model.intType)
+        is ThisExp         -> Const("1", input.model.intType)
         is VarUse -> {
             if (input.name == "result") {
                 if (returnType.isUnknownType)
@@ -183,8 +183,8 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
                 throw Exception("Wrong use of data constructor ${input.constructor} with parameters ${input.paramList} ")
             when (input.dataConstructor!!.name) {
                 "Unit" -> unitExpr()
-                "True" -> Const("true")
-                "False" -> Const("false")
+                "True" -> Const("true", input.model.boolType)
+                "False" -> Const("false", input.model.boolType)
                 else -> DataTypeExpr(input.dataConstructor!!.qualifiedName, input.type.qualifiedName, input.type, input.params.map { translateExpression(it, returnType, subst) })
             }
         }
@@ -192,7 +192,7 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
             if (input.name == "valueOf")
                 readFut(translateExpression(input.params.getChild(0), returnType, subst))
             else if (input.name == "hasRole") {
-                val roleConst = Const("\"${(input.params.getChild(1) as StringLiteral).content}\"")
+                val roleConst = Const("\"${(input.params.getChild(1) as StringLiteral).content}\"", input.model.stringType)
                 val field = translateExpression(input.params.getChild(0), returnType, subst)
                 SExpr("hasRole", listOf(field, roleConst))
             }
@@ -224,6 +224,9 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
                     translatePattern(it.left, it.patternExpType, returnType, subst),
                     translateExpression(it.right, returnType, subst))}, input.freeVars)
         }
+        is StringLiteral -> {
+            Const("\"" + input.content +"\"", input.model.stringType)
+        }
         else -> throw Exception("Translation of ${input::class} not supported, term is $input" )
     }
 
@@ -237,7 +240,7 @@ fun translateGuard(input: Guard, returnType: Type, subst: Map<String, Expr>) : E
         is ExpGuard -> translateExpression(input.pureExp, returnType, subst)
         is AndGuard -> SExpr("&&",listOf(translateGuard(input.left, returnType, subst), translateGuard(input.right, returnType, subst)))
         is ClaimGuard -> {
-            val placeholder = SExpr("=",listOf(Const("1"), Const("1"))) //todo: proper translation
+            val placeholder = SExpr("=",listOf(Const("1", input.varNoTransform.model.intType), Const("1", input.varNoTransform.model.intType))) //todo: proper translation
             placeholder.absExp = input.`var` // Save reference to original guard expression
             placeholder
         }

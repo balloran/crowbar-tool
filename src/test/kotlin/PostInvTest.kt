@@ -17,6 +17,17 @@ class PostInvTest : StringSpec ({
 	for (smt in listOf(z3, cvc)) {
 		println("testing with: $smt as backend")
 
+		"$smt string"{
+			smtPath = smt
+			val (model, repos) = load(listOf(Paths.get("src/test/resources/string.abs")))
+			val classDecl = model.extractClassDecl("Strings", "C")
+
+			var res = classDecl.extractMethodNode(postInv,"success", repos)
+			executeNode(res, repos, postInv) shouldBe true
+			res = classDecl.extractMethodNode(postInv,"fail", repos)
+			executeNode(res, repos, postInv) shouldBe false
+		}
+
 		"$smt random"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/random.abs")))

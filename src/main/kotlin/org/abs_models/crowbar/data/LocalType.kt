@@ -236,7 +236,7 @@ data class LTCall(val role: String, val method: String, val precond: Expr) : Sin
             UpdateOnFormula(
                 context.upd,
                 And(
-                    exprToForm(SExpr("hasRole", listOf(context.callee, Const("\"$role\"")))),
+                    exprToForm(SExpr("hasRole", listOf(context.callee, Const("\"$role\"", null)))),
                     subst(exprToForm(precond), context.substMap) as Formula
                 )
             )

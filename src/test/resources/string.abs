@@ -1,0 +1,16 @@
+module Strings;
+
+class C(Int i){
+	[Spec : Ensures(result == "a")]
+    String success(){
+        String res = "a";
+        return res;
+    }
+	[Spec : Ensures(result == "b")]
+    String fail(){
+        String res = "a";
+        return res;
+    }
+}
+
+{}

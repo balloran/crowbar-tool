@@ -258,7 +258,7 @@ data class SExpr(val op : String, val e : List<Expr>) : Expr {
 
 }
 
-data class Const(val name : String)  : Expr {
+data class Const(val name : String, val concrType: Type? = null)  : Expr {
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
         return name
