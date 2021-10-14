@@ -103,5 +103,10 @@ jar {
     }
 }
 
+shadowJar{
+    archiveFileName = "crowbar.${extension}"
+}
+
 compileKotlin.dependsOn generateGrammarSource
 lintKotlinMain.dependsOn generateGrammarSource
+assemble.dependsOn shadowJar

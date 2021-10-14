@@ -14,8 +14,8 @@ sudo apt-get install z3
 mkdir crowbar
 cd crowbar
 git clone https://github.com/Edkamb/crowbar-tool.git .
-./gradlew shadowJar
-java -jar build/libs/crowbar-1.1.0-alpha-all.jar --full examples/account.abs
+./gradlew assemble
+java -jar build/libs/crowbar.jar --full examples/account.abs
 ```
 The expected output should end in the lines
 ```
