@@ -36,6 +36,15 @@ class C(Int f){
         assert this.f == 0;
         this.f = 1;
     }
+[Spec : Ensures(True)]
+    Unit success4(){
+        this.f = 0;
+        try{
+            assert this.f == 1;
+        } catch {
+            AssertionFailException => this.f = 1;
+        }
+    }
 }
 
 {}

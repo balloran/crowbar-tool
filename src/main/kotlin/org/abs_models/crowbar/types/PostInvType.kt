@@ -576,7 +576,10 @@ class PITAssert(val repos: Repository) : Rule(Modality(
         val targetPost = cond.map[FormulaAbstractVar("POST")] as Formula
 
 
-        val lNode = LogicNode(input.condition, UpdateOnFormula(input.update, guard), info = NoInfo())
+        val lNode =
+        SymbolicNode(SymbolicState(And(input.condition, UpdateOnFormula(input.update, Not(guard))), input.update, Modality(
+            appendStmt(ThrowStmt(DataTypeExpr("ABS.StdLib.Exceptions.AssertionFailException","ABS.StdLib.Exception", repos.model?.exceptionType, listOf())),
+                cont), input.modality.target), input.exceptionScopes))
 
         val sStat = SymbolicState(And(input.condition, UpdateOnFormula(input.update, guard)), input.update, Modality(cont, PostInvariantPair(targetPost,target)), input.exceptionScopes)
 

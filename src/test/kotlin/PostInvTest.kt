@@ -498,6 +498,7 @@ class PostInvTest : StringSpec ({
 			val res = classDecl.extractMethodNode(postInv,"m", repos)
 			executeNode(res, repos, postInv) shouldBe true
 		}*/ //TODO: disabled until Daniel's version is merged
+
 		"$smt assert"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/assert.abs")))
@@ -514,6 +515,8 @@ class PostInvTest : StringSpec ({
 			res = classDecl.extractMethodNode(postInv,"success2", repos)
 			executeNode(res, repos, postInv) shouldBe true
 			res = classDecl.extractMethodNode(postInv,"success3", repos)
+			executeNode(res, repos, postInv) shouldBe true
+			res = classDecl.extractMethodNode(postInv,"success4", repos)
 			executeNode(res, repos, postInv) shouldBe true
 		}
 		"$smt divByZero"{
