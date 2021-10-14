@@ -114,11 +114,6 @@ interface LocalTypeType : DeductType {
     override fun exctractMainNode(model: Model) = emptySymNode()
 
     override fun exctractFunctionNode(fDecl: FunctionDecl) = emptySymNode()
-
-    fun emptySymNode(): SymbolicNode {
-        val emptySymState = SymbolicState(True, EmptyUpdate, Modality(SkipStmt, LocalTypeTarget(LTSkip, True)), listOf())
-        return SymbolicNode(emptySymState, listOf())
-    }
 }
 
 data class LocalTypeTarget(val lte: LocalType, val roleInv: Formula, val invariant: Formula = True, val showInvariant: Boolean = false) : LocalTypeType {
