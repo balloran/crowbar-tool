@@ -1,0 +1,17 @@
+module M;
+
+
+class C(Int i){
+	[Spec : Ensures(result > 1)]
+    Float success(){
+        Float res = 1.1;
+        return res;
+    }
+	[Spec : Ensures(result < 1)]
+    Float fail(){
+        Float res = 1.1;
+        return res;
+    }
+}
+
+{}

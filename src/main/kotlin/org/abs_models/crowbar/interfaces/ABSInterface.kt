@@ -227,6 +227,9 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
         is StringLiteral -> {
             Const("\"" + input.content +"\"", input.model.stringType)
         }
+        is FloatLiteral -> {
+            Const(input.content, input.model.floatType)
+        }
         else -> throw Exception("Translation of ${input::class} not supported, term is $input" )
     }
 
