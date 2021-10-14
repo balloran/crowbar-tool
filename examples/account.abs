@@ -1,0 +1,28 @@
+module Account;
+
+// Adaption of KeY-ABS tutorial (https://abs-models.org/tutorial_pdfs/KeY-ABS.pdf)
+// Author: Crystal Chang Din
+
+interface Account {
+    [Spec: Requires(x >= 0)]
+	Int deposit(Int x);
+	Int withdraw(Int x);
+}
+
+[Spec: Requires(this.balance >=0)]
+[Spec: ObjInv(this.balance >=0)]
+class AccountImpl(Int balance) implements Account {
+
+	Int deposit(Int x) { balance = balance + x; return balance;}
+
+	Int withdraw(Int x) {
+		if (balance - x >= 0) {
+			balance = balance - x;
+		}
+		return balance;
+	}
+}
+
+{
+	new AccountImpl(100);
+}

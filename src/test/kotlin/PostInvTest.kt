@@ -17,6 +17,20 @@ class PostInvTest : StringSpec ({
 	for (smt in listOf(z3, cvc)) {
 		println("testing with: $smt as backend")
 
+		"$smt account"{
+			smtPath = smt
+			val (model, repos) = load(listOf(Paths.get("examples/account.abs")))
+			val classDecl = model.extractClassDecl("Account", "AccountImpl")
+
+			var res = classDecl.extractMethodNode(postInv,"withdraw", repos)
+			executeNode(res, repos, postInv) shouldBe true
+			res = classDecl.extractMethodNode(postInv,"deposit", repos)
+			executeNode(res, repos, postInv) shouldBe true
+			res = model.exctractMainNode(postInv)
+			executeNode(res, repos, postInv) shouldBe true
+
+		}
+
 		"$smt resolves"{
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/resolves.abs")))
