@@ -15,6 +15,7 @@ import org.abs_models.frontend.ast.DivMultExp
 import org.abs_models.frontend.ast.EqExp
 import org.abs_models.frontend.ast.Exp
 import org.abs_models.frontend.ast.FieldUse
+import org.abs_models.frontend.ast.FloatLiteral
 import org.abs_models.frontend.ast.FnApp
 import org.abs_models.frontend.ast.GTEQExp
 import org.abs_models.frontend.ast.GTExp
@@ -34,6 +35,7 @@ import org.abs_models.frontend.ast.OrBoolExp
 import org.abs_models.frontend.ast.Pattern
 import org.abs_models.frontend.ast.PatternVar
 import org.abs_models.frontend.ast.PatternVarUse
+import org.abs_models.frontend.ast.StringLiteral
 import org.abs_models.frontend.ast.SubAddExp
 import org.abs_models.frontend.ast.ThisExp
 import org.abs_models.frontend.ast.UnderscorePattern
@@ -51,6 +53,8 @@ fun renderAbsExpression(e: Exp, m: Map<String, String>): String {
         is ThisExp         -> "this"
         is NullExp         -> "null"
         is IntLiteral      -> e.content
+        is FloatLiteral    -> e.content
+        is StringLiteral   -> "\"${e.content}\""
         is FieldUse        -> "this.${e.name}"
         is VarUse          -> if (m.containsKey(e.name)) m[e.name]!! else e.name
         is GTEQExp         -> "(${renderAbsExpression(e.left, m)} >= ${renderAbsExpression(e.right, m)})"

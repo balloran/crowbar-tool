@@ -83,17 +83,15 @@ object ModelParser {
         val args = parseArguments()
         val type = parseType()
 
-        val value: ModelValue
-
         // Functions are annoying to parse & evaluate, so we won't
         // Heap definitions of Array type can get complex once counterexamples reach a certain size
         // So we will only parse simple constant definitions here
         // Parsing of heaps and relevant functions is handled elsewhere
-        if (args.isEmpty() && (type == Type.INT || type == Type.COMPLEX || type == Type.FUTURE))
-            value = parseValue(type)
+        val value: ModelValue = if (args.isEmpty() && (type == Type.INT || type == Type.COMPLEX || type == Type.FUTURE))
+            parseValue(type)
         else {
             ignore()
-            value = UnknownValue
+            UnknownValue
         }
 
         consume(RParen())
@@ -141,7 +139,9 @@ object ModelParser {
                 return when (typeid) {
                     "Int" -> Type.INT
                     "Bool" -> Type.BOOL
+                    "String" -> Type.STRING
                     "ABS.StdLib.Fut" -> Type.FUTURE
+                    "ABS.StdLib.String" -> Type.STRING
                     else -> Type.COMPLEX
                 }
             }
@@ -152,6 +152,8 @@ object ModelParser {
     private fun parseValue(expectedType: Type): ModelValue {
         return when (expectedType) {
             Type.INT -> parseIntExp()
+            Type.FLOAT -> parseFloatExp()
+            Type.STRING -> parseStringExp()
             Type.COMPLEX -> parseComplexTypeExp()
             Type.ARRAY -> parseArrayExp()
             Type.BOOL -> parseBoolExp()
@@ -161,19 +163,25 @@ object ModelParser {
     }
 
     private fun parseScalarValue(): ModelValue {
+        println(tokens[0])
         return when (tokens[0]) {
-            is ConcreteValue -> parseValue(Type.INT)
+            is ConcreteIntValue -> parseValue(Type.INT)
+            is ConcreteFloatValue -> parseValue(Type.FLOAT)
+            is StringLiteral -> parseValue(Type.STRING)
             is Identifier -> {
-                if (tokens[0].toString() == "true" || tokens[0].toString() == "false")
-                    parseValue(Type.BOOL)
-                else
-                    parseValue(Type.COMPLEX)
+                val id = tokens[0].spelling
+                when {
+                    id == "true" || id ==  "false" -> parseValue(Type.BOOL)
+                    id matches Regex("^ABS\\.StdLib\\.String!val!.*") -> parseValue(Type.STRING)
+                    else -> parseValue(Type.COMPLEX)
+                }
             }
             is LParen -> {
-                if (tokens[1].toString() == "-")
-                    parseValue(Type.INT)
-                else
-                    parseValue(Type.COMPLEX)
+                when (tokens[1].toString()) {
+                    "-" -> parseValue(Type.INT)
+                    "/" -> parseValue(Type.FLOAT)
+                    else -> parseValue(Type.COMPLEX)
+                }
             }
             else -> throw Exception("Cannot guess type of value at ${tokens.joinToString(" ")}")
         }
@@ -181,8 +189,8 @@ object ModelParser {
 
     private fun parseIntExp(): MvInteger {
         when (tokens[0]) {
-            is ConcreteValue -> {
-                val value = (tokens[0] as ConcreteValue).value
+            is ConcreteIntValue -> {
+                val value = (tokens[0] as ConcreteIntValue).value
                 consume()
                 return MvInteger(value)
             }
@@ -201,6 +209,60 @@ object ModelParser {
                 return MvInteger(value)
             }
             else -> throw Exception("Expected concrete integer value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+        }
+    }
+
+    private fun parseFloatExp(): MvFloat {
+        when (tokens[0]) {
+            is ConcreteFloatValue -> {
+                val value = (tokens[0] as ConcreteFloatValue).value
+                consume()
+                return MvFloat(value)
+            }
+            is ConcreteIntValue -> {
+                val value = (tokens[0] as ConcreteIntValue).value
+                consume()
+                return MvFloat(value.toDouble())
+            }
+            is LParen -> {
+                consume()
+
+                val value: Double = when (tokens[0].toString()) {
+                    "-" -> {
+                        consume()
+                        - parseFloatExp().value
+                    }
+                    "/" -> {
+                        consume()
+                        val a = parseFloatExp().value
+                        val b = parseFloatExp().value
+                        a / b
+                    }
+                    else -> throw Exception("Expected float expression function but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+                }
+                consume(RParen())
+                return MvFloat(value)
+            }
+            else -> throw Exception("Expected concrete float value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+        }
+    }
+
+    private fun parseStringExp(): MvString {
+        return when (tokens[0]) {
+            is StringLiteral -> {
+                val value = (tokens[0] as StringLiteral).value
+                consume()
+                MvString(value)
+            }
+            is Identifier -> {
+                if (tokens[0].spelling.startsWith("ABS.StdLib.String!val!")) {
+                    val id = tokens[0].spelling.removePrefix("ABS.StdLib.String!val!")
+                    consume()
+                    MvString("stringLiteral#$id")
+                } else
+                    throw Exception("Expected string variable but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
+            }
+            else -> throw Exception("Expected string value but got '${tokens[0]}' at ${tokens.joinToString(" ")}")
         }
     }
 
@@ -257,10 +319,10 @@ object ModelParser {
                 consume(Identifier("="))
                 consume(Identifier(args[0].name))
 
-                if (tokens[0] !is ConcreteValue)
+                if (tokens[0] !is ConcreteIntValue)
                     throw Exception("Unsupported complex lambda in SMT array expression")
 
-                val index = (tokens[0] as ConcreteValue).value
+                val index = (tokens[0] as ConcreteIntValue).value
                 consume()
                 consume(RParen())
                 array = MvArray(Type.BOOL, MvBoolean(false))
@@ -430,8 +492,16 @@ data class MvInteger(val value: Int) : ModelValue {
     override fun toString() = value.toString()
 }
 
+data class MvFloat(val value: Double) : ModelValue {
+    override fun toString() = value.toString()
+}
+
 data class MvBoolean(val value: Boolean) : ModelValue {
     override fun toString() = value.toString()
+}
+
+data class MvString(val value: String) : ModelValue {
+    override fun toString() = "\"$value\""
 }
 
 data class MvDataType(val value: String, val params: List<ModelValue> = listOf()) : ModelValue {
@@ -448,5 +518,5 @@ data class MvFuture(val id: String) : ModelValue {
 }
 
 enum class Type {
-    INT, BOOL, ARRAY, COMPLEX, FUTURE, UNKNOWN
+    INT, BOOL, STRING, FLOAT, ARRAY, COMPLEX, FUTURE, UNKNOWN
 }

@@ -363,8 +363,10 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         val dType = ctype.qualifiedName
         return when {
             dType == "ABS.StdLib.Int" -> (value as MvInteger).value.toString()
+            dType == "ABS.StdLib.Float" -> (value as MvFloat).value.toString()
             dType == "ABS.StdLib.Fut" -> "\"${model.futNameById((value as MvFuture).id)}\""
             dType == "ABS.StdLib.Bool" -> if ((value as MvBoolean).value) "True" else "False"
+            dType == "ABS.StdLib.String" -> "\"${(value as MvString).value}\""
             dType == "<UNKNOWN>" -> "\"unknownType($value)\""
             isDataType(dType) -> (value as MvDataType).toString()
             value is MvInteger -> if (value.value == 0) "null" else "\"${getObjectById(value.value)}\""
@@ -435,7 +437,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
 
 fun complexTypeToString(ctype: Type): String {
     val type = ctype.qualifiedName
-    return if (type == "ABS.StdLib.Int" || type == "ABS.StdLib.Bool" || isDataType(type))
+    return if (type == "ABS.StdLib.Int" || type == "ABS.StdLib.Float" || type == "ABS.StdLib.Bool" || isDataType(type))
         stripModulePrefix(type)
     else
         "String"

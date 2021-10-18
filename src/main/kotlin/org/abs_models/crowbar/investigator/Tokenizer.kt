@@ -4,6 +4,7 @@ object Tokenizer {
 
     private val whitespace = Regex("\\s")
     private val numeric = Regex("(\\-)?\\d+")
+    private val float = Regex("(\\-)?\\d+\\.\\d+")
     private val allowedId = Regex("[^\\s\"\'\\)\\(\\]\\[]")
     private val allowedStringLit = Regex("[^\"]")
 
@@ -45,13 +46,14 @@ object Tokenizer {
                         i += 1
                     }
 
-                    if (numeric matches identifier)
+                    when {
+                        float matches identifier -> tokens.add(ConcreteFloatValue(identifier.toDouble()))
                         // The solver occasionally comes up with huge integer literals
                         // parsing them as ints fails, so we will parse as long and
                         // cut to int size. This might cause some incorrect counterexamples.
-                        tokens.add(ConcreteValue(identifier.toLong().toInt()))
-                    else
-                        tokens.add(Identifier(identifier))
+                        numeric matches identifier -> tokens.add(ConcreteIntValue(identifier.toLong().toInt()))
+                        else -> tokens.add(Identifier(identifier))
+                    }
                 }
                 else -> throw Exception("Unknown character at position $i: '$char'")
             }
@@ -76,6 +78,7 @@ abstract class Token(val spelling: String) {
 
 class LParen : Token("(")
 class RParen : Token(")")
-class StringLiteral(content: String) : Token("\"$content\"")
+class StringLiteral(val value: String) : Token("\"$value\"")
 class Identifier(spelling: String) : Token(spelling)
-class ConcreteValue(val value: Int) : Token(value.toString())
+class ConcreteIntValue(val value: Int) : Token(value.toString())
+class ConcreteFloatValue(val value: Double) : Token(value.toString())
