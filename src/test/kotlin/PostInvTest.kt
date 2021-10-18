@@ -32,8 +32,9 @@ class PostInvTest : StringSpec ({
 			smtPath = smt
 			val (model, repos) = load(listOf(Paths.get("src/test/resources/string.abs")))
 			val classDecl = model.extractClassDecl("Strings", "C")
-
 			var res = classDecl.extractMethodNode(postInv,"success", repos)
+			executeNode(res, repos, postInv) shouldBe true
+			res = classDecl.extractMethodNode(postInv,"successFieldFloat", repos)
 			executeNode(res, repos, postInv) shouldBe true
 			res = classDecl.extractMethodNode(postInv,"fail", repos)
 			executeNode(res, repos, postInv) shouldBe false

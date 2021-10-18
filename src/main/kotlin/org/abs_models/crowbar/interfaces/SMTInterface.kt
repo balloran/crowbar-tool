@@ -24,6 +24,7 @@ val smtHeader = """
     (declare-fun hasRole (Int String) Bool)
     (define-sort ABS.StdLib.Int () Int)
     (define-sort ABS.StdLib.Bool () Bool)
+    (define-sort ABS.StdLib.String () String)
     (declare-const Unit Int)
     (assert (= Unit 0))
     (declare-sort UNBOUND 0)
@@ -76,7 +77,7 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     val postSMT = post.toSMT()
 
     val functionDecl = FunctionRepos.toString()
-    val primitiveTypesDecl = ADTRepos.primitiveDtypesDecl.joinToString("\n\t") { "(declare-sort ${it.qualifiedName} 0)" }
+    val primitiveTypesDecl = ADTRepos.primitiveDtypesDecl.filter{!it.type.isStringType}.joinToString("\n\t") { "(declare-sort ${it.qualifiedName} 0)" }
     val wildcards: String = wildCardsConst.map { FunctionDeclSMT(it.key,it.value).toSMT("\n\t") }.joinToString("") { it }
     val fieldsDecl = fields.joinToString("\n\t"){ "(declare-const ${it.name} Field)"}
     val varsDecl = vars.joinToString("\n\t"){"(declare-const ${it.name} ${

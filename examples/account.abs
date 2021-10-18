@@ -1,7 +1,7 @@
 module Account;
 
 // Adaption of KeY-ABS tutorial (https://abs-models.org/tutorial_pdfs/KeY-ABS.pdf)
-// Author: Crystal Chang Din
+// Original Author: Crystal Chang Din
 
 interface Account {
     [Spec: Requires(x >= 0)]

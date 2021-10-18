@@ -1,6 +1,13 @@
 module Strings;
 
 class C(Int i){
+    String a = "xyz";
+
+    [Spec: Ensures(result == "1.5")]
+    String successFieldFloat() {
+        a = "1.5";
+        return a;
+    }
 	[Spec : Ensures(result == "a")]
     String success(){
         String res = "a";
