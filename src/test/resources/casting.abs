@@ -1,0 +1,52 @@
+module Casting;
+
+interface I{
+    [Spec : Ensures(result == 2)]
+    Int m ();
+}
+
+interface J{
+
+}
+
+class C {
+
+    [Spec : Requires(o implements I)]
+    [Spec : Requires(o != null)]
+    [Spec : Ensures(result == 2)]
+    Int preSimpleSuccess(J o){
+        I i = o as I;
+        Int res = i.m();
+        return res;
+    }
+
+
+    [Spec : Requires(o implements I)]
+    [Spec : Ensures(result == 2)]
+    Int withoutPreSimpleFail1(J o){
+        I i = o as I;
+        Int res = i.m();
+        return res;
+    }
+
+
+    [Spec : Requires(o != null)]
+    [Spec : Ensures(result == 2)]
+    Int withoutPreSimpleFail2(J o){
+        I i = o as I;
+        Int res = i.m();
+        return res;
+    }
+
+
+    [Spec : Ensures(result == 2)]
+    Int withoutPreSimpleFail3(J o){
+        I i = o as I;
+        Int res = i.m();
+        return res;
+    }
+
+
+}
+{
+}

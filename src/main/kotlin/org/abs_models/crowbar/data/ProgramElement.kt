@@ -1,5 +1,6 @@
 package org.abs_models.crowbar.data
 
+import org.abs_models.frontend.ast.Exp
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
 
@@ -256,6 +257,10 @@ data class SExpr(val op : String, val e : List<Expr>) : Expr {
         )
     }
 
+}
+
+data class ImplementsExpr(val variable : Expr, val interfaceType : Type) : Expr {
+    override var absExp: org.abs_models.frontend.ast.Exp? = null
 }
 
 data class Const(val name : String, val concrType: Type? = null)  : Expr {

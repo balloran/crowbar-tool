@@ -24,6 +24,7 @@ object ADTRepos {
 	val dTypesDecl = mutableListOf<DataTypeDecl>()
 	val primitiveDtypesDecl = mutableListOf<DataTypeDecl>()
 	val exceptionDecl = mutableListOf<ExceptionDecl>()
+	val interfaceDecl = mutableListOf<InterfaceDecl>()
 
 	private val concreteGenerics :MutableMap<String, DataTypeType> = mutableMapOf()
 	private val usedHeaps = mutableSetOf<String>()
@@ -122,12 +123,23 @@ object ADTRepos {
 		return header
 	}
 
+	fun interfaceExtendsToSMT() : String {
+		var res = ""
+		interfaceDecl.forEach { i1 ->
+			i1.extendedInterfaceUseListNoTransform.forEach { i2 ->
+
+				res += "(assert (extends ${i1.type.qualifiedName} ${i2.type.qualifiedName}))\n\t"
+			}
+		}
+		return res
+	}
+
 	fun dTypesToSMT() :String{
-		return DataTypesDecl(dTypesDecl, exceptionDecl).toSMT()
+		return DataTypesDecl(dTypesDecl, exceptionDecl,interfaceDecl).toSMT()
 	}
 
 	override fun toString() : String {
-		return DataTypesDecl(dTypesDecl, exceptionDecl).toSMT()
+		return DataTypesDecl(dTypesDecl, exceptionDecl,interfaceDecl).toSMT()
 	}
 
 	fun initBuiltIn(){
@@ -135,6 +147,7 @@ object ADTRepos {
 		dTypesDecl.clear()
 		primitiveDtypesDecl.clear()
 		exceptionDecl.clear()
+		interfaceDecl.clear()
 		dtypeMap["ABS.StdLib.Int"] = HeapDecl("ABS.StdLib.Int")
 		dtypeMap["ABS.StdLib.Float"] = HeapDecl("ABS.StdLib.Float")
 	}
@@ -156,6 +169,7 @@ object ADTRepos {
 					dtypeMap[decl.qualifiedName] = HeapDecl(decl.type.qualifiedName)
 				}
 				if(decl is ExceptionDecl) exceptionDecl.add(decl)
+				if(decl is InterfaceDecl)  interfaceDecl.add(decl)
 			}
 		}
 

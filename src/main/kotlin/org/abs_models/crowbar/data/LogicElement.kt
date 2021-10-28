@@ -334,6 +334,15 @@ data class HeapType(val name: String) : Type() {
 
 }
 
+data class ImplementsForm(val variable : Term, val interfaceType: Type) : Formula{
+    override fun toSMT(indent:String) : String = "(implements ${variable.toSMT()} ${interfaceType.qualifiedName})"
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + variable.iterate(f)
+}
+
+data class ImplementsTerm(val variable : Term, val interfaceType: Type) : Term{
+    override fun toSMT(indent:String) : String = "(implements ${variable.toSMT()} ${interfaceType.qualifiedName})"
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + variable.iterate(f)
+}
 
 object Heap : ProgVar("heap",  HeapType("Heap"))
 object OldHeap : ProgVar("old",  HeapType("Heap"))
@@ -374,6 +383,8 @@ fun exprToTerm(input : Expr, specialKeyword : String="NONE") : Term {//todo: add
             val match =exprToTerm(input.match)
             Case(match, input.expectedType, input.content.map { ex -> BranchTerm(exprToTerm(ex.matchTerm, specialKeyword), exprToTerm(ex.branch, specialKeyword)) },input.freeVars)
         }
+        is ImplementsExpr -> ImplementsTerm(exprToTerm(input.variable),input.interfaceType)
+
         else -> throw Exception("Expression cannot be converted to term: ${input.prettyPrint()} (${input.javaClass})")
     }
 }
@@ -384,6 +395,7 @@ fun exprToForm(input : Expr, specialKeyword : String="NONE") : Formula {//todo: 
     if(input is SExpr && input.op == "->" && input.e.size ==2 ) return Impl(exprToForm(input.e[0], specialKeyword), exprToForm(input.e[1], specialKeyword))
     if(input is SExpr && input.op == "!" && input.e.size ==1 ) return Not(exprToForm(input.e[0]))
     if(input is SExpr && input.op == "!=") return Not(exprToForm(SExpr("=",input.e), specialKeyword))
+    if(input is ImplementsExpr) return ImplementsForm(exprToTerm(input.variable), input.interfaceType)
 
     if(input is SExpr){
         if (specialHeapKeywords.containsKey(input.op)){//todo: fix for last
