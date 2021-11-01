@@ -26,6 +26,10 @@ class PostInvTest : StringSpec ({
 			executeNode(res, repos, postInv) shouldBe true
 			res = classDecl.extractMethodNode(postInv,"fail", repos)
 			executeNode(res, repos, postInv) shouldBe false
+			res = classDecl.extractMethodNode(postInv,"ticket271", repos)
+			executeNode(res, repos, postInv) shouldBe true
+			res = classDecl.extractMethodNode(postInv,"ticket272", repos)
+			executeNode(res, repos, postInv) shouldBe true
 		}
 
 		"$smt string"{

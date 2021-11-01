@@ -1,7 +1,10 @@
 module M;
 
 
+[Spec : ObjInv(this.f == 0.0)]
 class C(Int i){
+  Float f = 0.0;
+
 	[Spec : Ensures(result > 1)]
     Float success(){
         Float res = 1.1;
@@ -11,6 +14,17 @@ class C(Int i){
     Float fail(){
         Float res = 1.1;
         return res;
+    }
+
+    [Spec: Ensures(result == 2.0)]
+    Float ticket271() {
+        return 2.0;
+    }
+
+
+    [Spec: Ensures(result == 0.0)]
+    Float ticket272() {
+        return this.f;
     }
 }
 
