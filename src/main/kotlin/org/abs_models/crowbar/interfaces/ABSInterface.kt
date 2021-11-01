@@ -69,7 +69,7 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.
             if(subs.isEmpty())  return SkipStmt
             val last = subs.last()
             val tail = subs.dropLast(1)
-            return tail.foldRight( last) { nx, acc -> SeqStmt(nx, acc) }
+            return tail.foldRight( last) { nx, acc -> appendStmt(nx, acc) }
         }
         is WhileStmt -> {
             return org.abs_models.crowbar.data.WhileStmt(translateExpression(input.conditionNoTransform, returnType, subst),
