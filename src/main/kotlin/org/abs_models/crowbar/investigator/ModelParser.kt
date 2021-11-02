@@ -140,6 +140,7 @@ object ModelParser {
                     "Int" -> Type.INT
                     "Bool" -> Type.BOOL
                     "String" -> Type.STRING
+                    "Real" -> Type.FLOAT
                     "ABS.StdLib.Fut" -> Type.FUTURE
                     "ABS.StdLib.String" -> Type.STRING
                     else -> Type.COMPLEX
@@ -163,7 +164,6 @@ object ModelParser {
     }
 
     private fun parseScalarValue(): ModelValue {
-        println(tokens[0])
         return when (tokens[0]) {
             is ConcreteIntValue -> parseValue(Type.INT)
             is ConcreteFloatValue -> parseValue(Type.FLOAT)
