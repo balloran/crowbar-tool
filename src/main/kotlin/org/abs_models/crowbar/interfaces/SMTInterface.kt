@@ -23,6 +23,7 @@ val smtHeader = """
     (declare-fun valueOf_Int (Int) Int)
     (declare-fun hasRole (Int String) Bool)
     (define-sort ABS.StdLib.Int () Int)
+    (define-sort ABS.StdLib.Float () Real)
     (define-sort ABS.StdLib.Bool () Bool)
     (define-sort ABS.StdLib.String () String)
     (declare-const Unit Int)

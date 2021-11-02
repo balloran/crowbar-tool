@@ -25,7 +25,7 @@ import org.abs_models.frontend.typechecker.UnknownType
 import kotlin.system.exitProcess
 
 
-val intFunction = setOf("+","-","*","/")
+val arithFunction = setOf("+","-","*","/")
 val booleanFunction = setOf(">=","<=","<",">","=","!=",">=","<=","<",">","&&","||", "true", "false")
 
 //Declaration
@@ -786,9 +786,17 @@ fun getReturnType(term: Term) : Type {
     else if(term is DataTypeConst){
         return term.concrType!!
     }
-    else if (term is Function) {booleanFunction
-        if ( term.name in intFunction || term.name.toIntOrNull() != null)
+    else if (term is Function) {
+        if (term.name in arithFunction ){
+            val left = getReturnType(term.params[0])
+            val right = getReturnType(term.params[1])
+            if(left == ADTRepos.model!!.intType && right == ADTRepos.model!!.intType) return ADTRepos.model!!.intType
+            return ADTRepos.model!!.floatType
+        }
+        if ( term.name.toIntOrNull() != null)
             return ADTRepos.model!!.intType
+        if ( term.name.toFloatOrNull() != null)
+            return ADTRepos.model!!.floatType
         if (term.name == "valueOf")
             return ((term.params[0] as ProgVar).concrType as DataTypeType).getTypeArg(0)
         if (term.name in booleanFunction)

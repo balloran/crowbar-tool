@@ -59,11 +59,11 @@ object ADTRepos {
 
 	fun getSMTDType(dType : String) : HeapDecl =
 		try {
-		dtypeMap[libPrefix(dType)]!!
-	}catch ( e:KotlinNullPointerException){
-		System.err.println("Type $dType not supported")
-			exitProcess(-1)
-	}
+			dtypeMap[libPrefix(dType)]!!
+		}catch ( e:KotlinNullPointerException ){
+			System.err.println("Type $dType not supported")
+				exitProcess(-1)
+		}
 	fun getDeclForType(dType: String) : DataTypeDecl = dTypesDecl.find{ it.qualifiedName == dType }!!
 
 	fun getAllTypePrefixes() : Set<String> = dtypeMap.keys
@@ -136,6 +136,7 @@ object ADTRepos {
 		primitiveDtypesDecl.clear()
 		exceptionDecl.clear()
 		dtypeMap["ABS.StdLib.Int"] = HeapDecl("ABS.StdLib.Int")
+		dtypeMap["ABS.StdLib.Float"] = HeapDecl("ABS.StdLib.Float")
 	}
 	fun init(parModel: Model){
 		model = parModel
