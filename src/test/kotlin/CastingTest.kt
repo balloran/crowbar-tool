@@ -11,7 +11,7 @@ class CastingTest : StringSpec({
     for (smt in listOf(z3, cvc)) {
         println("testing with: $smt as backend")
 
-        "$smt caseExp"{
+        "$smt simpleCasting"{
             smtPath = smt
 
             val (model, repos) = load(listOf(Paths.get("src/test/resources/casting.abs")))
@@ -28,6 +28,18 @@ class CastingTest : StringSpec({
 
             val withoutPreSimpleFail3 = classDecl.extractMethodNode(postInv, "withoutPreSimpleFail3", repos)
             executeNode(withoutPreSimpleFail3, repos, postInv) shouldBe false
+
+            val inliningCastSimpleSuccess = classDecl.extractMethodNode(postInv, "inliningCastSimpleSuccess", repos)
+            executeNode(inliningCastSimpleSuccess, repos, postInv) shouldBe true
+
+            val extendsCastSimpleSuccess = classDecl.extractMethodNode(postInv, "extendsCastSimpleSuccess", repos)
+            executeNode(extendsCastSimpleSuccess, repos, postInv) shouldBe true
+
+            val castNullNoCallsSuccess = classDecl.extractMethodNode(postInv, "castNullNoCallsSuccess", repos)
+            executeNode(castNullNoCallsSuccess, repos, postInv) shouldBe true
+
+            val castNullCallOnNullReturnValFail = classDecl.extractMethodNode(postInv, "castNullCallOnNullReturnValFail", repos)
+            executeNode(castNullCallOnNullReturnValFail, repos, postInv) shouldBe false
 
         }
     }

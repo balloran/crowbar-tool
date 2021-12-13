@@ -17,6 +17,7 @@ import org.abs_models.frontend.ast.Stmt
 import org.abs_models.frontend.ast.ThrowStmt
 import org.abs_models.frontend.ast.WhileStmt
 import org.abs_models.frontend.typechecker.Type
+import org.abs_models.frontend.typechecker.UnionType
 import org.abs_models.frontend.typechecker.UnknownType
 import kotlin.system.exitProcess
 
@@ -132,7 +133,7 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
             translateExpression(input.exp, returnType, subst + Pair(input.`var`.name, translateExpression(input.`val`, returnType, subst))) //this handles the overwrite correctly
         is IntLiteral      -> Const(input.content, input.model.intType)
         is GetExp          -> readFut(translateExpression(input.pureExp, returnType, subst))
-        is NewExp          -> FreshGenerator.getFreshObjectId(input.className, input.paramList.map { translateExpression(it, returnType, subst) }) //todo:add "implements" information to Repos
+        is NewExp          -> FreshGenerator.getFreshObjectId(input.className, input.paramList.map { translateExpression(it, returnType, subst) },input.type) //todo:add "implements" information to Repos
         is NullExp         -> Const("0", input.model.intType)
         is ThisExp         -> Const("1", input.model.intType)
         is VarUse -> {
@@ -232,11 +233,14 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
             Const(input.content, input.model.floatType)
         }
         is AsExp -> {
+            val inputExpr = translateExpression(input.exp,returnType, subst)
+            val implements = ImplementsExpr(inputExpr,input.type)
             SExpr("ite",
                 listOf(
-                    ImplementsExpr(translateExpression(input.exp,returnType, subst),input.type),//cond
-                    translateExpression(input.exp, returnType, subst),
-                Const("0", input.model.intType)))
+                    SExpr("and", listOf(SExpr("not", listOf(SExpr("=", listOf(inputExpr, Const("0", input.model.intType))))),
+                    implements)),
+                    inputExpr,
+                    Const("0", input.model.intType)))
         }
         is ImplementsExp -> {
             ImplementsExpr(translateExpression(input.exp, returnType, subst), input.interfaceTypeUse.type)

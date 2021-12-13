@@ -8,6 +8,7 @@ import org.abs_models.crowbar.types.getReturnType
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
+import org.abs_models.frontend.typechecker.UnionType
 import org.abs_models.frontend.typechecker.UnknownType
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
@@ -25,6 +26,8 @@ object ADTRepos {
 	val primitiveDtypesDecl = mutableListOf<DataTypeDecl>()
 	val exceptionDecl = mutableListOf<ExceptionDecl>()
 	val interfaceDecl = mutableListOf<InterfaceDecl>()
+
+	val objects : MutableMap<String,UnionType> = mutableMapOf()
 
 	private val concreteGenerics :MutableMap<String, DataTypeType> = mutableMapOf()
 	private val usedHeaps = mutableSetOf<String>()
@@ -148,6 +151,7 @@ object ADTRepos {
 		primitiveDtypesDecl.clear()
 		exceptionDecl.clear()
 		interfaceDecl.clear()
+		objects.clear()
 		dtypeMap["ABS.StdLib.Int"] = HeapDecl("ABS.StdLib.Int")
 		dtypeMap["ABS.StdLib.Float"] = HeapDecl("ABS.StdLib.Float")
 	}

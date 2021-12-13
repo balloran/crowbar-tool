@@ -4,12 +4,12 @@ import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.main.ADTRepos.libPrefix
+import org.abs_models.crowbar.main.ADTRepos.objects
 import org.abs_models.crowbar.main.ADTRepos.setUsedHeaps
 import org.abs_models.crowbar.types.booleanFunction
 import org.abs_models.frontend.typechecker.DataTypeType
 import java.io.File
 import java.util.concurrent.TimeUnit
-import kotlin.system.exitProcess
 
 //(set-option :timeout ${timeoutS*1000})
 
@@ -98,6 +98,23 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
                 "(assert (implements ${it.name} ${it.concrType.qualifiedName}))\n\t"
             else ""
     }
+    val objectImpl = heaps.joinToString("\n"){
+        x:Function ->
+        if(x.name in objects)
+            objects[x.name]!!.types.joinToString("\n\t") {
+                "(assert (implements " +
+                        if(x.params.isNotEmpty()){
+                        "(${x.name} " +
+                        x.params.joinToString (" "){term -> term.toSMT()} +
+                        ")  ${it.qualifiedName}))"}
+                    else{
+                        "${x.name} ${it.qualifiedName}))"
+                        }
+
+        }else
+            ""
+
+    }
     val objectsDecl = heaps.joinToString("\n\t"){"(declare-fun ${it.name} (${it.params.joinToString (" "){
         term ->
         if(term is DataTypeConst) {
@@ -109,11 +126,14 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
         else {
             "Int"
         }
-    }}) Int)" }
+    }}) Int)"
+
+    }
     val funcsDecl = funcs.joinToString("\n") { "(declare-const ${it.name} Int)"}
     var fieldsConstraints = ""
     fields.forEach { f1 -> fields.minus(f1).forEach{ f2 -> if(libPrefix(f1.concrType.qualifiedName) == libPrefix(f2.concrType.qualifiedName)) fieldsConstraints += "(assert (not ${Eq(f1,f2).toSMT()}))" } } //??
 
+//    ADTRepos.objects.clear()
 
     return """
 ;header
@@ -154,6 +174,9 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     $varsDecl
 ;objects declaration
     $objectsDecl
+    
+;objects interface declaration
+    $objectImpl
 ;funcs declaration
     $funcsDecl
 ;fields constraints

@@ -9,6 +9,10 @@ interface J{
 
 }
 
+interface K extends I{
+
+}
+
 class C {
 
     [Spec : Requires(o implements I)]
@@ -46,6 +50,34 @@ class C {
         return res;
     }
 
+
+    [Spec : Requires(o implements I)]
+    [Spec : Requires(o != null)]
+    [Spec : Ensures(result == 2)]
+    Int inliningCastSimpleSuccess(J o) {
+        Int res = o as I.m();
+        return res;
+    }
+
+    [Spec : Requires(o != null)]
+    [Spec : Ensures(result == 2)]
+    Int extendsCastSimpleSuccess(K o) {
+        Int res = o as I.m();
+        return res;
+    }
+
+    [Spec : Ensures(result == 2)]
+    Int castNullNoCallsSuccess(J o){
+        I i = o as I;
+        return 2;
+    }
+
+    [Spec : Ensures(result == 2)]
+    Int castNullCallOnNullReturnValFail(J o){
+        I i = o as I;
+        Int res = i.m();
+        return 2;
+    }
 
 }
 {

@@ -1,10 +1,10 @@
 package org.abs_models.crowbar.rule
 
 import org.abs_models.crowbar.data.*
-import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.tree.SymbolicTree
 import org.abs_models.frontend.typechecker.Type
+import org.abs_models.frontend.typechecker.UnionType
 
 //do not use variables starting with pv_ etc.
 object FreshGenerator {
@@ -12,11 +12,15 @@ object FreshGenerator {
     fun getFreshProgVar(dType : Type) : ProgVar = ProgVar("pv_" + (count++), dType)
     fun getFreshPP() : PP = PPId(count++)
     fun getFreshFuture(dType : Type) : ProgVar = ProgVar("fut_"+ (count++), ADTRepos.model!!.getFutType(dType))
-	fun getFreshObjectId(className: String, map: List<Expr>): Expr {
+
+    fun getFreshObjectId(className: String, map: List<Expr>, type: Type): Expr {
+        val newName = "NEW"+(count++)+"_"+map.size
+        if (type is UnionType)
+            ADTRepos.objects[newName] = type
         if(map.isEmpty())
-            return SExpr("NEW"+(count++)+"_"+map.size, listOf(SExpr(className, emptyList())))
-        return SExpr("NEW"+(count++)+"_"+map.size, listOf(SExpr(className, emptyList()))+map)
-	}
+            return SExpr(newName, listOf(SExpr(className, emptyList())))
+        return SExpr(newName, listOf(SExpr(className, emptyList()))+map)
+    }
 }
 
 /* Every rule has a conclusion scheme that it matches on */
