@@ -5,6 +5,7 @@ import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.frontend.ast.DataTypeDecl
 import org.abs_models.frontend.ast.ExceptionDecl
+import org.abs_models.frontend.ast.InterfaceDecl
 import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
 
@@ -127,7 +128,7 @@ data class GenericTypeDecl(val dTypeDecl : DataTypeDecl, val concreteMap : Map<T
     }
 }
 
-data class DataTypesDecl(val dTypesDecl: List<DataTypeDecl>, val exceptionDecl: MutableList<ExceptionDecl>) :
+data class DataTypesDecl(val dTypesDecl: List<DataTypeDecl>, val exceptionDecl: MutableList<ExceptionDecl>, val interfaceDecl: MutableList<InterfaceDecl> ) :
     ProofElement {
     override fun toSMT(indent:String): String {
         var valueOfs = ""
@@ -142,6 +143,15 @@ data class DataTypesDecl(val dTypesDecl: List<DataTypeDecl>, val exceptionDecl: 
                 dTypeValDecl.add(v)
             }
             dTypeValsDecl.add(ArgSMT(dTypeValDecl))
+
+
+            dTypeDecl.add(ArgsSMT("Interface", listOf(Function("0"))))
+            val dTypeValDecl1 = mutableListOf<Term>()
+            for(ex in interfaceDecl){
+                val v = ArgsSMT(ex.qualifiedName, listOf())
+                dTypeValDecl1.add(v)
+            }
+            dTypeValsDecl.add(ArgSMT(dTypeValDecl1))
 
             //normal data types
             for (dType in dTypesDecl) {

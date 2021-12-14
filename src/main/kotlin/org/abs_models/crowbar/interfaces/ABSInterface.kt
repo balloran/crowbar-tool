@@ -17,7 +17,9 @@ import org.abs_models.frontend.ast.Stmt
 import org.abs_models.frontend.ast.ThrowStmt
 import org.abs_models.frontend.ast.WhileStmt
 import org.abs_models.frontend.typechecker.Type
+import org.abs_models.frontend.typechecker.UnionType
 import org.abs_models.frontend.typechecker.UnknownType
+import kotlin.system.exitProcess
 
 fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.crowbar.data.Stmt {
     if(input == null) return SkipStmt
@@ -131,7 +133,7 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
             translateExpression(input.exp, returnType, subst + Pair(input.`var`.name, translateExpression(input.`val`, returnType, subst))) //this handles the overwrite correctly
         is IntLiteral      -> Const(input.content, input.model.intType)
         is GetExp          -> readFut(translateExpression(input.pureExp, returnType, subst))
-        is NewExp          -> FreshGenerator.getFreshObjectId(input.className, input.paramList.map { translateExpression(it, returnType, subst) })
+        is NewExp          -> FreshGenerator.getFreshObjectId(input.className, input.paramList.map { translateExpression(it, returnType, subst) },input.type) //todo:add "implements" information to Repos
         is NullExp         -> Const("0", input.model.intType)
         is ThisExp         -> Const("1", input.model.intType)
         is VarUse -> {
@@ -229,6 +231,20 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
         }
         is FloatLiteral -> {
             Const(input.content, input.model.floatType)
+        }
+        is AsExp -> {
+            val inputExpr = translateExpression(input.exp,returnType, subst)
+            val implements = ImplementsExpr(inputExpr,input.type)
+            val res = SExpr("ite",
+                listOf(
+                    SExpr("and", listOf(SExpr("not", listOf(SExpr("=", listOf(inputExpr, Const("0", input.model.intType))))),
+                    implements)),
+                    inputExpr,
+                    Const("0", input.model.intType)))
+            res
+        }
+        is ImplementsExp -> {
+            ImplementsExpr(translateExpression(input.exp, returnType, subst), input.interfaceTypeUse.type)
         }
         else -> throw Exception("Translation of ${input::class} not supported, term is $input" )
     }

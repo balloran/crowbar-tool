@@ -4,6 +4,7 @@ import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.main.ADTRepos.libPrefix
+import org.abs_models.crowbar.main.ADTRepos.objects
 import org.abs_models.crowbar.main.ADTRepos.setUsedHeaps
 import org.abs_models.crowbar.types.booleanFunction
 import org.abs_models.frontend.typechecker.DataTypeType
@@ -80,7 +81,10 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     val functionDecl = FunctionRepos.toString()
     val primitiveTypesDecl = ADTRepos.primitiveDtypesDecl.filter{!it.type.isStringType}.joinToString("\n\t") { "(declare-sort ${it.qualifiedName} 0)" }
     val wildcards: String = wildCardsConst.map { FunctionDeclSMT(it.key,it.value).toSMT("\n\t") }.joinToString("") { it }
-    val fieldsDecl = fields.joinToString("\n\t"){ "(declare-const ${it.name} Field)"}
+    val fieldsDecl = fields.joinToString("\n\t"){ "(declare-const ${it.name} Field)\n" +
+            if(it.concrType.isInterfaceType)
+                "(assert (implements ${it.name} ${it.concrType.qualifiedName}))\n\t"
+            else ""}
     val varsDecl = vars.joinToString("\n\t"){"(declare-const ${it.name} ${
         if(it.concrType.isUnknownType)
             throw Exception("Var with unknown type: ${it.name}")
@@ -89,7 +93,28 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
             genericTypeSMTName(it.concrType)
         }
         else
-            libPrefix(it.concrType.qualifiedName)})"}
+            libPrefix(it.concrType.qualifiedName)})\n" +
+            if(it.concrType.isInterfaceType)
+                "(assert (implements ${it.name} ${it.concrType.qualifiedName}))\n\t"
+            else ""
+    }
+    val objectImpl = heaps.joinToString("\n"){
+        x:Function ->
+        if(x.name in objects)
+            objects[x.name]!!.types.joinToString("\n\t") {
+                "(assert (implements " +
+                        if(x.params.isNotEmpty()){
+                        "(${x.name} " +
+                        x.params.joinToString (" "){term -> term.toSMT()} +
+                        ")  ${it.qualifiedName}))"}
+                    else{
+                        "${x.name} ${it.qualifiedName}))"
+                        }
+
+        }else
+            ""
+
+    }
     val objectsDecl = heaps.joinToString("\n\t"){"(declare-fun ${it.name} (${it.params.joinToString (" "){
         term ->
         if(term is DataTypeConst) {
@@ -101,11 +126,14 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
         else {
             "Int"
         }
-    }}) Int)" }
+    }}) Int)"
+
+    }
     val funcsDecl = funcs.joinToString("\n") { "(declare-const ${it.name} Int)"}
     var fieldsConstraints = ""
     fields.forEach { f1 -> fields.minus(f1).forEach{ f2 -> if(libPrefix(f1.concrType.qualifiedName) == libPrefix(f2.concrType.qualifiedName)) fieldsConstraints += "(assert (not ${Eq(f1,f2).toSMT()}))" } } //??
 
+//    ADTRepos.objects.clear()
 
     return """
 ;header
@@ -116,6 +144,20 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     $valueOf
 ;data type declaration
     ${ADTRepos.dTypesToSMT()}
+
+;interface type declaration
+    (declare-fun   implements (ABS.StdLib.Int Interface) Bool)
+    (declare-fun   extends (Interface Interface) Bool)
+    (assert (forall ((i1 Interface) (i2 Interface) (i3 Interface))
+     (=> (and (extends i1 i2) (extends i2 i3))
+      (extends i1 i3))))
+      
+    (assert (forall ((i1 Interface) (i2 Interface) (object ABS.StdLib.Int))
+     (=> (and (extends i1 i2) (implements object i1))
+      (implements object i2))))
+      
+      ${ADTRepos.interfaceExtendsToSMT()}
+      
 ;generics declaration
     ${ADTRepos.genericsToSMT()}
 ;heaps declaration
@@ -132,6 +174,9 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     $varsDecl
 ;objects declaration
     $objectsDecl
+    
+;objects interface declaration
+    $objectImpl
 ;funcs declaration
     $funcsDecl
 ;fields constraints
