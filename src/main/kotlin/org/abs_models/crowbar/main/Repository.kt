@@ -352,7 +352,7 @@ data class Repository(val model : Model?,
             for (decl in moduleDecl.decls) {
                 if (decl is ClassDecl) {
                     val spec = extractSpec(decl, "Requires", UnknownType.INSTANCE)
-                    classReqs[decl.name] = Pair(spec,decl) //todo: use fully qualified name here
+                    classReqs[moduleDecl.name+"."+decl.name] = Pair(spec,decl)
                 }
             }
         }

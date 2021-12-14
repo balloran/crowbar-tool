@@ -133,7 +133,7 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
             translateExpression(input.exp, returnType, subst + Pair(input.`var`.name, translateExpression(input.`val`, returnType, subst))) //this handles the overwrite correctly
         is IntLiteral      -> Const(input.content, input.model.intType)
         is GetExp          -> readFut(translateExpression(input.pureExp, returnType, subst))
-        is NewExp          -> FreshGenerator.getFreshObjectId(input.className, input.paramList.map { translateExpression(it, returnType, subst) },input.type) //todo:add "implements" information to Repos
+        is NewExp          -> FreshGenerator.getFreshObjectId(input.type.qualifiedName, input.paramList.map { translateExpression(it, returnType, subst) },input.type) //todo:add "implements" information to Repos
         is NullExp         -> Const("0", input.model.intType)
         is ThisExp         -> Const("1", input.model.intType)
         is VarUse -> {
