@@ -235,12 +235,13 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
         is AsExp -> {
             val inputExpr = translateExpression(input.exp,returnType, subst)
             val implements = ImplementsExpr(inputExpr,input.type)
-            SExpr("ite",
+            val res = SExpr("ite",
                 listOf(
                     SExpr("and", listOf(SExpr("not", listOf(SExpr("=", listOf(inputExpr, Const("0", input.model.intType))))),
                     implements)),
                     inputExpr,
                     Const("0", input.model.intType)))
+            res
         }
         is ImplementsExp -> {
             ImplementsExpr(translateExpression(input.exp, returnType, subst), input.interfaceTypeUse.type)

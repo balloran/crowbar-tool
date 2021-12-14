@@ -13,6 +13,14 @@ interface K extends I{
 
 }
 
+class CI implements K,J{
+
+    [Spec : Ensures(result == 2)]
+    Int m (){
+        return 2;
+    }
+}
+
 class C {
 
     [Spec : Requires(o implements I)]
@@ -77,6 +85,28 @@ class C {
         I i = o as I;
         Int res = i.m();
         return 2;
+    }
+
+    [Spec : Ensures(result == 2)]
+    Int castCreatedObjectSimpleSuccess(){
+        I o = new CI();
+        Int res = o.m();
+        return res;
+    }
+
+    [Spec : Ensures(result == 2)]
+    Int castCreatedObjectExtendsSuccess(){
+        K o = new CI();
+        Int res = o.m();
+        return res;
+    }
+
+    [Spec : Ensures(result == 2)]
+    Int castCreatedObjectDifferentInterfaceSuccess(){
+        J o = new CI();
+        K i = o as K;
+        Int res = i.m();
+        return res;
     }
 
 }

@@ -436,6 +436,7 @@ fun apply(update: UpdateElement, input: LogicElement) : LogicElement {
 
 
 fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicElement {
+
     if(map.containsKey(input)) return map.getValue(input)
     when(input){
         is EmptyUpdate -> return EmptyUpdate
@@ -453,6 +454,7 @@ fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicEleme
         is And -> return And(subst(input.left, map) as Formula, subst(input.right, map) as Formula)
         is Or -> return Or(subst(input.left, map) as Formula, subst(input.right, map) as Formula)
         is Not -> return Not(subst(input.left,map) as Formula)
+        is ImplementsTerm -> return ImplementsTerm(subst(input.variable, map)  as Term, input.interfaceType)
         is UpdateOnTerm -> {
             if(map.keys.any { it is ProgVar && input.update.assigns(it)}) return UpdateOnTerm(subst(input.update, map) as UpdateElement, input.target)
             return UpdateOnTerm(subst(input.update, map) as UpdateElement, subst(input.target, map) as Term)

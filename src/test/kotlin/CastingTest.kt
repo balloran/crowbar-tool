@@ -38,8 +38,28 @@ class CastingTest : StringSpec({
             val castNullNoCallsSuccess = classDecl.extractMethodNode(postInv, "castNullNoCallsSuccess", repos)
             executeNode(castNullNoCallsSuccess, repos, postInv) shouldBe true
 
-            val castNullCallOnNullReturnValFail = classDecl.extractMethodNode(postInv, "castNullCallOnNullReturnValFail", repos)
+            val castNullCallOnNullReturnValFail =
+                classDecl.extractMethodNode(postInv, "castNullCallOnNullReturnValFail", repos)
             executeNode(castNullCallOnNullReturnValFail, repos, postInv) shouldBe false
+
+        }
+
+        "$smt objectCreation"{
+            smtPath = smt
+
+            val (model, repos) = load(listOf(Paths.get("src/test/resources/casting.abs")))
+            val classDecl = model.extractClassDecl("Casting", "C")
+
+            val castCreatedObjectSimpleSuccess = classDecl.extractMethodNode(postInv, "castCreatedObjectSimpleSuccess", repos)
+            executeNode(castCreatedObjectSimpleSuccess, repos, postInv) shouldBe true
+
+
+            val castCreatedObjectExtendsSuccess = classDecl.extractMethodNode(postInv, "castCreatedObjectExtendsSuccess", repos)
+            executeNode(castCreatedObjectExtendsSuccess, repos, postInv) shouldBe true
+
+            val castCreatedObjectDifferentInterfaceSuccess = classDecl.extractMethodNode(postInv, "castCreatedObjectDifferentInterfaceSuccess", repos)
+            executeNode(castCreatedObjectDifferentInterfaceSuccess, repos, postInv) shouldBe true
+
 
         }
     }
