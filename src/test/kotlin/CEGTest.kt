@@ -1,18 +1,14 @@
-
-import io.kotlintest.specs.StringSpec
 import org.abs_models.crowbar.investigator.CounterexampleGenerator
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.types.PostInvType
 import org.abs_models.frontend.ast.ClassDecl
 import java.nio.file.Paths
 
-class CEGTest : StringSpec() {
-
+class CEGTest : CrowbarTest() {
     init {
-        val cvc: String = System.getenv("CVC") ?: "cvc"
-        val z3: String = System.getenv("Z3") ?: "z3"
-
-        for (smt in listOf(z3, cvc)) {
+        for (smt in listOf(z3, cvc)){
+            if (!backendAvailable(smt)) continue
+            println("testing with $smt as backend")
 
             "$smt CEG case study demo"{
                 smtPath = smt

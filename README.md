@@ -8,7 +8,7 @@ Documentation for users and developers can be found in the [wiki](https://github
 
 ## Installation
 Crowbar requires Java >= 1.8 and an SMT-Solver to run. 
-On an Ubuntu machine, run
+On an Ubuntu/Linux machine, run
 ```
 sudo apt-get install z3
 mkdir crowbar
@@ -24,4 +24,4 @@ Crowbar  : Final verification result: true
 Crowbar  : Verification time: ...
 Crowbar  : Total number of branches: 6
 ```
-
+On macOS, install Z3 with `brew install z3` instead. 

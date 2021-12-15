@@ -9,8 +9,7 @@ import org.abs_models.crowbar.types.LocalTypeType
 import org.abs_models.frontend.ast.ClassDecl
 import java.nio.file.Paths
 
-class LocalTypeTest : StringSpec() {
-
+class LocalTypeTest : CrowbarTest() {
     init {
         "matching-1" {
             val exp1 = LocalTypeParser.parse("(role!a(true).role!b(true) + (role!c(true))*).skip.role!d(true)).role!e(true)", null)
@@ -65,11 +64,11 @@ class LocalTypeTest : StringSpec() {
             shouldThrow<Exception>{ exp.readTransform(LTPatternCall("e"), fakeCallCtx) }
         }
 
-        val cvc: String = System.getenv("CVC") ?: "cvc"
-        val z3: String = System.getenv("Z3") ?: "z3"
 
-        for (smt in listOf(z3, cvc)) {
-            
+        for (smt in listOf(z3, cvc)){
+            if (!backendAvailable(smt)) continue
+            println("testing with $smt as backend")
+
             "$smt basic local types"{
                 smtPath = smt
 
@@ -138,6 +137,7 @@ class LocalTypeTest : StringSpec() {
         }
     }
 }
+
 
 fun testMethod(classDecl: ClassDecl, method: String, repos: Repository, expected: Boolean) {
     val ltt = LocalTypeType::class
