@@ -7,7 +7,7 @@ functional correctness of Active Objects.
 Documentation for users and developers can be found in the [wiki](https://github.com/Edkamb/crowbar-tool/wiki).
 
 ## Installation
-Crowbar requires Java >= 1.8 and an SMT-Solver to run. 
+Crowbar requires Java >= 1.11 and an SMT-Solver to run. 
 On an Ubuntu/Linux machine, run
 ```
 sudo apt-get install z3
