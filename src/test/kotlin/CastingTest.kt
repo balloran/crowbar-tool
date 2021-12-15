@@ -35,6 +35,9 @@ class CastingTest : CrowbarTest() {
                 val castNullNoCallsSuccess = classDecl.extractMethodNode(postInv, "castNullNoCallsSuccess", repos)
                 executeNode(castNullNoCallsSuccess, repos, postInv) shouldBe true
 
+                val castCreatedObjectExplicitConditionSuccess = classDecl.extractMethodNode(postInv, "castCreatedObjectExplicitConditionSuccess", repos)
+                executeNode(castCreatedObjectExplicitConditionSuccess, repos, postInv) shouldBe true
+
                 val castNullCallOnNullReturnValFail =
                     classDecl.extractMethodNode(postInv, "castNullCallOnNullReturnValFail", repos)
                 executeNode(castNullCallOnNullReturnValFail, repos, postInv) shouldBe false

@@ -429,6 +429,7 @@ fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicEleme
         is Or -> return Or(subst(input.left, map) as Formula, subst(input.right, map) as Formula)
         is Not -> return Not(subst(input.left,map) as Formula)
         is ImplementsTerm -> return ImplementsTerm(subst(input.variable, map)  as Term, input.interfaceType)
+        is ImplementsForm -> return ImplementsForm(subst(input.variable, map)  as Term, input.interfaceType)
         is UpdateOnTerm -> {
             if(map.keys.any { it is ProgVar && input.update.assigns(it)}) return UpdateOnTerm(subst(input.update, map) as UpdateElement, input.target)
             return UpdateOnTerm(subst(input.update, map) as UpdateElement, subst(input.target, map) as Term)
@@ -437,7 +438,7 @@ fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicEleme
             if(map.keys.any { it is ProgVar && input.update.assigns(it)}) return UpdateOnFormula(subst(input.update, map) as UpdateElement, input.target)
             return UpdateOnFormula(subst(input.update, map) as UpdateElement, subst(input.target, map) as Formula)
         }
-        else                -> return input
+        else -> return input
     }
 }
 fun subst(input: LogicElement, elem : ProgVar, term : Term) : LogicElement = subst(input, mapOf(Pair(elem,term)))

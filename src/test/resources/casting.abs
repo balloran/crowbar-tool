@@ -109,6 +109,17 @@ class C {
         return res;
     }
 
+    [Spec : Ensures(result == 2)]
+    Int castCreatedObjectExplicitConditionSuccess(){
+        J o = new CI();
+        Int res = 0;
+        if (o implements K){
+            K i = o as K;
+            res = i.m();
+        }
+        return res;
+    }
+
 }
 {
 }
