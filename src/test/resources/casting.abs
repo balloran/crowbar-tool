@@ -119,7 +119,12 @@ class C {
         }
         return res;
     }
-
+    [Spec : Ensures(result == 2)]
+    Int createdObjectInlineCastingSuccess(){
+        J o = new CI();
+        Int res = (o as K).m();
+        return res;
+    }
 }
 {
 }
