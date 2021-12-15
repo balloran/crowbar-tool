@@ -46,6 +46,10 @@ import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.RecognitionException
 import org.antlr.v4.runtime.Recognizer
 
+/**
+ *   Parses a local session type and directly translates the AST into the internal data structure
+ */
+
 object LocalTypeParser : LocalSessionBaseVisitor<LocalType>() {
 
     private val noContext = Pair(UnknownType.INSTANCE, mapOf<String, Type>())

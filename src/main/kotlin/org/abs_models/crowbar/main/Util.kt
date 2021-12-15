@@ -105,7 +105,7 @@ fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : 
             ret = if(ret == null) next else And(ret, next)
             if(!multipleAllowed) break
         }
-    }else if (decl is MethodImpl && decl !is FunctionDecl){
+    }else if (decl is MethodImpl){
         ret = extractInheritedSpec(decl.methodSig,expectedSpec, default)
     }else {
         for (annotation in decl.nodeAnnotations){
@@ -167,7 +167,7 @@ fun Model.extractFunctionDecl(moduleName: String, funcName: String) : FunctionDe
     }
     val funcDecl : FunctionDecl? = moduleDecl.decls.firstOrNull { it is FunctionDecl && it.name == funcName } as FunctionDecl?
     if(funcDecl == null){
-        System.err.println("function not found: ${moduleName}.${funcDecl}")
+        System.err.println("function not found: ${moduleName}.$funcName")
         exitProcess(-1)
     }
     return funcDecl

@@ -108,7 +108,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         val postHeap = model.heapMap[info.heapExpr.toSMT()]
         val assignmentBlock = renderHeapAssignmentBlock(postHeap)
 
-        // If the guard is a True constant, this was probably a suspend statement before translation
+        // If the guard is a True constant, this was probably a suspend statement before translation,
         // so we'll render it accordingly
         if (info.guard is Const && info.guard.name == "true")
             return indent("\n// suspend;\n$assignmentBlock\n")
@@ -329,7 +329,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
             is ProgVar -> if (varRemaps.containsKey(loc.name)) varRemaps[loc.name]!! else loc.name
             is Field -> {
                 val name = loc.name.substring(0, loc.name.length - 2) // Remove _f suffix
-                usedFields.add(loc) // Remember this field so we include it in field definitions later
+                usedFields.add(loc) // Remember this field, so we include it in field definitions later
                 "this.$name"
             }
             else -> throw Exception("Cannot render unknown location type: ${loc.prettyPrint()}")

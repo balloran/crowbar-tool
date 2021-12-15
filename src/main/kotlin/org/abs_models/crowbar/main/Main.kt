@@ -64,7 +64,6 @@ class Main : CliktCommand() {
         option(help="Verifies the full model").switch("--full" to CrowOption.FullOption)
     ).single().required()
 
-   // private val timeout     by   option("--timeout","-to",help="timeout for a single SMT prover invocation in seconds").int().default(timeoutS)
     private val tmp        by   option("--tmp", "-t", help="Path to a directory used to store .smt and counterexample files").path().default(Paths.get(tmpPath))
     private val smtCmd     by   option("--smt", "-s", help="Command to start SMT solver").default(smtPath)
     private val verbose    by   option("--verbose", "-v", help="Verbosity output level").int().restrictTo(Verbosity.values().indices).default(Verbosity.NORMAL.ordinal)
@@ -79,7 +78,6 @@ class Main : CliktCommand() {
         tmpPath = "$tmp/"
         smtPath = smtCmd
         verbosity = Verbosity.values()[verbose]
-        // timeoutS = timeout
         investigate = invFlag
         conciseProofs = conciseProofsFlag
 
@@ -190,7 +188,7 @@ class Main : CliktCommand() {
     }
 
     private fun triviallyFree(methodImpl: MethodImpl) : Boolean{
-        return filterAtomic(methodImpl.block) { it is GetExp || it is AwaitStmt }.isEmpty()
+        return filterAtomic(methodImpl.block) { (it is GetExp) || (it is AwaitStmt) }.isEmpty()
     }
 
 

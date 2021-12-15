@@ -317,7 +317,7 @@ class PITAllocAssign(repos: Repository) : PITAssign(repos, Modality(
                                             InfoObjAlloc(lhs, rhsExpr, constructorSMTExpr), input.exceptionScopes)
 
         val zeros  = divByZeroNodes(listOf(rhsExpr), remainder, input, repos)
-        return listOf<SymbolicTree>(pre, next) + zeros
+        return listOf(pre, next) + zeros
     }
 }
 
@@ -390,7 +390,7 @@ class PITCallAssign(repos: Repository) : PITAssign(repos, Modality(
                                             InfoCallAssign(lhs, calleeExpr, call, freshFut.name), input.exceptionScopes)
         if (isNonNull) return listOf(pre, next)
         val zeros  = divByZeroNodes(call.e, remainder, input, repos)
-        return listOf<SymbolicTree>(nonNull,pre,next) + zeros
+        return listOf(nonNull,pre,next) + zeros
     }
 }
 
@@ -454,7 +454,7 @@ class PITSyncCallAssign(repos: Repository) : PITAssign(repos, Modality(
                 InfoSyncCallAssign(lhs, calleeExpr, call, anonHeapExpr, returnValExpr), input.exceptionScopes)
 
         val zeros  = divByZeroNodes(call.e, remainder, input, repos)
-        return listOf<SymbolicTree>(first,next) + zeros
+        return listOf(first,next) + zeros
     }
 }
 
@@ -636,7 +636,7 @@ class PITAwait(val repos: Repository) : Rule(Modality(
                 ChainUpdate(input.update, ChainUpdate(ElementaryUpdate(Heap,anon(Heap)),updateLastHeap)),
                 Modality(cont, PostInvariantPair(targetPost,target)), input.exceptionScopes)
         val zeros  = divByZeroNodes(listOf(guardExpr), cont, input, repos)
-        return listOf<SymbolicTree>(lNode,SymbolicNode(sStat, info = InfoAwaitUse(guardExpr, anonHeapExpr))) + zeros
+        return listOf(lNode,SymbolicNode(sStat, info = InfoAwaitUse(guardExpr, anonHeapExpr))) + zeros
     }
 }
 

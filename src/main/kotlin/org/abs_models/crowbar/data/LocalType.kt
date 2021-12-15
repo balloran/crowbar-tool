@@ -2,6 +2,11 @@ package org.abs_models.crowbar.data
 
 import org.abs_models.crowbar.tree.LogicNode
 
+/**
+ *   These are the structures to represent local types, the calculus itself is in org.abs_models.crowbar.types.LocalTypeType.kt
+ *   The parser is in org.abs_models.crowbar.interfaces.LocatTypeParser.kt
+ */
+
 interface LocalType : Anything {
     // Indicates that the subexpression can be matched to "nothing"
     val couldSkip: Boolean
@@ -118,7 +123,7 @@ data class LTOpt(val first: LocalType, val second: LocalType) : LocalType {
     override val isSkip: Boolean
         get() = first.isSkip && second.isSkip
 
-    // This is sub-optimal, but in some cases we might have two valid matching paths through the expression
+    // This one is sub-optimal, but in some cases we might have two valid matching paths through the expression
     // that only differ in their sideconditions
     // So here we squash the sidecondtions of each branch into a single formula and then show that one of the branches
     // is universally true

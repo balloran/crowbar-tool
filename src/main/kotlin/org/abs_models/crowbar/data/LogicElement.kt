@@ -7,35 +7,19 @@ import org.abs_models.crowbar.types.getReturnType
 import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
 
+
+/**
+ *   Standard data structures for logic, as well as the translation between terms and expressions.
+ */
+
 interface LogicElement: Anything {
     fun toSMT(indent:String="") : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
 }
 interface Formula: LogicElement
 interface Term : LogicElement
-//interface LogicVariable : Term //for FO
 
 val binaries = listOf(">=","<=","<",">","=","!=","+","-","*","/","&&","||")
 
-
-//data class Assert(val formula: Formula) : ProofElement{
-//    override fun toSMT(isInForm: Boolean): String {
-//        return "(assert ${formula.toSMT(isInForm)})"
-//    }
-//}
-//
-//data class Distinct(val params :List<Term>) :Formula {
-//    override fun toSMT(isInForm : Boolean) : String {
-//        return "(distinct ${params.joinToString(" "){it.toSMT(isInForm)}})"
-//    }
-//}
-//
-//data class Forall(val params :List<Pair<Term,Term>>, val formula: Formula) :Formula{
-//    override fun toSMT(isInForm : Boolean) : String {
-//        if(params.isEmpty())
-//            return formula.toSMT(isInForm)
-//        return "(forall (${params.map { pair -> "${pair.first.toSMT(isInForm)} ${pair.second.toSMT(isInForm)}" }.joinToString(" ") { "($it)" }}) ${formula.toSMT(isInForm)})"
-//    }
-//}
 
 data class FormulaAbstractVar(val name : String) : Formula, AbstractVar {
     override fun prettyPrint(): String {
@@ -87,14 +71,11 @@ data class Function(val name : String, val params : List<Term> = emptyList()) : 
     }
 }
 
-fun  isGeneric(type : Type?) : Boolean = type != null && !type.isFutureType && type is DataTypeType && type.numTypeArgs() > 0
-fun isConcreteGeneric(type: Type?) = isGeneric(type) && !(type as DataTypeType).typeArgs[0].isTypeParameter
+fun isGeneric(type : Type?) : Boolean = type != null && !type.isFutureType && type is DataTypeType && type.numTypeArgs() > 0
+fun isConcreteGeneric(type: Type?) :Boolean = isGeneric(type) && ((type as DataTypeType).typeArgs.isEmpty() || type.typeArgs.all{ x -> !x.isTypeParameter && (!isGeneric(x) || isConcreteGeneric(x))})
 fun isNotWellKnown(dataTypeConst:DataTypeConst) = dataTypeConst.toString().contains("<UNKNOWN>")
-fun isNotWellKnown(type: Type?) = type!!.toString().contains("<UNKNOWN>")
-fun isUnboundGeneric(type : Type?) : Boolean = isGeneric(type) && (type as DataTypeType).toString().contains("Unbound Type")
 fun isUnboundGeneric(dataTypeConst:DataTypeConst) : Boolean = isGeneric(dataTypeConst.concrType) && dataTypeConst.toString().contains("Unbound Type")
 fun isBoundGeneric(type : Type?) : Boolean = isGeneric(type) && !(type as DataTypeType).toString().contains("Unbound Type")
-fun isBoundGeneric(dataTypeConst:DataTypeConst) : Boolean = isGeneric(dataTypeConst.concrType) && !dataTypeConst.toString().contains("Unbound Type")
 
 data class DataTypeConst(val name : String, val concrType: Type?, val params : List<Term> = emptyList()) : Term {
 
@@ -103,12 +84,11 @@ data class DataTypeConst(val name : String, val concrType: Type?, val params : L
             throw Exception("too few parameters")
     }
 
-    override fun prettyPrint(): String {
-        return name + ":" + concrType!!.qualifiedName+"("+params.map { p -> p.prettyPrint() }.fold("") { acc, nx -> "$acc,$nx" }
+    override fun prettyPrint(): String =
+        name + ":" + concrType!!.qualifiedName+"("+params.map { p -> p.prettyPrint() }.fold("") { acc, nx -> "$acc,$nx" }
             .removePrefix(",") + ")"
-    }
-    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f))
-    { acc, nx ->  acc + nx.iterate(f) }
+
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = params.fold(super.iterate(f)) { acc, nx ->  acc + nx.iterate(f) }
 
     override fun toSMT(indent:String): String {
         val back = genericSMTName(name, concrType!!)
@@ -240,28 +220,21 @@ data class Predicate(val name : String, val params : List<Term> = emptyList()) :
     }
 
     override fun toSMT(indent:String) : String {
-
-
         if(params.isEmpty()) return name
         var boundParam0 = params[0]
         var boundParam1 = params[1]
         if(name == "=") {
-
-
 
             val param0IsUnbound = params[0] is DataTypeConst && isUnboundGeneric((params[0] as DataTypeConst))
             val param1IsUnbound = params[1] is DataTypeConst && isUnboundGeneric((params[1] as DataTypeConst))
             val param0NotWellKnown = params[0] is DataTypeConst && isNotWellKnown((params[0] as DataTypeConst))
             val param1NotWellKnown = params[1] is DataTypeConst && isNotWellKnown((params[1] as DataTypeConst))
 
-
             val param0Bound = !param0IsUnbound && !param0NotWellKnown
             val param1Bound = !param1IsUnbound && !param1NotWellKnown
 
-
             if((param0NotWellKnown && param1NotWellKnown) || (param0IsUnbound && param1NotWellKnown) || (param0NotWellKnown && param1IsUnbound))
                 throw Exception("Impossible to bind type: \n$boundParam0 and \n$boundParam1")
-
 
             if(param0Bound || param1Bound)
             if (!param0Bound) {
@@ -275,6 +248,7 @@ data class Predicate(val name : String, val params : List<Term> = emptyList()) :
         return getSMT(name, list)
     }
 }
+
 data class UpdateOnFormula(val update : UpdateElement, val target : Formula) : Formula {
     override fun prettyPrint(): String {
         return "{"+update.prettyPrint()+"}"+target.prettyPrint()
@@ -297,11 +271,6 @@ data class Is(val typeName : String, val term : Term) :Formula{
     }
 }
 
-data class Exists(val params :List<ProgVar>, val formula: Formula) : Formula{
-    override fun toSMT(indent:String): String {
-        return "(exists (${params.joinToString(" ") { "(${it.name} ${ADTRepos.libPrefix(it.concrType.qualifiedName)})" }}) ${formula.toSMT()})"
-    }
-}
 
 data class Eq(val term1: Term, val term2 : Term) : Formula{
     override fun toSMT(indent:String): String {
@@ -344,6 +313,10 @@ data class ImplementsTerm(val variable : Term, val interfaceType: Type) : Term{
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + variable.iterate(f)
 }
 
+
+
+
+//constants for the special heaps and functions for futures and the theory of arrays on heaps
 object Heap : ProgVar("heap",  HeapType("Heap"))
 object OldHeap : ProgVar("old",  HeapType("Heap"))
 object LastHeap : ProgVar("last",  HeapType("Heap"))
@@ -353,7 +326,9 @@ fun select(field : Field, heap: ProgVar = Heap) : Function = Function("select", 
 fun anon(heap : Term) : Function = Function("anon", listOf(heap))
 fun poll(term : Term) : Function = Function("poll", listOf(term))
 fun readFut(term : Expr) : Expr = SExpr("valueOf", listOf(term))
-fun exprToTerm(input : Expr, specialKeyword : String="NONE") : Term {//todo: add check for non-field reference inside old and last
+
+//Translates an expression into a term. specialKeyword is the name of the used heap
+fun exprToTerm(input : Expr, specialKeyword : String="NONE") : Term {
     return when(input){
         is ProgVar -> input
         is Field -> {
@@ -389,7 +364,8 @@ fun exprToTerm(input : Expr, specialKeyword : String="NONE") : Term {//todo: add
     }
 }
 
-fun exprToForm(input : Expr, specialKeyword : String="NONE") : Formula {//todo: add check for non-field reference inside old and last
+//transates an expression of boolean type into a formula
+fun exprToForm(input : Expr, specialKeyword : String="NONE") : Formula {
     if(input is SExpr && input.op == "&&" && input.e.size ==2 ) return And(exprToForm(input.e[0], specialKeyword), exprToForm(input.e[1], specialKeyword))
     if(input is SExpr && input.op == "||" && input.e.size ==2 ) return Or(exprToForm(input.e[0], specialKeyword), exprToForm(input.e[1], specialKeyword))
     if(input is SExpr && input.op == "->" && input.e.size ==2 ) return Impl(exprToForm(input.e[0], specialKeyword), exprToForm(input.e[1], specialKeyword))
@@ -411,6 +387,7 @@ fun exprToForm(input : Expr, specialKeyword : String="NONE") : Formula {//todo: 
     throw Exception("Expression cannot be converted to formula: $input")
 }
 
+//applies all updates
 fun deupdatify(input: LogicElement) : LogicElement {
     return when(input){
         is UpdateOnTerm -> deupdatify(apply(input.update, input.target))
@@ -436,7 +413,6 @@ fun apply(update: UpdateElement, input: LogicElement) : LogicElement {
 
 
 fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicElement {
-
     if(map.containsKey(input)) return map.getValue(input)
     when(input){
         is EmptyUpdate -> return EmptyUpdate
@@ -445,9 +421,7 @@ fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicEleme
             if(map.keys.any { it is ProgVar && input.left.assigns(it)}) return ChainUpdate(subst(input.left, map) as UpdateElement, input.right)
             return ChainUpdate(subst(input.left, map) as UpdateElement, subst(input.right, map) as UpdateElement)
         }
-//        is DataTypeConst -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
         is DataTypeConst -> return DataTypeConst(input.name, input.concrType, input.params.map { p -> subst(p, map) as Term })
-//        is Case -> return Case(subst(input.match, map) as Term, input.expectedType, input.branches.map { p -> subst(p, map) as BranchTerm }, input.freeVars)
         is Function -> return Function(input.name, input.params.map { p -> subst(p, map) as Term })
         is Predicate -> return Predicate(input.name, input.params.map { p -> subst(p, map) as Term })
         is Impl -> return Impl(subst(input.left, map) as Formula, subst(input.right, map) as Formula)

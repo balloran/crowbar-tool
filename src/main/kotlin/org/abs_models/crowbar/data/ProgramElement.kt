@@ -1,9 +1,12 @@
 package org.abs_models.crowbar.data
 
-import org.abs_models.frontend.ast.Exp
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
 
+/**
+ *  IR for ABS
+ *  Essentially the same as the ABS AST, but without all the properties needed for compilation and normalized (all expressions have a target)
+ */
 
 interface ProgramElement: Anything
 
@@ -353,27 +356,7 @@ open class ProgVar(open val name: String, open val concrType: Type = UnknownType
     }
     override fun toSMT(indent:String) : String = name
 }
-data class ReturnVar(val vParam : String, override val concrType: Type) : ProgVar("result", concrType){
-    override fun equals(other: Any?): Boolean {
-        return super.equals(other)
-    }
-
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
-}
-
-data class ProgAbstractVar(val vName : String) : ProgVar(vName, UnknownType.INSTANCE), AbstractVar {
-    override fun prettyPrint(): String {
-        return name
-    }
-}
-data class ProgFieldAbstractVar(val vName : String) : Field(vName, UnknownType.INSTANCE), AbstractVar {
-    override fun prettyPrint(): String {
-        return name
-    }
-    override fun toSMT(indent:String) : String = name
-}
+data class ReturnVar(val vParam : String, override val concrType: Type) : ProgVar("result", concrType)
 
 fun appendStmt(stmt : Stmt, add : Stmt) : Stmt {
     return when(stmt){

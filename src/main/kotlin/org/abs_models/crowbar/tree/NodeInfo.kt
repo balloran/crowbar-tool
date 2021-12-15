@@ -5,7 +5,7 @@ import org.abs_models.crowbar.investigator.collectBaseExpressions
 
 /*
 These classes record the information needed for the CEG.
-NodeInfo instances are annotated by the rules so we are able to reconstruct the statements.
+NodeInfo instances are annotated by the rules, so we are able to reconstruct the statements.
  */
 
 // Abstract classes & interfaces

@@ -17,17 +17,19 @@ import org.abs_models.frontend.ast.Stmt
 import org.abs_models.frontend.ast.ThrowStmt
 import org.abs_models.frontend.ast.WhileStmt
 import org.abs_models.frontend.typechecker.Type
-import org.abs_models.frontend.typechecker.UnionType
 import org.abs_models.frontend.typechecker.UnknownType
-import kotlin.system.exitProcess
+
+/**
+ *   Translates the ABS AST into our IR
+ */
+
 
 fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.crowbar.data.Stmt {
     if(input == null) return SkipStmt
     val returnType =
-        if(input.contextMethod != null)
-            input.contextMethod.type
-        else
-            UnknownType.INSTANCE
+        if(input.contextMethod != null) input.contextMethod.type
+        else UnknownType.INSTANCE
+
     when(input){
         is org.abs_models.frontend.ast.SkipStmt -> return SkipStmt
         is ExpressionStmt ->{
@@ -110,7 +112,7 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.
             val sFirst = TryPushStmt(ConcreteExceptionScope(BranchList(list), finally, pp))
             return appendStmt(appendStmt(sFirst, inner), TryPopStmt(pp))
         }
-        //this is the foreach statement only
+        //this is the foreach statement only and should not occur
         else -> throw Exception("Translation of ${input::class} not supported, please flatten the model before passing it to Crowbar" )
     }
 }
@@ -122,15 +124,14 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
                 throw Exception("fields cannot be referred to in the declaration of interfaces: " +
                         "field $input is referred to in the declaration of ${input.contextDecl.name}")
             val type = if (input.type.isUnknownType) {
-                if(input.contextDecl.locallookupVarOrFieldName(input.name, true) == null)
-                    throw Exception("Field ${input.name} not defined")
-                input.contextDecl.locallookupVarOrFieldName(input.name, true).type
-            } else
-                input.type
+                            if(input.contextDecl.locallookupVarOrFieldName(input.name, true) == null)
+                                throw Exception("Field ${input.name} not defined")
+                            input.contextDecl.locallookupVarOrFieldName(input.name, true).type
+                        } else input.type
             Field(input.name + "_f",type)
         }
         is LetExp          ->
-            translateExpression(input.exp, returnType, subst + Pair(input.`var`.name, translateExpression(input.`val`, returnType, subst))) //this handles the overwrite correctly
+            translateExpression(input.exp, returnType, subst + Pair(input.`var`.name, translateExpression(input.`val`, returnType, subst))) //this handles overwrite correctly
         is IntLiteral      -> Const(input.content, input.model.intType)
         is GetExp          -> readFut(translateExpression(input.pureExp, returnType, subst))
         is NewExp          -> FreshGenerator.getFreshObjectId(input.type.qualifiedName, input.paramList.map { translateExpression(it, returnType, subst) },input.type) //todo:add "implements" information to Repos

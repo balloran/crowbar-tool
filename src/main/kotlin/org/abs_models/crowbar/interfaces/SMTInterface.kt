@@ -11,7 +11,6 @@ import org.abs_models.frontend.typechecker.DataTypeType
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-//(set-option :timeout ${timeoutS*1000})
 
 val valueOf = """
     (declare-fun   valueOf_ABS_StdLib_Int (ABS.StdLib.Fut) Int)
@@ -42,30 +41,6 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
 
     val post = deupdatify(Not(succ))
     val fields =  (pre.iterate { it is Field } + post.iterate { it is Field }) as Set<Field>
-
-    //todo finish implementation: missing binding of the contract of functions with generics
-//    val genericFunctionsDecl = ((pre.iterate { it is Function && it.name in FunctionRepos.genericFunctions} + post.iterate { it is Function && it.name in FunctionRepos.genericFunctions}) as Set<Function>).map {
-//        println("${it.name}::function " + FunctionRepos.genericFunctions[it.name])
-//        val genericType = FunctionRepos.genericFunctions[it.name]!!.first
-//        val genericParams = FunctionRepos.genericFunctions[it.name]!!.second
-//        val contract = FunctionRepos.genericFunctions[it.name]!!.third
-//        val concreteParams = it.params.map { param -> getReturnType(param) }
-//
-//        val mapGenericConcrete = genericParams.zip(concreteParams).filter { pair -> pair.first != pair.second }.toMap()
-//        val concreteTypes = genericType.typeArgs.map { gT :Type -> if(gT in mapGenericConcrete) mapGenericConcrete[gT] else gT }
-//        val additionalName = concreteTypes.joinToString("_") { cT -> genericTypeSMTName(cT!!) }
-//
-//        val zippedParams = contract.params.zip(concreteParams)
-//
-//
-//        val paramsTyped = zippedParams.joinToString(" ") { zipped -> "(${(zipped.first as Function).name} ${zipped.second.qualifiedName})" }
-//
-//
-//        "(declare-fun ${it.name}_$additionalName (${concreteParams.joinToString(" "){ cT -> genericTypeSMTName(cT) }} ) ${
-//            genericTypeSMTName(genericType)}_$additionalName)" +
-//                "\n(assert (forall ($paramsTyped) ${contract.name.replace(it.name, "${it.name}_$additionalName")}))"
-//
-//    }.joinToString("\n")
 
     setUsedHeaps(fields.map{libPrefix(it.concrType.qualifiedName)}.toSet())
 
@@ -111,8 +86,7 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
                         "${x.name} ${it.qualifiedName}))"
                         }
 
-        }else
-            ""
+        }else ""
 
     }
     val objectsDecl = heaps.joinToString("\n\t"){"(declare-fun ${it.name} (${it.params.joinToString (" "){
@@ -121,10 +95,8 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
             ADTRepos.addGeneric(term.concrType!! as DataTypeType)
             genericTypeSMTName(term.concrType)
         }
-        else if(term is Function && term.name in booleanFunction)
-            "Bool"
-        else {
-            "Int"
+        else if(term is Function && term.name in booleanFunction) "Bool"
+        else { "Int"
         }
     }}) Int)"
 
@@ -132,8 +104,6 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     val funcsDecl = funcs.joinToString("\n") { "(declare-const ${it.name} Int)"}
     var fieldsConstraints = ""
     fields.forEach { f1 -> fields.minus(f1).forEach{ f2 -> if(libPrefix(f1.concrType.qualifiedName) == libPrefix(f2.concrType.qualifiedName)) fieldsConstraints += "(assert (not ${Eq(f1,f2).toSMT()}))" } } //??
-
-//    ADTRepos.objects.clear()
 
     return """
 ;header

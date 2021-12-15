@@ -13,10 +13,12 @@ import org.abs_models.frontend.typechecker.UnknownType
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
 
-/*
-We need to keep track of ADTs because SMT-LIB has no polymorphic heaps, so we need to generate several heaps per type
-TODO: document
-*/
+/**
+ *   The structures in this file keep track of information from the AST that is not visible in the IR because it is outside of statement:
+ *    - ADTRepos manages the data types
+ *    - FunctionRepos manages the functional layer
+ *    - Repository manages the specification
+ */
 object ADTRepos {
 
 	var model:Model? = null
@@ -32,6 +34,7 @@ object ADTRepos {
 	private val concreteGenerics :MutableMap<String, DataTypeType> = mutableMapOf()
 	private val usedHeaps = mutableSetOf<String>()
 
+	//These are either handled manually as special cases (e.g., float, Exception)
 	private val ignorableBuiltInDataTypes : Set<String> = setOf(
 			"ABS.StdLib.Map",
 			"ABS.StdLib.Float",
@@ -206,8 +209,8 @@ object FunctionRepos{
 		    var defs = ""
 		    for (pair in contracts) {
 
-				if(isGeneric(pair.value.type) && !isConcreteGeneric(pair.value.type))
-					throw Exception("Generic function not yet supported")
+				if(pair.value is ParametricFunctionDecl)
+					throw Exception("Parametric functions are not supported, please flatten your model")
 			    val name = pair.key.replace(".", "-")
 			    val params = pair.value.params
 				val paramTypes = params.map{

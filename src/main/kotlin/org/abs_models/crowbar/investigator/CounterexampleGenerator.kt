@@ -120,7 +120,7 @@ object CounterexampleGenerator {
         oldHeapExpr: Term
     ): Model {
 
-        // "heap", "old", "last", function names etc do not reference program vars
+        // "heap", "old", "last", function names etc. do not reference program vars
         val functionNames = FunctionRepos.known.map { it.key.replace(".", "-") }
         val allTypes = ADTRepos.getAllTypePrefixes()
         val reservedVarNameStems = listOf("heap", "Something") + specialHeapKeywords.values.map { it.name }
@@ -311,9 +311,9 @@ object CounterexampleGenerator {
 
     private fun renderDataTypeDefs(): String {
         val definedDataTypes = ADTRepos.dTypesDecl.filter { !it.moduleName().startsWith("ABS") }
-        // TODO: Filter unused but defined data types
-        val defs = definedDataTypes.map {
-            val constructors = it.dataConstructorList.map {
+
+        val defs = definedDataTypes.map { it ->
+            val constructors = it.dataConstructorList.map { it ->
                 val args = it.constructorArgList.toList()
                 if (args.isEmpty())
                     it.name

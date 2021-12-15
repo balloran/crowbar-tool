@@ -9,14 +9,8 @@ import org.abs_models.crowbar.data.ReturnStmt
 import org.abs_models.crowbar.data.SkipStmt
 import org.abs_models.crowbar.data.Stmt
 import org.abs_models.crowbar.data.WhileStmt
-import kotlin.system.exitProcess
 import org.abs_models.crowbar.interfaces.LocalTypeParser
-import org.abs_models.crowbar.main.Repository
-import org.abs_models.crowbar.main.Verbosity
-import org.abs_models.crowbar.main.extractInheritedSpec
-import org.abs_models.crowbar.main.extractRoleSpec
-import org.abs_models.crowbar.main.extractSpec
-import org.abs_models.crowbar.main.output
+import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.rule.FreshGenerator
 import org.abs_models.crowbar.rule.MatchCondition
 import org.abs_models.crowbar.rule.Rule
@@ -24,11 +18,16 @@ import org.abs_models.crowbar.tree.*
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
-import java.util.*
+import kotlin.system.exitProcess
 
 // Declaration
 interface LocalTypeType : DeductType {
     companion object : LocalTypeType
+
+    fun emptySymNode(): SymbolicNode {
+        val emptySymState = SymbolicState(True, EmptyUpdate, Modality(SkipStmt, LocalTypeTarget(LTSkip, True)), listOf())
+        return SymbolicNode(emptySymState, listOf())
+    }
 
     override fun extractMethodNode(classDecl: ClassDecl, name: String, repos: Repository): SymbolicNode {
         val mDecl = classDecl.methods.firstOrNull { it.methodSig.name == name }
