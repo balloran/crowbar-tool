@@ -138,18 +138,22 @@ interface PostInvType : DeductType{
         return SymbolicNode(symb, emptyList())
     }
 
-    override fun exctractMainNode(model: Model) : SymbolicNode {
+    override fun extractMainNode(model: Model) : SymbolicNode {
 
         if(!model.hasMainBlock()){
             System.err.println("model has no main block!")
             exitProcess(-1)
         }
 
+        output("\n${model.mainBlock}\n")
+
         val v = appendStmt(translateStatement(model.mainBlock, emptyMap()), SkipStmt)
-        return SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(v, PostInvariantPair(True, True)), listOf()), emptyList())
+        val ret = SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(v, PostInvariantPair(True, True)), listOf()), emptyList())
+        //output("\n$ret\n")
+        return ret
     }
 
-    override fun exctractFunctionNode(fDecl: FunctionDecl): SymbolicNode {
+    override fun extractFunctionNode(fDecl: FunctionDecl): SymbolicNode {
         val symb: SymbolicState?
         val funpost: Formula?
         val funpre: Formula?

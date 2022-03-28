@@ -110,9 +110,9 @@ interface LocalTypeType : DeductType {
         return SymbolicNode(emptySymState, listOf(StaticNode("Expected projection result:\n$methods")))
     }
 
-    override fun exctractMainNode(model: Model) = emptySymNode()
+    override fun extractMainNode(model: Model) = emptySymNode()
 
-    override fun exctractFunctionNode(fDecl: FunctionDecl) = emptySymNode()
+    override fun extractFunctionNode(fDecl: FunctionDecl) = emptySymNode()
 }
 
 data class LocalTypeTarget(val lte: LocalType, val roleInv: Formula, val invariant: Formula = True, val showInvariant: Boolean = false) : LocalTypeType {

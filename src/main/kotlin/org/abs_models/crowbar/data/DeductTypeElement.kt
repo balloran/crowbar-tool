@@ -15,8 +15,8 @@ import org.abs_models.frontend.ast.Model
 interface DeductType: Anything {
 	fun extractMethodNode(classDecl: ClassDecl, name: String, repos: Repository): SymbolicNode
 	fun extractInitialNode(classDecl: ClassDecl): SymbolicNode
-	fun exctractMainNode(model: Model): SymbolicNode
-	fun exctractFunctionNode(fDecl: FunctionDecl): SymbolicNode
+	fun extractMainNode(model: Model): SymbolicNode
+	fun extractFunctionNode(fDecl: FunctionDecl): SymbolicNode
 
 	// ABS does not enforce a final return for Unit typed methods, but we need it to finish symbolic execution
 	fun getNormalizedStatement(st : Block?): Stmt {

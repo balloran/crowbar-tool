@@ -9,6 +9,7 @@ import org.abs_models.crowbar.tree.LogicNode
 import org.abs_models.crowbar.tree.StaticNode
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.getStrategy
+import org.abs_models.crowbar.types.AbstractExecType
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.Type
 import java.io.File
@@ -17,6 +18,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.companionObject
 import kotlin.reflect.full.memberFunctions
 import kotlin.system.exitProcess
+import org.abs_models.crowbar.interfaces.AbstractExecParser
 
 /*
 A number of utility functions for user interaction and proof setup
@@ -56,6 +58,7 @@ fun load(paths : List<Path>) : Pair<Model,Repository> {
     ADTRepos.init(model)
     repos.populateClassReqs(model)
     repos.populateMethodReqs(model)
+
     return Pair(model, repos)
 }
 
@@ -91,6 +94,30 @@ fun extractInheritedSpec(mSig : MethodSig, expectedSpec : String, default:Formul
     return direct
 }
 
+fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>, returnType: Type, default:Formula = True): Formula{
+    var ret: Formula? = null;
+
+    //output("\n$mainblock\n")
+
+    //output("\n${mainblock.nodeAnnotations}\n")
+
+    for(annotation in mainblock.nodeAnnotations){
+        if(annotation.type.isStringType){
+            output("${annotation.value}")
+            output(annotation.value.toString())
+            output("${annotation.value.type}")
+
+            val help = annotation.value as StringLiteral
+            output(help.content)
+
+            AbstractExecParser.parse((annotation.value as StringLiteral).content)
+        }
+    }
+
+    ret = default
+    return ret
+}
+
 fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : String, returnType: Type, default:Formula = True, multipleAllowed:Boolean = true) : Formula {
     var ret : Formula? = null
     if(decl is FunctionDecl){
@@ -120,11 +147,13 @@ fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : 
             if(!multipleAllowed) break
         }
     }
+
     if(ret == null) {
         ret = default
         if(verbosity >= Verbosity.VVV)
             println("Crowbar-v: Could not extract $expectedSpec specification, using ${default.prettyPrint()}")
     }
+
     return ret
 }
 
@@ -188,13 +217,13 @@ fun Model.extractClassDecl(moduleName: String, className: String) : ClassDecl {
     return classDecl
 }
 
-fun FunctionDecl.exctractFunctionNode(usedType: KClass<out DeductType>) : SymbolicNode{
-    val callTarget = usedType.memberFunctions.first { it.name == "exctractFunctionNode" }
+fun FunctionDecl.extractFunctionNode(usedType: KClass<out DeductType>) : SymbolicNode{
+    val callTarget = usedType.memberFunctions.first { it.name == "extractFunctionNode" }
     val obj = usedType.companionObject!!.objectInstance
     return callTarget.call(obj, this) as SymbolicNode
 }
-fun Model.exctractMainNode(usedType: KClass<out DeductType>) : SymbolicNode{
-    val callTarget = usedType.memberFunctions.first { it.name == "exctractMainNode" }
+fun Model.extractMainNode(usedType: KClass<out DeductType>) : SymbolicNode{
+    val callTarget = usedType.memberFunctions.first { it.name == "extractMainNode" }
     val obj = usedType.companionObject!!.objectInstance
     return callTarget.call(obj, this) as SymbolicNode
 }

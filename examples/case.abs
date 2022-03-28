@@ -6,6 +6,7 @@ class Testcase {
 
   [Spec: Ensures(this.dontTouch == old(this.dontTouch))]
   Unit modify() {
+	["This is ANNOTATION"]
     this.doNothing();
   }
 

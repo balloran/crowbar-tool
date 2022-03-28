@@ -1,8 +1,6 @@
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
-import io.kotlintest.specs.StringSpec
 import org.abs_models.crowbar.main.*
-import org.abs_models.crowbar.types.PostInvType
 import java.nio.file.Paths
 
 class PostInvTest : CrowbarTest() {
@@ -65,7 +63,7 @@ class PostInvTest : CrowbarTest() {
 				executeNode(res, repos, postInv) shouldBe true
 				res = classDecl.extractMethodNode(postInv, "deposit", repos)
 				executeNode(res, repos, postInv) shouldBe true
-				res = model.exctractMainNode(postInv)
+				res = model.extractMainNode(postInv)
 				executeNode(res, repos, postInv) shouldBe true
 
 			}
@@ -111,7 +109,7 @@ class PostInvTest : CrowbarTest() {
 				val classDecl = model.extractClassDecl("Ints", "C")
 				classDecl.executeAll(repos, postInv) shouldBe true
 
-				val mNode = model.exctractMainNode(postInv)
+				val mNode = model.extractMainNode(postInv)
 				executeNode(mNode, repos, postInv) shouldBe true
 			}
 
@@ -158,7 +156,7 @@ class PostInvTest : CrowbarTest() {
 				val fNode = classDecl.extractMethodNode(postInv, "fail", repos)
 				executeNode(fNode, repos, postInv) shouldBe false
 
-				val mNode = model.exctractMainNode(postInv)
+				val mNode = model.extractMainNode(postInv)
 				executeNode(mNode, repos, postInv) shouldBe true
 			}
 
@@ -182,7 +180,7 @@ class PostInvTest : CrowbarTest() {
 				val m4Node = classDecl.extractMethodNode(postInv, "m4", repos)
 				executeNode(m4Node, repos, postInv) shouldBe true
 
-				val mNode = model.exctractMainNode(postInv)
+				val mNode = model.extractMainNode(postInv)
 				executeNode(mNode, repos, postInv) shouldBe false
 			}
 
@@ -197,7 +195,7 @@ class PostInvTest : CrowbarTest() {
 				val classDecl = model.extractClassDecl("Multi1", "C")
 				classDecl.executeAll(repos, postInv) shouldBe true
 
-				val mNode = model.exctractMainNode(postInv)
+				val mNode = model.extractMainNode(postInv)
 				executeNode(mNode, repos, postInv) shouldBe true
 			}
 
@@ -210,7 +208,7 @@ class PostInvTest : CrowbarTest() {
 				classDeclD.executeAll(repos, postInv) shouldBe true
 				val classDeclE = model.extractClassDecl("CallS", "E")
 				classDeclE.executeAll(repos, postInv) shouldBe true
-				val mNode = model.exctractMainNode(postInv)
+				val mNode = model.extractMainNode(postInv)
 				executeNode(mNode, repos, postInv) shouldBe true
 			}
 
@@ -226,7 +224,7 @@ class PostInvTest : CrowbarTest() {
 				val classDeclE = model.extractClassDecl("CallF", "E")
 				val m2Node = classDeclE.extractMethodNode(postInv, "m", repos)
 				executeNode(m2Node, repos, postInv) shouldBe false
-				val mNode = model.exctractMainNode(postInv)
+				val mNode = model.extractMainNode(postInv)
 				executeNode(mNode, repos, postInv) shouldBe false
 			}
 
@@ -248,7 +246,7 @@ class PostInvTest : CrowbarTest() {
 				executeNode(m1Node, repos, postInv) shouldBe true
 				val m2Node = classDecl.extractMethodNode(postInv, "m2", repos)
 				executeNode(m2Node, repos, postInv) shouldBe false
-				val mNode = model.exctractMainNode(postInv)
+				val mNode = model.extractMainNode(postInv)
 				executeNode(mNode, repos, postInv) shouldBe true
 			}
 
@@ -330,7 +328,7 @@ class PostInvTest : CrowbarTest() {
 				val classDecl = model.extractClassDecl("FieldVarClash", "C")
 				classDecl.executeAll(repos, postInv) shouldBe true
 
-				val mNode = model.exctractMainNode(postInv)
+				val mNode = model.extractMainNode(postInv)
 				executeNode(mNode, repos, postInv) shouldBe true
 			}
 
@@ -361,7 +359,7 @@ class PostInvTest : CrowbarTest() {
 				classDecl = model.extractClassDecl("TestModule", "C_set_x")
 				classDecl.executeAll(repos, postInv) shouldBe true
 
-				var mNode = model.exctractMainNode(postInv)
+				var mNode = model.extractMainNode(postInv)
 				executeNode(mNode, repos, postInv) shouldBe true
 
 				var any = load(listOf(Paths.get("examples/gcd.abs")))
@@ -373,7 +371,7 @@ class PostInvTest : CrowbarTest() {
 				classDecl = model.extractClassDecl("CallS", "LogC")
 				classDecl.executeAll(repos, postInv) shouldBe true
 
-				mNode = model.exctractMainNode(postInv)
+				mNode = model.extractMainNode(postInv)
 				executeNode(mNode, repos, postInv) shouldBe true
 
 				any = load(listOf(Paths.get("examples/gcdfield.abs")))
@@ -382,7 +380,7 @@ class PostInvTest : CrowbarTest() {
 				classDecl = model.extractClassDecl("CallSField", "GcdC")
 				classDecl.executeAll(repos, postInv) shouldBe true
 
-				mNode = model.exctractMainNode(postInv)
+				mNode = model.extractMainNode(postInv)
 				executeNode(mNode, repos, postInv) shouldBe true
 
 				any = load(listOf(Paths.get("examples/one_to_fib_n.abs")))
@@ -404,7 +402,7 @@ class PostInvTest : CrowbarTest() {
 				classDecl = model.extractClassDecl("TestModule", "C_one_to_fib_n")
 				classDecl.executeAll(repos, postInv) shouldBe true
 
-				mNode = model.exctractMainNode(postInv)
+				mNode = model.extractMainNode(postInv)
 				executeNode(mNode, repos, postInv) shouldBe true
 			}
 

@@ -327,7 +327,7 @@ object FunctionRepos{
 		}
 	}
 	fun extractAll(usedType: KClass<out DeductType>) : List<Pair<String,SymbolicNode>> {
-		return known.filter { hasContract(it.value) }.map { Pair(it.key,it.value.exctractFunctionNode(usedType)) }
+		return known.filter { hasContract(it.value) }.map { Pair(it.key,it.value.extractFunctionNode(usedType)) }
 	}
 
 	fun genericFunctionsName(function : Function) :String{
