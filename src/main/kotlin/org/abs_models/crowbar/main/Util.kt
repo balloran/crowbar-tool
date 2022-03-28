@@ -3,7 +3,7 @@ package org.abs_models.crowbar.main
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.Stmt
-import org.abs_models.crowbar.interfaces.AbstractExecParser
+import org.abs_models.crowbar.interfaces.AbstractParser
 import org.abs_models.crowbar.interfaces.translateExpression
 import org.abs_models.crowbar.investigator.CounterexampleGenerator
 import org.abs_models.crowbar.tree.LogicNode
@@ -105,7 +105,7 @@ fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>, defaul
 
     for(annotation in mainblock.nodeAnnotations){
         if(annotation.type.isStringType){
-            AbstractExecParser.parse((annotation.value as StringLiteral).content)
+            AbstractParser.parse((annotation.value as StringLiteral).content)
         }
     }
 

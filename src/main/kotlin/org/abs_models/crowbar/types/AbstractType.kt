@@ -16,15 +16,15 @@ import kotlin.system.exitProcess
  * DeductType for abstract Execution, lots of things to do
  */
 
-interface AbstractExecType : DeductType{
-    companion object : AbstractExecType
+interface AbstractType : DeductType{
+    companion object : AbstractType
 
     /**
      * Return the emptiest possible node just for programming purpose, might change/disappear in the future.
      */
 
     fun totallyEmptyNode() : SymbolicNode{
-        return SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(SkipStmt, EmptyAbstractExecType), listOf()))
+        return SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(SkipStmt, EmptyAbstractType), listOf()))
     }
 
     override fun extractMethodNode(classDecl: ClassDecl, name: String, repos: Repository): SymbolicNode{
@@ -98,6 +98,6 @@ interface AbstractExecType : DeductType{
     }
 }
 
-object EmptyAbstractExecType : AbstractExecType{
+object EmptyAbstractType : AbstractType{
 
 }

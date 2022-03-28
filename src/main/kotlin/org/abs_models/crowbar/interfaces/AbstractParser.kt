@@ -3,11 +3,11 @@ package org.abs_models.crowbar.interfaces
 import antlr.crowbar.gen.AbstractExecutionBaseVisitor
 import antlr.crowbar.gen.AbstractExecutionLexer
 import antlr.crowbar.gen.AbstractExecutionParser
-import org.abs_models.crowbar.types.AbstractExecType
+import org.abs_models.crowbar.types.AbstractType
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 
-object AbstractExecParser : AbstractExecutionBaseVisitor<AbstractExecType>() {
+object AbstractParser : AbstractExecutionBaseVisitor<AbstractType>() {
 
     fun parse(annotation:String) {
 
