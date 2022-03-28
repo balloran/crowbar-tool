@@ -1,6 +1,11 @@
 package org.abs_models.crowbar.data
 
 /**
- *  These are the structures to represent abstract programs, the calculus should happen in AbstractExecType.kt.
- *  The parser should be in AbstractExecParser.kt.
+ *  These file is currently in work.
+ *  These are the structure to represent abstract programs, the calculus itself will be in AbstractExecType.kt.
+ *  The parser is in AbstractExecParser.kt.
  */
+
+interface AbstractExec : Anything{
+
+}
