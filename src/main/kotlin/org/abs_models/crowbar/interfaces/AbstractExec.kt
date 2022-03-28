@@ -16,11 +16,11 @@ import org.antlr.v4.runtime.Recognizer
 
 object AbstractExecParser : AbstractExecutionBaseVisitor<AbstractExecType>() {
 
-    fun parse(annotation:String) : AbstractExecType{
+    fun parse(annotation:String) {
 
         val stream = CharStreams.fromString(annotation)
 
-        output(stream.toString())
+        //output(stream.toString())
 
         val lexer = AbstractExecutionLexer(stream)
         //lexer.removeErrorListeners()
@@ -32,9 +32,9 @@ object AbstractExecParser : AbstractExecutionBaseVisitor<AbstractExecType>() {
         //parser.addErrorListener(ThrowingErrorListener)
 
         try {
-            return parser.entry().accept(this)
+            parser.entry().accept(this)
         } catch (e : Exception){
-            throw Exception("Could not parse abstract execution specification $annotation: \n${e.message}")
+            throw Exception("Could not parse abstract execution specification $annotation: \n${e.message}\n{${e.cause}")
         }
     }
 }

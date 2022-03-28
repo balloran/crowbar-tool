@@ -347,7 +347,8 @@ data class Repository(val model : Model?,
 					  val methodReqs : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
 					  val methodEnss : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
 					  val syncMethodReqs : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
-					  val syncMethodEnss : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf()){
+					  val syncMethodEnss : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
+					  var globalAbstractReqs : Formula = True){
 
     fun populateClassReqs(model: Model) {
         for(moduleDecl in model.moduleDecls) {
@@ -397,4 +398,8 @@ data class Repository(val model : Model?,
             }
         }
     }
+
+	fun populateAbstractReqs(model: Model) {
+		this.globalAbstractReqs = extractGlobalSpec(model.mainBlock)
+	}
 }

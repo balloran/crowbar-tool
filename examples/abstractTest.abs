@@ -1,0 +1,14 @@
+module Test;
+
+["ae_specvars locset footprintQ, frameQ, relevantLocs"]
+["ae_constraint disjoint(frameQ, relevantLocs)"]
+
+{
+    Int x = 0;
+	if(True){
+        x = 1;
+	}
+	else{
+	    x = 2;
+	}
+}

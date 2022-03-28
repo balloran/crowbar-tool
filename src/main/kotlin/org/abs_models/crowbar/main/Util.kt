@@ -3,13 +3,13 @@ package org.abs_models.crowbar.main
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.Stmt
+import org.abs_models.crowbar.interfaces.AbstractExecParser
 import org.abs_models.crowbar.interfaces.translateExpression
 import org.abs_models.crowbar.investigator.CounterexampleGenerator
 import org.abs_models.crowbar.tree.LogicNode
 import org.abs_models.crowbar.tree.StaticNode
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.getStrategy
-import org.abs_models.crowbar.types.AbstractExecType
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.Type
 import java.io.File
@@ -18,7 +18,6 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.companionObject
 import kotlin.reflect.full.memberFunctions
 import kotlin.system.exitProcess
-import org.abs_models.crowbar.interfaces.AbstractExecParser
 
 /*
 A number of utility functions for user interaction and proof setup
@@ -59,6 +58,9 @@ fun load(paths : List<Path>) : Pair<Model,Repository> {
     repos.populateClassReqs(model)
     repos.populateMethodReqs(model)
 
+    // Only useful for AbstractExecution
+    repos.populateAbstractReqs(model)
+
     return Pair(model, repos)
 }
 
@@ -94,8 +96,8 @@ fun extractInheritedSpec(mSig : MethodSig, expectedSpec : String, default:Formul
     return direct
 }
 
-fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>, returnType: Type, default:Formula = True): Formula{
-    var ret: Formula? = null;
+fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>, default:Formula = True): Formula{
+    var ret: Formula? = null
 
     //output("\n$mainblock\n")
 
@@ -103,13 +105,6 @@ fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>, return
 
     for(annotation in mainblock.nodeAnnotations){
         if(annotation.type.isStringType){
-            output("${annotation.value}")
-            output(annotation.value.toString())
-            output("${annotation.value.type}")
-
-            val help = annotation.value as StringLiteral
-            output(help.content)
-
             AbstractExecParser.parse((annotation.value as StringLiteral).content)
         }
     }

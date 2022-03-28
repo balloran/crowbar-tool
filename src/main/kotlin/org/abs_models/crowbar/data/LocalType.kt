@@ -4,7 +4,7 @@ import org.abs_models.crowbar.tree.LogicNode
 
 /**
  *   These are the structures to represent local types, the calculus itself is in org.abs_models.crowbar.types.LocalTypeType.kt
- *   The parser is in org.abs_models.crowbar.interfaces.LocatTypeParser.kt
+ *   The parser is in org.abs_models.crowbar.interfaces.LocalTypeParser.kt
  */
 
 interface LocalType : Anything {

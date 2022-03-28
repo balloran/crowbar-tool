@@ -83,7 +83,7 @@ interface AbstractExecType : DeductType{
 
     fun extractGlobalAbstractExecTypeSpec(model: Model): Formula{
 
-        var globalSpec = extractGlobalSpec(model.mainBlock, UnknownType.INSTANCE)
+        var globalSpec = extractGlobalSpec(model.mainBlock)
 
         return globalSpec
     }
