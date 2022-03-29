@@ -6,6 +6,7 @@ import org.abs_models.crowbar.data.SkipStmt
 import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.FunctionRepos
 import org.abs_models.crowbar.main.extractSpec
+import org.abs_models.crowbar.main.output
 import org.abs_models.crowbar.rule.FreshGenerator
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.ast.AssertStmt
@@ -29,6 +30,30 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.
     val returnType =
         if(input.contextMethod != null) input.contextMethod.type
         else UnknownType.INSTANCE
+
+    if(input.hasAnnotation()){
+
+        var spec : AESpec
+        for(annotation in input.annotations){
+            if(annotation.type is StringLiteral){
+                try {
+                    spec = AbstractParser.parse((annotation.value as StringLiteral).content)
+                }
+                catch (e : Exception){
+                    output("Exception in string annotation parsing, continuing: ${e.message}")
+                    continue
+                }
+
+                if(!(spec is AELocal)){
+                    throw Exception("Global constraint found in a local specification: $spec")
+                }
+
+                when(spec){
+
+                }
+            }
+        }
+    }
 
     when(input){
         is org.abs_models.frontend.ast.SkipStmt -> return SkipStmt

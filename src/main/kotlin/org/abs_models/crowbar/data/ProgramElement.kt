@@ -189,6 +189,22 @@ data class AssertStmt(val expr : Expr) : Stmt {
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + expr.iterate(f)
 }
 
+/**
+ *  Abstract statement is a new type of statement used to represent a statement.
+ */
+
+data class AbstractStmt(
+    val name : String,
+    val accessible : List<String>,
+    val assignable : List<Pair<Boolean, String>>,
+    val retBehavior : Phi)
+    : Stmt{
+
+    override fun prettyPrint(): String {
+        return "\\accessible $accessible \\assignable ${assignable.map { pair -> if(pair.first){"\\hasTo(${pair.second})"}else{"${pair.second}"}}} \\abstract_statement $name;"
+    }
+}
+
 interface Expr : ProgramElement {
     var absExp: org.abs_models.frontend.ast.Exp?
 }
@@ -357,6 +373,30 @@ open class ProgVar(open val name: String, open val concrType: Type = UnknownType
     override fun toSMT(indent:String) : String = name
 }
 data class ReturnVar(val vParam : String, override val concrType: Type) : ProgVar("result", concrType)
+
+/**
+ *  LocSet is the term representing abstract location set in formula, it might inherit from Location later and many other things
+ */
+
+class LocSet(val name: String) : Term{
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as LocSet
+
+        return name == other.name
+    }
+
+    override fun toSMT(indent: String): String = name
+}
+
+/**
+ *  Phi is the term representing abstract formulas (phi) in formula, it might change in the future
+ */
+
+interface Phi : Term
 
 fun appendStmt(stmt : Stmt, add : Stmt) : Stmt {
     return when(stmt){

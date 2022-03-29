@@ -73,21 +73,11 @@ interface AbstractType : DeductType{
             exitProcess(-1)
         }
 
-        extractGlobalAbstractExecTypeSpec(model)
-
-        //output("${model.mainBlock}")
+        output("${model.mainBlock}")
         val v = appendStmt(translateStatement(model.mainBlock, emptyMap()), SkipStmt)
         //output("$v")
         return SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(v, PostInvariantPair(True, True)), listOf()), emptyList())
     }
-
-    fun extractGlobalAbstractExecTypeSpec(model: Model): Formula{
-
-        //var globalSpec = extractGlobalSpec(model.mainBlock)
-
-        return True
-    }
-
 
     override fun extractFunctionNode(fDecl: FunctionDecl): SymbolicNode {
         return totallyEmptyNode()

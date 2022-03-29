@@ -48,6 +48,26 @@ object AbstractParser : AbstractExecutionBaseVisitor<AESpec>() {
     override fun visitMutex_constraint(ctx: AbstractExecutionParser.Mutex_constraintContext?): AESpec {
         return AEMut(ctx?.formula_list()!!.accept(termConverter) as List<AEPhi>)
     }
+
+    override fun visitStatement_local(ctx: AbstractExecutionParser.Statement_localContext?): AESpec {
+        return AEStatement(ctx?.aps_name()!!.text)
+    }
+
+    override fun visitExpression_local(ctx: AbstractExecutionParser.Expression_localContext?): AESpec {
+        return AEExpression(ctx?.ape_name()!!.text)
+    }
+
+    override fun visitAssignable_local(ctx: AbstractExecutionParser.Assignable_localContext?): AESpec {
+        return AEAssignable(ctx?.ass_list()!!.accept(termConverter) as List<AELoc>)
+    }
+
+    override fun visitAccessible_local(ctx: AbstractExecutionParser.Accessible_localContext?): AESpec {
+        return AEAccessible(ctx?.ids_loc()!!.accept(termConverter) as List<AELoc>)
+    }
+
+    override fun visitReturn_local(ctx: AbstractExecutionParser.Return_localContext?): AESpec {
+        return AERetBehavior(ctx?.formula()!!.accept(termConverter) as AEPhi)
+    }
 }
 
 class AbstractTermParser : AbstractExecutionBaseVisitor<List<AETerm>>(){

@@ -97,20 +97,42 @@ fun extractInheritedSpec(mSig : MethodSig, expectedSpec : String, default:Formul
 }
 
 fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>, default:Formula = True): Formula{
-    var ret: Formula? = null
+    var ret: Formula =True
 
     //output("\n$mainblock\n")
 
     //output("\n${mainblock.nodeAnnotations}\n")
 
+    var spec : AESpec
+
+    val currentGlobalSpec : MutableList<AEGlobal> = emptyList<AEGlobal>().toMutableList()
+
     for(annotation in mainblock.nodeAnnotations){
         if(annotation.type.isStringType){
-            //output("wtf")
-            output(AbstractParser.parse((annotation.value as StringLiteral).content).toString())
+            try {
+                spec = AbstractParser.parse((annotation.value as StringLiteral).content)
+            }
+            catch (e : Exception) {
+                output("Exception in string annotation parsing, continuing: ${e.message}")
+                continue
+            }
+            if(!(spec is AEGlobal)){
+                throw Exception("Local constraint found in a global specification: $spec")
+            }
+
+            if(spec is AEDis){
+                var aux = Predicate("disjoint", spec.terms.map { LocSet(it.getName()) })
+                ret = And(ret, aux)
+            }
+            else if(spec is AEMut){
+
+            }
+
+
+
         }
     }
 
-    ret = default
     return ret
 }
 

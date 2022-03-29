@@ -5,6 +5,10 @@ module Test;
 
 {
     Int x = 0;
+    ["accessible footprintQ"]
+    ["assignable frameQ"]
+    ["abstract_statement Q"]
+    skip;
 	if(True){
         x = 1;
 	}
