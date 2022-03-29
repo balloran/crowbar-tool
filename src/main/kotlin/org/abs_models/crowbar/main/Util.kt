@@ -105,7 +105,8 @@ fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>, defaul
 
     for(annotation in mainblock.nodeAnnotations){
         if(annotation.type.isStringType){
-            AbstractParser.parse((annotation.value as StringLiteral).content)
+            //output("wtf")
+            output(AbstractParser.parse((annotation.value as StringLiteral).content).toString())
         }
     }
 

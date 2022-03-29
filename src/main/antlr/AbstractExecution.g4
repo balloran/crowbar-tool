@@ -26,7 +26,8 @@ APE : 'abstract_expression';
 APS : 'abstract_statement';
 
 ANY : 'any';
-EVERY : 'everything';
+EVERYTHING : 'everything';
+NOTHING : 'nothing';
 TRUE: 'true';
 FALSE: 'false';
 
@@ -57,8 +58,11 @@ vars : LOC ids_loc                      # location_declaration
 // List of location names
 ids_loc : id_loc (COMMA id_loc)*;
 
-// Name of a location
-id_loc : EVERY | STRING ;
+// Different type of locations
+id_loc : EVERYTHING | NOTHING | loc_name ;
+
+// Location Name
+loc_name : STRING;
 
 // List of formula declaration
 formula_dec : simple_dec (COMMA simple_dec)*;
