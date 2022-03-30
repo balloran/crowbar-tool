@@ -4,15 +4,19 @@ module Test;
 ["ae_constraint disjoint(frameQ, relevantLocs)"]
 
 {
-    Int x = 0;
     ["accessible footprintQ"]
     ["assignable frameQ"]
     ["abstract_statement Q"]
-    skip;
 	if(True){
-        x = 1;
+        ["accessible everything"]
+        ["assignable everything"]
+        ["abstract_statement P1"]
+        skip;
 	}
 	else{
-	    x = 2;
+        ["accessible everything"]
+        ["assignable everything"]
+        ["abstract_statement P2"]
+        skip;
 	}
 }

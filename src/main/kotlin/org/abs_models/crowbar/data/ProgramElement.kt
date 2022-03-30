@@ -201,7 +201,7 @@ data class AbstractStmt(
     : Stmt{
 
     override fun prettyPrint(): String {
-        return "\\accessible $accessible \\assignable ${assignable.map { pair -> if(pair.first){"\\hasTo(${pair.second})"}else{"${pair.second}"}}} \\abstract_statement $name;"
+        return "accessible $accessible; assignable ${assignable.map { pair -> if(pair.first){"hasTo(${pair.second})"}else{"${pair.second}"}}}; abstract_statement $name"
     }
 }
 
@@ -318,6 +318,26 @@ data class BranchExpr(val matchTerm : Expr, val branch : Expr) {
     }
 }
 
+/**
+ *  AbstractExpr is new type of expression used to represent abstract expressions
+ */
+
+data class AbstractExpr(
+    val name : String,
+    val accessible : List<String>,
+    val assignable : List<Pair<Boolean, String>>,
+    val retBehavior : Phi)
+    : Expr {
+
+    override var absExp: org.abs_models.frontend.ast.Exp? = null
+
+    override fun prettyPrint(): String {
+        return "accessible $accessible; assignable ${assignable.map { pair -> if(pair.first){"hasTo(${pair.second})"}else{"${pair.second}"}}}; abstract_expression $name"
+    }
+
+
+}
+
 interface Location : Expr
 data class LocationAbstractVar(val name : String) : Location, AbstractVar{
     override var absExp: org.abs_models.frontend.ast.Exp? = null
@@ -389,6 +409,10 @@ class LocSet(val name: String) : Term{
         return name == other.name
     }
 
+    override fun hashCode(): Int {
+        return name.hashCode()
+    }
+
     override fun toSMT(indent: String): String = name
 }
 
@@ -397,6 +421,13 @@ class LocSet(val name: String) : Term{
  */
 
 interface Phi : Term
+
+object PhiFalse : Phi{
+
+    override fun toSMT(indent: String): String = "false"
+
+}
+
 
 fun appendStmt(stmt : Stmt, add : Stmt) : Stmt {
     return when(stmt){

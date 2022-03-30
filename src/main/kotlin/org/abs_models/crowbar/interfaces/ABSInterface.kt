@@ -24,35 +24,16 @@ import org.abs_models.frontend.typechecker.UnknownType
  *   Translates the ABS AST into our IR
  */
 
-
 fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.crowbar.data.Stmt {
     if(input == null) return SkipStmt
     val returnType =
         if(input.contextMethod != null) input.contextMethod.type
         else UnknownType.INSTANCE
 
+
+
     if(input.hasAnnotation()){
-
-        var spec : AESpec
-        for(annotation in input.annotations){
-            if(annotation.type is StringLiteral){
-                try {
-                    spec = AbstractParser.parse((annotation.value as StringLiteral).content)
-                }
-                catch (e : Exception){
-                    output("Exception in string annotation parsing, continuing: ${e.message}")
-                    continue
-                }
-
-                if(!(spec is AELocal)){
-                    throw Exception("Global constraint found in a local specification: $spec")
-                }
-
-                when(spec){
-
-                }
-            }
-        }
+        return translateAnnotationStmt(input).foldRight(translateStatement(input, subst), { nx, acc -> appendStmt(nx, acc) })
     }
 
     when(input){
@@ -142,7 +123,52 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.
     }
 }
 
+/**
+ *  Function to extract abstract statements from statements ,it returns a lsit of abstract statements while cleaning the input of its annotations
+ */
+
+fun translateAnnotationStmt(input : Stmt) : List<AbstractStmt>{
+    var abstractProg : List<AbstractStmt> = emptyList()
+
+    var spec : AESpec
+
+    var accessible : List<String> = emptyList()
+    var assignable : List<Pair<Boolean, String>> = emptyList()
+    var retBehavior : Phi = PhiFalse
+
+    loop@ for(annotation in input.annotations){
+        if(annotation.value is StringLiteral){
+            try {
+                spec = AbstractParser.parse((annotation.value as StringLiteral).content)
+            }
+            catch (e : Exception) {
+                output("Exception in string annotation parsing, continuing: ${e.message}")
+                continue
+            }
+
+            when(spec){
+                is AEStatement      -> {
+                    abstractProg += AbstractStmt(spec.name, accessible, assignable, retBehavior)
+                    accessible = emptyList()
+                    assignable = emptyList()
+                    retBehavior = PhiFalse
+                }
+                is AEAccessible     -> accessible += spec.id_locs.map { it.getName() }
+                is AEAssignable     -> assignable += spec.id_locs.map { if(it is AEHasToLoc)Pair(true, it.getName()) else Pair(false, it.getName()) }
+                is AERetBehavior    -> output("Return behavior not yet supported, ignored for now.")
+                else                -> continue@loop
+            }
+        }
+    }
+
+    input.setAnnotationList(org.abs_models.frontend.ast.List<org.abs_models.frontend.ast.Annotation>())
+
+    return abstractProg
+}
+
+
 fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>) : Expr {
+
     val converted = when(input){
         is FieldUse -> {
             if(input.contextDecl is InterfaceDecl)

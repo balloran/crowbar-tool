@@ -75,7 +75,7 @@ interface AbstractType : DeductType{
 
         output("${model.mainBlock}")
         val v = appendStmt(translateStatement(model.mainBlock, emptyMap()), SkipStmt)
-        //output("$v")
+        output("\n${v.prettyPrint()}")
         return SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(v, PostInvariantPair(True, True)), listOf()), emptyList())
     }
 
