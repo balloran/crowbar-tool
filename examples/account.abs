@@ -11,14 +11,12 @@ interface Account {
 
 [Spec: Requires(this.balance >= 0)]
 [Spec: ObjInv(this.balance >= 0)]
-["This is an nnotation"]
 class AccountImpl(Int balance) implements Account {
 
 	Int deposit(Int x) { balance = balance + x; return balance;}
 
 	Int withdraw(Int x) {
 		if (balance - x >= 0) {
-			["Random false annotation"]
 			balance = balance - x ;
 		}
 		return balance;

@@ -24,7 +24,7 @@ import org.abs_models.frontend.typechecker.UnknownType
  *   Translates the ABS AST into our IR
  */
 
-fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.crowbar.data.Stmt {
+fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : MutableMap<ProgVar, AbstractExpr> = mutableMapOf()) : org.abs_models.crowbar.data.Stmt {
     if(input == null) return SkipStmt
     val returnType =
         if(input.contextMethod != null) input.contextMethod.type
@@ -33,7 +33,28 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.
 
 
     if(input.hasAnnotation()){
-        return translateAnnotationStmt(input).foldRight(translateStatement(input, subst), { nx, acc -> appendStmt(nx, acc) })
+        val abstractElements = translateAnnotation(input)
+
+        //This deals with the case of a last abstract expression (not good by the way) it will be changed and generalised or not...
+
+        output("\n$abstractElements")
+
+        if (abstractElements.lastOrNull() is AbstractExpr && input is VarDeclStmt){
+            AEsubst[ProgVar(input.varDecl.name, input.varDecl.type)] = abstractElements.last() as AbstractExpr
+
+            abstractElements.remove(abstractElements.last())
+            abstractElements.removeLast()
+
+        }
+
+        output("$abstractElements\n")
+
+        return abstractElements.foldRight(translateStatement(input, subst, AEsubst)) { nx, acc ->
+            appendStmt(
+                nx as AbstractStmt,
+                acc
+            )
+        }
     }
 
     when(input){
@@ -124,17 +145,18 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>) : org.abs_models.
 }
 
 /**
- *  Function to extract abstract statements from statements ,it returns a lsit of abstract statements while cleaning the input of its annotations
+ *  Function to extract abstract program elements from a statement ,it returns a list of abstract program elements while cleaning the input of its annotations
  */
 
-fun translateAnnotationStmt(input : Stmt) : List<AbstractStmt>{
-    var abstractProg : List<AbstractStmt> = emptyList()
+fun translateAnnotation(input : Stmt) : MutableList<AbstractProgramElement>{
+    val abstractProg : MutableList<AbstractProgramElement> = emptyList<AbstractProgramElement>().toMutableList()
 
     var spec : AESpec
 
     var accessible : List<String> = emptyList()
     var assignable : List<Pair<Boolean, String>> = emptyList()
     var retBehavior : Phi = PhiFalse
+    var excBehavior : Phi = PhiFalse
 
     loop@ for(annotation in input.annotations){
         if(annotation.value is StringLiteral){
@@ -148,20 +170,28 @@ fun translateAnnotationStmt(input : Stmt) : List<AbstractStmt>{
 
             when(spec){
                 is AEStatement      -> {
-                    abstractProg += AbstractStmt(spec.name, accessible, assignable, retBehavior)
+                    abstractProg.add(AbstractStmt(spec.name, accessible, assignable, retBehavior))
                     accessible = emptyList()
                     assignable = emptyList()
                     retBehavior = PhiFalse
+                    excBehavior = PhiFalse
+                }
+                is AEExpression     -> {
+                    abstractProg.add(AbstractExpr(spec.name, accessible, assignable, excBehavior))
+                    accessible = emptyList()
+                    assignable = emptyList()
+                    retBehavior = PhiFalse
+                    excBehavior = PhiFalse
                 }
                 is AEAccessible     -> accessible += spec.id_locs.map { it.getName() }
                 is AEAssignable     -> assignable += spec.id_locs.map { if(it is AEHasToLoc)Pair(true, it.getName()) else Pair(false, it.getName()) }
-                is AERetBehavior    -> output("Return behavior not yet supported, ignored for now.")
+                is AEBehavior    -> output("Behaviors not yet supported, ignored for now.")
                 else                -> continue@loop
             }
         }
     }
 
-    input.setAnnotationList(org.abs_models.frontend.ast.List<org.abs_models.frontend.ast.Annotation>())
+    input.setAnnotationList(List())
 
     return abstractProg
 }

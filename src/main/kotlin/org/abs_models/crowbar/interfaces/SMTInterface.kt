@@ -191,6 +191,7 @@ fun evaluateSMT(smtRep : String) : Boolean {
 
 fun evaluateSMT(ante: Formula, succ: Formula) : Boolean {
     val smtRep = generateSMT(ante, succ)
+    output("$smtRep")
     if(verbosity >= Verbosity.VV) println("crowbar-v: \n$smtRep")
     return evaluateSMT(smtRep)
 }

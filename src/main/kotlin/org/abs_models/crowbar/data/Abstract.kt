@@ -97,7 +97,13 @@ class AEAccessible(val id_locs : List<AELoc>) : AELocal{
     }
 }
 
-class AERetBehavior(val phi : AEPhi) : AELocal{
+/**
+ *  This interface regroups all the local behavior specification
+ */
+
+interface AEBehavior : AELocal
+
+class AERetBehavior(val phi : AEPhi) : AEBehavior{
 
     override fun toString(): String {
         return "return_behavior requires $phi"

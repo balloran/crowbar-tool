@@ -1,13 +1,21 @@
 module Test;
 
-["ae_specvars locset footprintQ, frameQ, relevantLocs"]
-["ae_constraint disjoint(frameQ, relevantLocs)"]
+["ae_specvars locset footprintG, frameG, footprintQ, frameQ, relevantLocs"]
+["ae_constraint disjoint(frameQ, frameG)"]
+["ae_constraint disjoint(footprintG, frameQ)"]
+["ae_constraint disjoint(footprintQ, frameG)"]
 
 {
     ["accessible footprintQ"]
     ["assignable frameQ"]
     ["abstract_statement Q"]
-	if(True){
+
+    ["accessible footprintG"]
+    ["assignable frameG"]
+    ["abstract_expression g"]
+
+    Bool x = True;
+	if(x){
         ["accessible everything"]
         ["assignable everything"]
         ["abstract_statement P1"]

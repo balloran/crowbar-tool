@@ -382,7 +382,7 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
                 // We'll try to generate a short-as-possible default value by choosing the type constructor with the fewest parameters
                 // If we can't find one with no parameters, we recursively generate default values for the required parameters
                 val typeDecl = ADTRepos.getDeclForType(dType)
-                val preferredConstructor = typeDecl.dataConstructorList.minBy { it.constructorArgList.toList().size }!!
+                val preferredConstructor = typeDecl.dataConstructorList.minByOrNull { it.constructorArgList.toList().size }!!
                 if (preferredConstructor.constructorArgList.toList().isEmpty())
                     MvDataType(preferredConstructor.qualifiedName)
                 else {

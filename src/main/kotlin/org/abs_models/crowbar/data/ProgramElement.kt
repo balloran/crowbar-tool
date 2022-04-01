@@ -189,22 +189,6 @@ data class AssertStmt(val expr : Expr) : Stmt {
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + expr.iterate(f)
 }
 
-/**
- *  Abstract statement is a new type of statement used to represent a statement.
- */
-
-data class AbstractStmt(
-    val name : String,
-    val accessible : List<String>,
-    val assignable : List<Pair<Boolean, String>>,
-    val retBehavior : Phi)
-    : Stmt{
-
-    override fun prettyPrint(): String {
-        return "accessible $accessible; assignable ${assignable.map { pair -> if(pair.first){"hasTo(${pair.second})"}else{"${pair.second}"}}}; abstract_statement $name"
-    }
-}
-
 interface Expr : ProgramElement {
     var absExp: org.abs_models.frontend.ast.Exp?
 }
@@ -318,26 +302,6 @@ data class BranchExpr(val matchTerm : Expr, val branch : Expr) {
     }
 }
 
-/**
- *  AbstractExpr is new type of expression used to represent abstract expressions
- */
-
-data class AbstractExpr(
-    val name : String,
-    val accessible : List<String>,
-    val assignable : List<Pair<Boolean, String>>,
-    val retBehavior : Phi)
-    : Expr {
-
-    override var absExp: org.abs_models.frontend.ast.Exp? = null
-
-    override fun prettyPrint(): String {
-        return "accessible $accessible; assignable ${assignable.map { pair -> if(pair.first){"hasTo(${pair.second})"}else{"${pair.second}"}}}; abstract_expression $name"
-    }
-
-
-}
-
 interface Location : Expr
 data class LocationAbstractVar(val name : String) : Location, AbstractVar{
     override var absExp: org.abs_models.frontend.ast.Exp? = null
@@ -393,6 +357,49 @@ open class ProgVar(open val name: String, open val concrType: Type = UnknownType
     override fun toSMT(indent:String) : String = name
 }
 data class ReturnVar(val vParam : String, override val concrType: Type) : ProgVar("result", concrType)
+
+/**
+ *  AbstractProgramElement are either abstract statement or abstract expressions.
+ */
+
+interface AbstractProgramElement : ProgramElement
+
+/**
+ *  Abstract statement is a new type of statement used to represent a statement.
+ */
+
+data class AbstractStmt(
+    val name : String,
+    val accessible : List<String>,
+    val assignable : List<Pair<Boolean, String>>,
+    val retBehavior : Phi)
+    : Stmt, AbstractProgramElement{
+
+    override fun prettyPrint(): String {
+        return "accessible $accessible; assignable ${assignable.map { pair -> if(pair.first){"hasTo(${pair.second})"}else{"${pair.second}"}}}; abstract_statement $name"
+    }
+}
+
+/**
+ *  AbstractExpr is new type of expression used to represent abstract expressions
+ */
+
+data class AbstractExpr(
+    val name : String,
+    val accessible : List<String>,
+    val assignable : List<Pair<Boolean, String>>,
+    val excBehavior : Phi)
+    : Expr, AbstractProgramElement {
+
+    override var absExp: org.abs_models.frontend.ast.Exp? = null
+
+    override fun prettyPrint(): String {
+        return "accessible $accessible; assignable ${assignable.map { pair -> if(pair.first){"hasTo(${pair.second})"}else{"${pair.second}"}}}; abstract_expression $name"
+    }
+
+
+}
+
 
 /**
  *  LocSet is the term representing abstract location set in formula, it might inherit from Location later and many other things
