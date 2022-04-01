@@ -24,7 +24,7 @@ import org.abs_models.frontend.typechecker.UnknownType
  *   Translates the ABS AST into our IR
  */
 
-fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : MutableMap<ProgVar, AbstractExpr> = mutableMapOf()) : org.abs_models.crowbar.data.Stmt {
+fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : MutableMap<ProgVar, AbstractExpr> = mutableMapOf() ) : org.abs_models.crowbar.data.Stmt {
     if(input == null) return SkipStmt
     val returnType =
         if(input.contextMethod != null) input.contextMethod.type
@@ -39,17 +39,16 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : Mutable
 
         output("\n$abstractElements")
 
+        var next = input
+
         if (abstractElements.lastOrNull() is AbstractExpr && input is VarDeclStmt){
-            AEsubst[ProgVar(input.varDecl.name, input.varDecl.type)] = abstractElements.last() as AbstractExpr
-
-            abstractElements.remove(abstractElements.last())
-            abstractElements.removeLast()
-
+            AEsubst[ProgVar(input.varDecl.name, input.varDecl.type)] = abstractElements.removeLast() as AbstractExpr
+            next = org.abs_models.frontend.ast.SkipStmt()
         }
 
         output("$abstractElements\n")
 
-        return abstractElements.foldRight(translateStatement(input, subst, AEsubst)) { nx, acc ->
+        return abstractElements.foldRight(translateStatement(next, subst, AEsubst)) { nx, acc ->
             appendStmt(
                 nx as AbstractStmt,
                 acc
@@ -64,21 +63,21 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : Mutable
             val exp = input.exp
             val type = input.type
             return when(exp) {
-                is GetExp       -> SyncStmt(loc, translateExpression(exp, returnType, subst), extractResolves(input), FreshGenerator.getFreshPP())
-                is NewExp       -> AllocateStmt(loc, translateExpression(exp, returnType, subst))
-                is AsyncCall    -> CallStmt(loc, translateExpression(exp.callee, returnType, subst), translateExpression(exp, returnType, subst) as CallExpr)
-                is SyncCall     -> desugar(loc, type, exp, returnType, subst)
-                else            -> ExprStmt(translateExpression(exp, returnType, subst)) // Cannot be SkipStmt, as an expression can throw an exception
+                is GetExp       -> SyncStmt(loc, translateExpression(exp, returnType, subst, AEsubst), extractResolves(input), FreshGenerator.getFreshPP())
+                is NewExp       -> AllocateStmt(loc, translateExpression(exp, returnType, subst, AEsubst))
+                is AsyncCall    -> CallStmt(loc, translateExpression(exp.callee, returnType, subst, AEsubst), translateExpression(exp, returnType, subst, AEsubst) as CallExpr)
+                is SyncCall     -> desugar(loc, type, exp, returnType, subst, AEsubst)
+                else            -> ExprStmt(translateExpression(exp, returnType, subst, AEsubst)) // Cannot be SkipStmt, as an expression can throw an exception
             }
         }
         is VarDeclStmt -> {
             val loc = ProgVar(input.varDecl.name, input.varDecl.type)
             return when(val exp = input.varDecl.initExp ?: NullExp()) {
-                is GetExp       -> SyncStmt(loc, translateExpression(exp, returnType, subst), extractResolves(input), FreshGenerator.getFreshPP())
-                is NewExp       -> AllocateStmt(loc, translateExpression(exp, returnType, subst))
-                is AsyncCall    -> CallStmt(loc, translateExpression(exp.callee, returnType, subst), translateExpression(exp, returnType, subst) as CallExpr)
-                is SyncCall     -> desugar(loc, input.type, exp, returnType, subst)
-                else -> org.abs_models.crowbar.data.AssignStmt(loc, translateExpression(exp, returnType, subst))
+                is GetExp       -> SyncStmt(loc, translateExpression(exp, returnType, subst, AEsubst), extractResolves(input), FreshGenerator.getFreshPP())
+                is NewExp       -> AllocateStmt(loc, translateExpression(exp, returnType, subst, AEsubst))
+                is AsyncCall    -> CallStmt(loc, translateExpression(exp.callee, returnType, subst, AEsubst), translateExpression(exp, returnType, subst, AEsubst) as CallExpr)
+                is SyncCall     -> desugar(loc, input.type, exp, returnType, subst, AEsubst)
+                else -> org.abs_models.crowbar.data.AssignStmt(loc, translateExpression(exp, returnType, subst, AEsubst))
             }
         }
         is AssignStmt -> {
@@ -88,54 +87,54 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : Mutable
                 input.varNoTransform.type
             )
             return when(val exp = input.valueNoTransform) {
-                is GetExp       -> SyncStmt(loc, translateExpression(exp, returnType, subst), extractResolves(input), FreshGenerator.getFreshPP())
-                is NewExp       -> AllocateStmt(loc, translateExpression(exp, returnType, subst))
-                is AsyncCall    -> CallStmt(loc, translateExpression(exp.callee, returnType, subst), translateExpression(exp, returnType, subst) as CallExpr)
-                is SyncCall     -> desugar(loc, input.type, exp, returnType, subst)
-                else -> org.abs_models.crowbar.data.AssignStmt(loc, translateExpression(exp, returnType, subst))
+                is GetExp       -> SyncStmt(loc, translateExpression(exp, returnType, subst, AEsubst), extractResolves(input), FreshGenerator.getFreshPP())
+                is NewExp       -> AllocateStmt(loc, translateExpression(exp, returnType, subst, AEsubst))
+                is AsyncCall    -> CallStmt(loc, translateExpression(exp.callee, returnType, subst, AEsubst), translateExpression(exp, returnType, subst, AEsubst) as CallExpr)
+                is SyncCall     -> desugar(loc, input.type, exp, returnType, subst, AEsubst)
+                else -> org.abs_models.crowbar.data.AssignStmt(loc, translateExpression(exp, returnType, subst, AEsubst))
             }
         }
         is Block -> {
-            val subs = input.stmts.map {translateStatement(it, subst)  }
+            val subs = input.stmts.map {translateStatement(it, subst, AEsubst)  }
             if(subs.isEmpty())  return SkipStmt
             val last = subs.last()
             val tail = subs.dropLast(1)
             return tail.foldRight( last) { nx, acc -> appendStmt(nx, acc) }
         }
         is WhileStmt -> {
-            return org.abs_models.crowbar.data.WhileStmt(translateExpression(input.conditionNoTransform, returnType, subst),
-                translateStatement(input.bodyNoTransform, subst),
+            return org.abs_models.crowbar.data.WhileStmt(translateExpression(input.conditionNoTransform, returnType, subst, AEsubst),
+                translateStatement(input.bodyNoTransform, subst, AEsubst),
                 FreshGenerator.getFreshPP(),
                 extractSpec(input,"WhileInv", returnType))
         }
-        is AwaitStmt -> return org.abs_models.crowbar.data.AwaitStmt(translateGuard(input.guard, returnType, subst),FreshGenerator.getFreshPP())
+        is AwaitStmt -> return org.abs_models.crowbar.data.AwaitStmt(translateGuard(input.guard, returnType, subst, AEsubst),FreshGenerator.getFreshPP())
         is SuspendStmt -> return org.abs_models.crowbar.data.AwaitStmt(Const("true", input.model.boolType),FreshGenerator.getFreshPP()) // We should be able to model a suspend; as an await True;
-        is ReturnStmt -> return org.abs_models.crowbar.data.ReturnStmt(translateExpression(input.retExp, returnType, subst))
-        is IfStmt -> return org.abs_models.crowbar.data.IfStmt(translateExpression(input.conditionNoTransform, returnType, subst), translateStatement(input.then, subst), translateStatement(input.`else`, subst))
-        is AssertStmt -> return org.abs_models.crowbar.data.AssertStmt(translateExpression(input.condition, returnType, subst))
+        is ReturnStmt -> return org.abs_models.crowbar.data.ReturnStmt(translateExpression(input.retExp, returnType, subst, AEsubst))
+        is IfStmt -> return org.abs_models.crowbar.data.IfStmt(translateExpression(input.conditionNoTransform, returnType, subst, AEsubst), translateStatement(input.then, subst, AEsubst), translateStatement(input.`else`, subst, AEsubst))
+        is AssertStmt -> return org.abs_models.crowbar.data.AssertStmt(translateExpression(input.condition, returnType, subst, AEsubst))
         is CaseStmt -> {
             var list : List<Branch> = emptyList()
             for (br in input.branchList) {
                 val patt = translatePattern(br.left, input.expr.type, returnType, subst)
-                val next = translateStatement(br.right, subst)
+                val next = translateStatement(br.right, subst, AEsubst)
                 list = list + Branch(patt, next)
             }
-            return BranchStmt(translateExpression(input.expr, returnType, subst), BranchList(list))
+            return BranchStmt(translateExpression(input.expr, returnType, subst, AEsubst), BranchList(list))
         }
         is DieStmt -> return org.abs_models.crowbar.data.AssertStmt(Const("False", input.model.boolType))
         is MoveCogToStmt -> throw Exception("Statements ${input::class} are not coreABS" )
         is DurationStmt -> throw Exception("Statements ${input::class} are not coreABS" )
-        is ThrowStmt -> return org.abs_models.crowbar.data.ThrowStmt(translateExpression(input.reason, returnType, subst))
+        is ThrowStmt -> return org.abs_models.crowbar.data.ThrowStmt(translateExpression(input.reason, returnType, subst, AEsubst))
         is TryCatchFinallyStmt -> {
-            val inner = translateStatement(input.body, subst)
+            val inner = translateStatement(input.body, subst, AEsubst)
             var list : List<Branch> = emptyList()
             for (br in input.catchList) {
                 val patt = translatePattern(br.left, returnType, input.model.exceptionType, subst)
-                val next = translateStatement(br.right, subst)
+                val next = translateStatement(br.right, subst, AEsubst)
                 list = list + Branch(patt, next)
             }
             val pp = FreshGenerator.getFreshPP()
-            val finally = translateStatement(input.finally, subst)
+            val finally = translateStatement(input.finally, subst, AEsubst)
             val sFirst = TryPushStmt(ConcreteExceptionScope(BranchList(list), finally, pp))
             return appendStmt(appendStmt(sFirst, inner), TryPopStmt(pp))
         }
@@ -191,13 +190,13 @@ fun translateAnnotation(input : Stmt) : MutableList<AbstractProgramElement>{
         }
     }
 
-    input.setAnnotationList(List())
+    input.annotationList = List()
 
     return abstractProg
 }
 
 
-fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>) : Expr {
+fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>, AEsubst : MutableMap<ProgVar, AbstractExpr> = mutableMapOf()) : Expr {
 
     val converted = when(input){
         is FieldUse -> {
@@ -212,10 +211,10 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
             Field(input.name + "_f",type)
         }
         is LetExp          ->
-            translateExpression(input.exp, returnType, subst + Pair(input.`var`.name, translateExpression(input.`val`, returnType, subst))) //this handles overwrite correctly
+            translateExpression(input.exp, returnType, subst + Pair(input.`var`.name, translateExpression(input.`val`, returnType, subst, AEsubst)), AEsubst) //this handles overwrite correctly
         is IntLiteral      -> Const(input.content, input.model.intType)
-        is GetExp          -> readFut(translateExpression(input.pureExp, returnType, subst))
-        is NewExp          -> FreshGenerator.getFreshObjectId(input.type.qualifiedName, input.paramList.map { translateExpression(it, returnType, subst) },input.type) //todo:add "implements" information to Repos
+        is GetExp          -> readFut(translateExpression(input.pureExp, returnType, subst, AEsubst))
+        is NewExp          -> FreshGenerator.getFreshObjectId(input.type.qualifiedName, input.paramList.map { translateExpression(it, returnType, subst, AEsubst) },input.type) //todo:add "implements" information to Repos
         is NullExp         -> Const("0", input.model.intType)
         is ThisExp         -> Const("1", input.model.intType)
         is VarUse -> {
@@ -229,8 +228,14 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
                 }
                 else if(subst.keys.contains(input.name)){
                     subst[input.name]
-                } else
-                    ProgVar(input.name, input.type)
+                } else {
+                    val aux = ProgVar(input.name, input.type)
+                    if (AEsubst.containsKey(aux)){
+                        AEsubst.remove(aux)
+                    }
+                    else
+                        aux
+                }
             }
         }
         is Binary -> {
@@ -249,7 +254,7 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
                 is OrBoolExp -> "||"
                 else -> throw Exception("Translation of data ${input::class} not supported, term is $input")
             }
-            SExpr(op, listOf(translateExpression(input.left, returnType, subst), translateExpression(input.right, returnType, subst)))
+            SExpr(op, listOf(translateExpression(input.left, returnType, subst, AEsubst), translateExpression(input.right, returnType, subst, AEsubst)))
         }
         is Unary -> {
             val op = when(input){
@@ -257,7 +262,7 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
                 is NegExp       -> "!"
                 else            -> throw Exception("Translation of data ${input::class} not supported, term is $input" )
             }
-            SExpr(op, listOf(translateExpression(input.operand, returnType, subst)))
+            SExpr(op, listOf(translateExpression(input.operand, returnType, subst, AEsubst)))
         }
         is DataConstructorExp -> {
             if(input.dataConstructor == null){
@@ -269,31 +274,31 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
                 "Unit" -> unitExpr()
                 "True" -> Const("true", input.model.boolType)
                 "False" -> Const("false", input.model.boolType)
-                else -> DataTypeExpr(input.dataConstructor!!.qualifiedName, input.type.qualifiedName, input.type, input.params.map { translateExpression(it, returnType, subst) })
+                else -> DataTypeExpr(input.dataConstructor!!.qualifiedName, input.type.qualifiedName, input.type, input.params.map { translateExpression(it, returnType, subst, AEsubst) })
             }
         }
         is FnApp ->
             if (input.name == "valueOf")
-                readFut(translateExpression(input.params.getChild(0), returnType, subst))
+                readFut(translateExpression(input.params.getChild(0), returnType, subst, AEsubst))
             else if (input.name == "hasRole") {
                 val roleConst = Const("\"${(input.params.getChild(1) as StringLiteral).content}\"", input.model.stringType)
-                val field = translateExpression(input.params.getChild(0), returnType, subst)
+                val field = translateExpression(input.params.getChild(0), returnType, subst, AEsubst)
                 SExpr("hasRole", listOf(field, roleConst))
             }
             else if (input.decl is UnknownDecl) {
                 if (specialHeapKeywords.containsKey(input.name))
-                    SExpr(input.name, input.params.map { translateExpression(it, returnType, subst) })
+                    SExpr(input.name, input.params.map { translateExpression(it, returnType, subst, AEsubst) })
                 else
                     throw Exception("Unknown declaration of function ${input.name}")
             } else if (FunctionRepos.isKnown(input.decl.qualifiedName)) {
-                SExpr(input.decl.qualifiedName.replace(".", "-"), input.params.map { translateExpression(it, returnType, subst) })
+                SExpr(input.decl.qualifiedName.replace(".", "-"), input.params.map { translateExpression(it, returnType, subst, AEsubst) })
             } else if(input.decl.qualifiedName == "ABS.StdLib.random"){
                 FreshGenerator.getFreshProgVar(input.model.intType)
             } else throw Exception("Translation of FnApp is not fully supported, term is $input with function ${input.decl.qualifiedName}")
-        is IfExp -> SExpr("ite", listOf(translateExpression(input.condExp, returnType, subst),translateExpression(input.thenExp, returnType, subst),translateExpression(input.elseExp, returnType, subst)))
+        is IfExp -> SExpr("ite", listOf(translateExpression(input.condExp, returnType, subst, AEsubst),translateExpression(input.thenExp, returnType, subst, AEsubst),translateExpression(input.elseExp, returnType, subst, AEsubst)))
         is Call -> {
             val met = input.methodSig.contextDecl.qualifiedName+"."+input.methodSig.name
-            val params = input.params.map {  translateExpression(it, returnType, subst) }
+            val params = input.params.map {  translateExpression(it, returnType, subst, AEsubst) }
 
             if(input is AsyncCall || input.callee  !is ThisExp)
                 CallExpr(met, params)
@@ -301,12 +306,12 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
                 SyncCallExpr(met, params)
         }
         is CaseExp ->{
-            CaseExpr(translateExpression(input.expr, returnType, subst),
+            CaseExpr(translateExpression(input.expr, returnType, subst, AEsubst),
                 ADTRepos.libPrefix(input.type.qualifiedName),
                 input.branchList.map {
                 BranchExpr(
                     translatePattern(it.left, it.patternExpType, returnType, subst),
-                    translateExpression(it.right, returnType, subst))}, input.freeVars)
+                    translateExpression(it.right, returnType, subst, AEsubst))}, input.freeVars)
         }
         is StringLiteral -> {
             Const("\"" + input.content +"\"", input.model.stringType)
@@ -315,7 +320,7 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
             Const(input.content, input.model.floatType)
         }
         is AsExp -> {
-            val inputExpr = translateExpression(input.exp,returnType, subst)
+            val inputExpr = translateExpression(input.exp,returnType, subst, AEsubst)
             val implements = ImplementsExpr(inputExpr,input.type)
             val res = SExpr("ite",
                 listOf(
@@ -326,7 +331,7 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
             res
         }
         is ImplementsExp -> {
-            ImplementsExpr(translateExpression(input.exp, returnType, subst), input.interfaceTypeUse.type)
+            ImplementsExpr(translateExpression(input.exp, returnType, subst, AEsubst), input.interfaceTypeUse.type)
         }
         else -> throw Exception("Translation of ${input::class} not supported, term is $input" )
     }
@@ -336,10 +341,10 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>)
     return converted
 }
 
-fun translateGuard(input: Guard, returnType: Type, subst: Map<String, Expr>) : Expr =
+fun translateGuard(input: Guard, returnType: Type, subst: Map<String, Expr>, AEsubst: MutableMap<ProgVar, AbstractExpr> = mutableMapOf()) : Expr =
     when(input){
-        is ExpGuard -> translateExpression(input.pureExp, returnType, subst)
-        is AndGuard -> SExpr("&&",listOf(translateGuard(input.left, returnType, subst), translateGuard(input.right, returnType, subst)))
+        is ExpGuard -> translateExpression(input.pureExp, returnType, subst, AEsubst)
+        is AndGuard -> SExpr("&&",listOf(translateGuard(input.left, returnType, subst, AEsubst), translateGuard(input.right, returnType, subst, AEsubst)))
         is ClaimGuard -> {
             val placeholder = Const("true")
             placeholder.absExp = input.`var` // Save reference to original guard expression
@@ -348,11 +353,11 @@ fun translateGuard(input: Guard, returnType: Type, subst: Map<String, Expr>) : E
         else -> throw Exception("Guards ${input::class} are not coreABS" )
     }
 
-fun translatePattern(pattern : Pattern, overrideType : Type, returnType:Type, subst: Map<String, Expr>) : Expr =
+fun translatePattern(pattern : Pattern, overrideType : Type, returnType:Type, subst: Map<String, Expr>, AEsubst: MutableMap<ProgVar, AbstractExpr> = mutableMapOf()) : Expr =
     when (pattern) {
         is PatternVarUse -> ProgVar(pattern.name, pattern.type)
         is PatternVar -> ProgVar(pattern.`var`.name, pattern.type)
-        is LiteralPattern -> translateExpression(pattern.literal, returnType, subst)
+        is LiteralPattern -> translateExpression(pattern.literal, returnType, subst, AEsubst)
         is UnderscorePattern ->  FreshGenerator.getFreshProgVar(overrideType)
         is ConstructorPattern -> {
             val qualName = if(returnType == pattern.moduleDecl.model.exceptionType) "ABS.StdLib.Exceptions.${pattern.constructor}" else typeWithModule(pattern.constructor, pattern.moduleDecl.name)
@@ -388,9 +393,9 @@ fun extractResolves(stmt: Stmt): ConcreteStringSet{
 }
 
 /* We need to perform the rewritting on sync call ourselves as the version of the compiler we use still uses the old broken location types */
-fun desugar(loc: Location, type: Type, syncCall: SyncCall, returnType :Type, subst: Map<String, Expr>) : org.abs_models.crowbar.data.Stmt{
-    val calleeExpr = translateExpression(syncCall.callee, returnType, subst)
-    val callExpr = translateExpression(syncCall, returnType, subst)
+fun desugar(loc: Location, type: Type, syncCall: SyncCall, returnType :Type, subst: Map<String, Expr>, AEsubst: MutableMap<ProgVar, AbstractExpr> = mutableMapOf()) : org.abs_models.crowbar.data.Stmt{
+    val calleeExpr = translateExpression(syncCall.callee, returnType, subst, AEsubst)
+    val callExpr = translateExpression(syncCall, returnType, subst, AEsubst)
 
     if(syncCall.callee is ThisExp)
         return SyncCallStmt(loc, calleeExpr, callExpr as SyncCallExpr)

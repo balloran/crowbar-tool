@@ -68,7 +68,7 @@ class Main : CliktCommand() {
     private val tmp        by   option("--tmp", "-t", help="Path to a directory used to store .smt and counterexample files").path().default(Paths.get(tmpPath))
     private val smtCmd     by   option("--smt", "-s", help="Command to start SMT solver").default(smtPath)
     private val verbose    by   option("--verbose", "-v", help="Verbosity output level").int().restrictTo(Verbosity.values().indices).default(Verbosity.NORMAL.ordinal)
-    private val deductType by   option("--deduct", "-d", help="Used deductive system").choice("PostInv","LocalType", "AbstractExec").convert { when(it){"PostInv" -> PostInvType::class; "LocalType" -> LocalTypeType::class; "Abstract" -> AbstractType::class; else -> throw Exception(); } }.default(PostInvType::class)
+    private val deductType by   option("--deduct", "-d", help="Used deductive system").choice("PostInv","LocalType", "Abstract").convert { when(it){"PostInv" -> PostInvType::class; "LocalType" -> LocalTypeType::class; "Abstract" -> AbstractType::class; else -> throw Exception(); } }.default(PostInvType::class)
     private val freedom    by   option("--freedom", "-fr", help="Performs a simple check for potentially deadlocking methods").flag()
     private val invFlag    by   option("--investigate", "-inv", help="Generate counterexamples for uncloseable branches").flag()
     private val conciseProofsFlag    by  option("--concise_proofs", "-cp", help="Generate concise proofs omitting unused declarations").flag()

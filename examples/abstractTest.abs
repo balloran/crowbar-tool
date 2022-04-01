@@ -14,8 +14,15 @@ module Test;
     ["assignable frameG"]
     ["abstract_expression g"]
 
-    Bool x = True;
-	if(x){
+    Bool g = True;
+
+    ["accessible footprintG"]
+    ["assignable frameG"]
+    ["abstract_expression f"]
+
+    Bool f = True;
+
+	if(g && f){
         ["accessible everything"]
         ["assignable everything"]
         ["abstract_statement P1"]
