@@ -37,7 +37,7 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : Mutable
 
         //This deals with the case of a last abstract expression (not good by the way) it will be changed and generalised or not...
 
-        output("\n$abstractElements")
+        //output("\n$abstractElements")
 
         var next = input
 
@@ -46,7 +46,7 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : Mutable
             next = org.abs_models.frontend.ast.SkipStmt()
         }
 
-        output("$abstractElements\n")
+        //output("$abstractElements\n")
 
         return abstractElements.foldRight(translateStatement(next, subst, AEsubst)) { nx, acc ->
             appendStmt(
@@ -171,7 +171,7 @@ fun translateAnnotation(input : Stmt) : MutableList<AEProgramElement>{
                 is AEStatement      -> {
                     abstractProg.add(
                         AEStmt(
-                            spec.name,
+                            ConcreteName(spec.name),
                             AELocSet(accessible.map{pair -> Pair(pair.first, AELocation(pair.second))}),
                             AELocSet(assignable.map{pair -> Pair(pair.first, AELocation(pair.second))}),
                             retBehavior
@@ -185,7 +185,7 @@ fun translateAnnotation(input : Stmt) : MutableList<AEProgramElement>{
                 is AEExpression     -> {
                     abstractProg.add(
                         AEExpr(
-                            spec.name,
+                            ConcreteName(spec.name),
                             AELocSet(accessible.map{pair -> Pair(pair.first, AELocation(pair.second))}),
                             AELocSet(assignable.map{pair -> Pair(pair.first, AELocation(pair.second))}),
                             excBehavior

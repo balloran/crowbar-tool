@@ -2,6 +2,7 @@ package org.abs_models.crowbar.rule
 
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.main.ADTRepos
+import org.abs_models.crowbar.main.output
 import org.abs_models.crowbar.tree.SymbolicTree
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnionType
@@ -42,7 +43,9 @@ abstract class Rule(
 
         //matching
         val cond = MatchCondition()
+
         match(input.modality.remainder, conclusion.remainder, cond)
+
         match(input.modality.target, conclusion.target, cond)
 
         //caching

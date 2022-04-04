@@ -55,7 +55,10 @@ fun match(concrete : Anything, pattern : Anything, matchCond : MatchCondition) {
         for (field in concrete::class.java.declaredFields) {
             field.isAccessible = true
 
+            //output("field: ${field}")
+
             if (List::class.java.isAssignableFrom(field.type)) {
+                //output("chat1 field: ${field}")
                 @Suppress("UNCHECKED_CAST")
                 val f1: List<Anything> = field.get(concrete) as List<Anything>
                 @Suppress("UNCHECKED_CAST")
@@ -68,8 +71,10 @@ fun match(concrete : Anything, pattern : Anything, matchCond : MatchCondition) {
             //Because we do not match classes from outside our Anything hierarchy, we must compare them using equality
             //This is for, e.g., Strings used for variable names and constants
             else if (!Anything::class.java.isAssignableFrom(field.type)) {
+                //output("chat2 field: ${field}")
                 val f1 = field.get(concrete)
                 val f2 = field.get(pattern)
+                output("f1 ${f1::class} $f1 \nf2 ${f2::class} $f2")
                 if(f2 is AbstractVar && f1 is Anything){
                     matchCond.map[f2] = f1
                 } else if (f1 != f2) {
@@ -77,6 +82,7 @@ fun match(concrete : Anything, pattern : Anything, matchCond : MatchCondition) {
                     return
                 }
             } else {
+                //output("chat field: ${field}")
                 val next1 = field.get(concrete) as Anything
                 val next2 = field.get(pattern) as Anything
                 //output("\n$next1 \n$next2 \n")

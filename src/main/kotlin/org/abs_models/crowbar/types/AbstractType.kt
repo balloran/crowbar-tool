@@ -75,10 +75,10 @@ interface AbstractType : DeductType{
             exitProcess(-1)
         }
 
-        output("${model.mainBlock}")
+        //output("${model.mainBlock}")
         val v = appendStmt(translateStatement(model.mainBlock, emptyMap()), SkipStmt)
-        output("\n$v")
-        output("\n${v.prettyPrint()}")
+        //output("\n$v")
+        //output("\n${v.prettyPrint()}")
         return SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(v, PostInvariantPair(True, True)), listOf()), emptyList())
     }
 
@@ -100,7 +100,7 @@ data class AbstractAbstractVar(val name : String) : AbstractType, AbstractVar{
 }
 
 class AESimpleAbstractAssign(repos: Repository) : Rule(Modality(
-    SeqStmt(AEStmt("P", LocationAbstractVar("ASSIGN"), LocationAbstractVar("ACCESS"), PhiAbstractVar("RET")), StmtAbstractVar("CONT")),
+    SeqStmt(AEStmt(AbstractName("P"), LocationAbstractVar("ASSIGN"), LocationAbstractVar("ACCESS"), PhiAbstractVar("RET")), StmtAbstractVar("CONT")),
     AbstractAbstractVar("TYPE"))){
 
     override fun transform(cond: MatchCondition, input: SymbolicState): List<SymbolicTree> {

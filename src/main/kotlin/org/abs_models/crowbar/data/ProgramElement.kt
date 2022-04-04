@@ -374,7 +374,7 @@ data class AEProgramElementAbstractVar(val name : String) : AEProgramElement, Ab
  */
 
 data class AEStmt(
-    val name : String,
+    val name : ConcreteName,
     val accessible : Location,
     val assignable : Location,
     val retBehavior : Phi)
@@ -390,7 +390,7 @@ data class AEStmt(
  */
 
 data class AEExpr(
-    val name : String,
+    val name : ConcreteName,
     val accessible : Location,
     val assignable : Location,
     val excBehavior : Phi)

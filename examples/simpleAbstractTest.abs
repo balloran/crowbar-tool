@@ -1,0 +1,10 @@
+module Simple;
+
+["ae_specvars locset footprintQ, frameQ, relevantLocs"]
+
+{
+    ["accessible footprintQ"]
+    ["assignable frameQ"]
+    ["abstract_statement Q"]
+    skip;
+}

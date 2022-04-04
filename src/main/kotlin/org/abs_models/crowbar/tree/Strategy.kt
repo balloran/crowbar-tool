@@ -2,6 +2,7 @@ package org.abs_models.crowbar.tree
 
 import org.abs_models.crowbar.data.DeductType
 import org.abs_models.crowbar.main.Repository
+import org.abs_models.crowbar.main.output
 import org.abs_models.crowbar.rule.Rule
 import org.abs_models.crowbar.types.*
 import kotlin.reflect.KClass
@@ -15,12 +16,15 @@ The default strategy just tries all rules in the given order
  */
 class DefaultStrategy(private val rules: List<Rule>) : Strategy{
     override fun execute(symbolicNode: SymbolicNode){
+        //output("${symbolicNode}\n")
         if(symbolicNode.children.isNotEmpty()) { //if we are not in a leaf, symbolically execute every branch
             symbolicNode.children.filterIsInstance<SymbolicNode>().forEach { execute(it) }
         } else {
             //this is a depth first strategy: apply the matching rule and then recurse on the result
             for (rule in rules) {
+                output("$rule")
                 if (rule.isApplicable(symbolicNode.content)) {
+                    output("$rule")
                     val next = rule.apply(symbolicNode.content)
                     if (next != null) {
                         if(symbolicNode.info is LeafInfo) {

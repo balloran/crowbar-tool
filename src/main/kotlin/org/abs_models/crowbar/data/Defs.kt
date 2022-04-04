@@ -36,3 +36,10 @@ data class ConcreteExceptionScope(val scopes : AbsBranchList, val finally : Stmt
 /* This is a wrapper around Set<String> to have it in the Anything hierarchy for matching */
 open class ConcreteStringSet(val vals : Set<String> = emptySet()) : Anything
 data class AbstractStringSet(val name : String) : ConcreteStringSet(), AbstractVar
+
+/* This is a wrapper aroung name of Abstract Program Elements to have it in the Anything hierarchy for matching */
+open class ConcreteName(open val name : String) : Anything{
+    override fun prettyPrint(): String = name
+    override fun toString(): String = name
+}
+data class AbstractName(override val name: String) : ConcreteName(name), AbstractVar
