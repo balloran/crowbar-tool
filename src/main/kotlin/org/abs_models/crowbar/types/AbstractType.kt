@@ -6,6 +6,8 @@ import org.abs_models.crowbar.data.SkipStmt
 import org.abs_models.crowbar.interfaces.translateExpression
 import org.abs_models.crowbar.interfaces.translateStatement
 import org.abs_models.crowbar.main.*
+import org.abs_models.crowbar.rule.MatchCondition
+import org.abs_models.crowbar.rule.Rule
 import org.abs_models.crowbar.tree.*
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.UnknownType
@@ -91,4 +93,17 @@ interface AbstractType : DeductType{
 
 object EmptyAbstractType : AbstractType{
 
+}
+
+data class AbstractAbstractVar(val name : String) : AbstractType, AbstractVar{
+    override fun prettyPrint(): String = name
+}
+
+class AESimpleAbstractAssign(repos: Repository) : Rule(Modality(
+    SeqStmt(AEStmt("P", LocationAbstractVar("ASSIGN"), LocationAbstractVar("ACCESS"), PhiAbstractVar("RET")), StmtAbstractVar("CONT")),
+    AbstractAbstractVar("TYPE"))){
+
+    override fun transform(cond: MatchCondition, input: SymbolicState): List<SymbolicTree> {
+        TODO("Not yet implemented")
+    }
 }

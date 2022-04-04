@@ -411,6 +411,7 @@ fun apply(update: UpdateElement, input: LogicElement) : LogicElement {
         is EmptyUpdate -> input
         is ElementaryUpdate -> subst(input, update.lhs, update.rhs)
         is ChainUpdate -> apply(update.left, apply(update.right, input))
+        is AbstractUpdate -> input
         else -> input
     }
 }

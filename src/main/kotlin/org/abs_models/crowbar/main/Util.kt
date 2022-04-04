@@ -121,8 +121,9 @@ fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>, defaul
             }
 
             if(spec is AEDis){
-                var aux = Predicate("disjoint", spec.terms.map { LocSet(it.getName()) })
-                ret = And(ret, aux)
+                //var aux = Predicate("disjoint", spec.terms.map { LocSet(it.getName()) })
+                //ret = And(ret, aux)
+                // TODO Many things to do there not even sure what now... :)
             }
             else if(spec is AEMut){
 

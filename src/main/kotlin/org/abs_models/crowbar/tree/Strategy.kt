@@ -49,6 +49,7 @@ fun getStrategy(clazz: KClass<out DeductType>, repos: Repository) : Strategy =
     when(clazz){
         PostInvType::class   -> nextPITStrategy(repos)
         LocalTypeType::class -> nextLTTStrategy(repos)
+        AbstractType::class -> nextAEStrategy(repos)
         else                 -> throw Exception("unsupported type $clazz")
     }
 
@@ -64,3 +65,7 @@ fun nextLTTStrategy(repos: Repository) : Strategy =
     DefaultStrategy(listOf(LTTBranch, LTTSyncAssign(repos), LTTLocAssign(repos), LTTAllocAssign(repos),
                            LTTCallAssign(repos), LTTReturn, LTTSkip, LTTIf, LTTAwait, LTTSkipSkip, LTTWhile,
                            LTTScopeSkip))
+
+//abstract execution
+fun nextAEStrategy(repos:Repository): Strategy =
+    DefaultStrategy(listOf(AESimpleAbstractAssign(repos)))

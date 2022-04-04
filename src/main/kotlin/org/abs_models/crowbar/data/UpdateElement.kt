@@ -22,3 +22,11 @@ data class ElementaryUpdate(val lhs : ProgVar, val rhs : Term) : UpdateElement {
     override fun assigns(v : ProgVar) : Boolean = lhs == v
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + lhs.iterate(f) + rhs.iterate(f)
 }
+
+/**
+ *  Abstract Updates represent abstract updates needed for abstract executions.
+ */
+
+data class AbstractUpdate(val name : String) : UpdateElement{
+    override fun assigns(v: ProgVar): Boolean = true
+}

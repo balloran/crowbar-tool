@@ -24,7 +24,7 @@ import org.abs_models.frontend.typechecker.UnknownType
  *   Translates the ABS AST into our IR
  */
 
-fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : MutableMap<ProgVar, AbstractExpr> = mutableMapOf() ) : org.abs_models.crowbar.data.Stmt {
+fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : MutableMap<ProgVar, AEExpr> = mutableMapOf() ) : org.abs_models.crowbar.data.Stmt {
     if(input == null) return SkipStmt
     val returnType =
         if(input.contextMethod != null) input.contextMethod.type
@@ -41,8 +41,8 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : Mutable
 
         var next = input
 
-        if (abstractElements.lastOrNull() is AbstractExpr && input is VarDeclStmt){
-            AEsubst[ProgVar(input.varDecl.name, input.varDecl.type)] = abstractElements.removeLast() as AbstractExpr
+        if (abstractElements.lastOrNull() is AEExpr && input is VarDeclStmt){
+            AEsubst[ProgVar(input.varDecl.name, input.varDecl.type)] = abstractElements.removeLast() as AEExpr
             next = org.abs_models.frontend.ast.SkipStmt()
         }
 
@@ -50,7 +50,7 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : Mutable
 
         return abstractElements.foldRight(translateStatement(next, subst, AEsubst)) { nx, acc ->
             appendStmt(
-                nx as AbstractStmt,
+                nx as AEStmt,
                 acc
             )
         }
@@ -147,12 +147,12 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : Mutable
  *  Function to extract abstract program elements from a statement ,it returns a list of abstract program elements while cleaning the input of its annotations
  */
 
-fun translateAnnotation(input : Stmt) : MutableList<AbstractProgramElement>{
-    val abstractProg : MutableList<AbstractProgramElement> = emptyList<AbstractProgramElement>().toMutableList()
+fun translateAnnotation(input : Stmt) : MutableList<AEProgramElement>{
+    val abstractProg : MutableList<AEProgramElement> = emptyList<AEProgramElement>().toMutableList()
 
     var spec : AESpec
 
-    var accessible : List<String> = emptyList()
+    var accessible : List<Pair<Boolean, String>> = emptyList()
     var assignable : List<Pair<Boolean, String>> = emptyList()
     var retBehavior : Phi = PhiFalse
     var excBehavior : Phi = PhiFalse
@@ -169,20 +169,34 @@ fun translateAnnotation(input : Stmt) : MutableList<AbstractProgramElement>{
 
             when(spec){
                 is AEStatement      -> {
-                    abstractProg.add(AbstractStmt(spec.name, accessible, assignable, retBehavior))
+                    abstractProg.add(
+                        AEStmt(
+                            spec.name,
+                            AELocSet(accessible.map{pair -> Pair(pair.first, AELocation(pair.second))}),
+                            AELocSet(assignable.map{pair -> Pair(pair.first, AELocation(pair.second))}),
+                            retBehavior
+                        )
+                    )
                     accessible = emptyList()
                     assignable = emptyList()
                     retBehavior = PhiFalse
                     excBehavior = PhiFalse
                 }
                 is AEExpression     -> {
-                    abstractProg.add(AbstractExpr(spec.name, accessible, assignable, excBehavior))
+                    abstractProg.add(
+                        AEExpr(
+                            spec.name,
+                            AELocSet(accessible.map{pair -> Pair(pair.first, AELocation(pair.second))}),
+                            AELocSet(assignable.map{pair -> Pair(pair.first, AELocation(pair.second))}),
+                            excBehavior
+                        )
+                    )
                     accessible = emptyList()
                     assignable = emptyList()
                     retBehavior = PhiFalse
                     excBehavior = PhiFalse
                 }
-                is AEAccessible     -> accessible += spec.id_locs.map { it.getName() }
+                is AEAccessible     -> accessible += spec.id_locs.map { Pair(false,it.getName()) }
                 is AEAssignable     -> assignable += spec.id_locs.map { if(it is AEHasToLoc)Pair(true, it.getName()) else Pair(false, it.getName()) }
                 is AEBehavior    -> output("Behaviors not yet supported, ignored for now.")
                 else                -> continue@loop
@@ -196,7 +210,7 @@ fun translateAnnotation(input : Stmt) : MutableList<AbstractProgramElement>{
 }
 
 
-fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>, AEsubst : MutableMap<ProgVar, AbstractExpr> = mutableMapOf()) : Expr {
+fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>, AEsubst : MutableMap<ProgVar, AEExpr> = mutableMapOf()) : Expr {
 
     val converted = when(input){
         is FieldUse -> {
@@ -341,7 +355,7 @@ fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>,
     return converted
 }
 
-fun translateGuard(input: Guard, returnType: Type, subst: Map<String, Expr>, AEsubst: MutableMap<ProgVar, AbstractExpr> = mutableMapOf()) : Expr =
+fun translateGuard(input: Guard, returnType: Type, subst: Map<String, Expr>, AEsubst: MutableMap<ProgVar, AEExpr> = mutableMapOf()) : Expr =
     when(input){
         is ExpGuard -> translateExpression(input.pureExp, returnType, subst, AEsubst)
         is AndGuard -> SExpr("&&",listOf(translateGuard(input.left, returnType, subst, AEsubst), translateGuard(input.right, returnType, subst, AEsubst)))
@@ -353,7 +367,7 @@ fun translateGuard(input: Guard, returnType: Type, subst: Map<String, Expr>, AEs
         else -> throw Exception("Guards ${input::class} are not coreABS" )
     }
 
-fun translatePattern(pattern : Pattern, overrideType : Type, returnType:Type, subst: Map<String, Expr>, AEsubst: MutableMap<ProgVar, AbstractExpr> = mutableMapOf()) : Expr =
+fun translatePattern(pattern : Pattern, overrideType : Type, returnType:Type, subst: Map<String, Expr>, AEsubst: MutableMap<ProgVar, AEExpr> = mutableMapOf()) : Expr =
     when (pattern) {
         is PatternVarUse -> ProgVar(pattern.name, pattern.type)
         is PatternVar -> ProgVar(pattern.`var`.name, pattern.type)
@@ -393,7 +407,7 @@ fun extractResolves(stmt: Stmt): ConcreteStringSet{
 }
 
 /* We need to perform the rewritting on sync call ourselves as the version of the compiler we use still uses the old broken location types */
-fun desugar(loc: Location, type: Type, syncCall: SyncCall, returnType :Type, subst: Map<String, Expr>, AEsubst: MutableMap<ProgVar, AbstractExpr> = mutableMapOf()) : org.abs_models.crowbar.data.Stmt{
+fun desugar(loc: Location, type: Type, syncCall: SyncCall, returnType :Type, subst: Map<String, Expr>, AEsubst: MutableMap<ProgVar, AEExpr> = mutableMapOf()) : org.abs_models.crowbar.data.Stmt{
     val calleeExpr = translateExpression(syncCall.callee, returnType, subst, AEsubst)
     val callExpr = translateExpression(syncCall, returnType, subst, AEsubst)
 

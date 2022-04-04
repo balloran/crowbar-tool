@@ -1,5 +1,6 @@
 package org.abs_models.crowbar.data
 
+import org.abs_models.frontend.ast.Exp
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
 
@@ -362,21 +363,25 @@ data class ReturnVar(val vParam : String, override val concrType: Type) : ProgVa
  *  AbstractProgramElement are either abstract statement or abstract expressions.
  */
 
-interface AbstractProgramElement : ProgramElement
+interface AEProgramElement : ProgramElement
+
+data class AEProgramElementAbstractVar(val name : String) : AEProgramElement, AbstractVar{
+    override fun prettyPrint(): String = name
+}
 
 /**
  *  Abstract statement is a new type of statement used to represent a statement.
  */
 
-data class AbstractStmt(
+data class AEStmt(
     val name : String,
-    val accessible : List<String>,
-    val assignable : List<Pair<Boolean, String>>,
+    val accessible : Location,
+    val assignable : Location,
     val retBehavior : Phi)
-    : Stmt, AbstractProgramElement{
+    : Stmt, AEProgramElement{
 
     override fun prettyPrint(): String {
-        return "accessible $accessible; assignable ${assignable.map { pair -> if(pair.first){"hasTo(${pair.second})"}else{"${pair.second}"}}}; abstract_statement $name"
+        return "accessible ${accessible.prettyPrint()}; assignable ${assignable.prettyPrint()}; abstract_statement $name"
     }
 }
 
@@ -384,17 +389,17 @@ data class AbstractStmt(
  *  AbstractExpr is new type of expression used to represent abstract expressions
  */
 
-data class AbstractExpr(
+data class AEExpr(
     val name : String,
-    val accessible : List<String>,
-    val assignable : List<Pair<Boolean, String>>,
+    val accessible : Location,
+    val assignable : Location,
     val excBehavior : Phi)
-    : Expr, AbstractProgramElement {
+    : Expr, AEProgramElement {
 
     override var absExp: org.abs_models.frontend.ast.Exp? = null
 
     override fun prettyPrint(): String {
-        return "accessible $accessible; assignable ${assignable.map { pair -> if(pair.first){"hasTo(${pair.second})"}else{"${pair.second}"}}}; abstract_expression $name"
+        return "accessible ${accessible.prettyPrint()}; assignable ${assignable.prettyPrint()}; abstract_expression $name"
     }
 
 
@@ -402,25 +407,31 @@ data class AbstractExpr(
 
 
 /**
- *  LocSet is the term representing abstract location set in formula, it might inherit from Location later and many other things
+ *  AELocSet is the type of location sets used in abstract program elements.
  */
 
-class LocSet(val name: String) : Term{
+class AELocSet(val locs : List<Pair<Boolean, Location>>) : Location{
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+    override var absExp: org.abs_models.frontend.ast.Exp? = null
 
-        other as LocSet
-
-        return name == other.name
+    override fun prettyPrint(): String {
+        return "${locs.map { pair ->
+            if (pair.first) {
+                "hasTo(${pair.second.prettyPrint()}"
+            } else {
+                "${pair.second.prettyPrint()}"
+            }
+        }
+        }"
     }
+}
 
-    override fun hashCode(): Int {
-        return name.hashCode()
+class AELocation(val name: String) : Location{
+    override var absExp: org.abs_models.frontend.ast.Exp? = null
+
+    override fun prettyPrint(): String {
+        return name
     }
-
-    override fun toSMT(indent: String): String = name
 }
 
 /**
@@ -428,6 +439,13 @@ class LocSet(val name: String) : Term{
  */
 
 interface Phi : Term
+
+data class PhiAbstractVar(val name :String) : Phi, AbstractVar{
+
+    override fun toSMT(indent: String): String {
+        TODO("Not yet implemented")
+    }
+}
 
 object PhiFalse : Phi{
 

@@ -2,6 +2,7 @@ package org.abs_models.crowbar.rule
 
 import org.abs_models.crowbar.data.AbstractVar
 import org.abs_models.crowbar.data.Anything
+import org.abs_models.crowbar.main.output
 import kotlin.reflect.full.superclasses
 
 /*
@@ -36,6 +37,7 @@ fun match(concrete : Anything, pattern : Anything, matchCond : MatchCondition) {
                     return
                 }
                 matchCond.map[pattern] = concrete
+                //output("match $concrete with $pattern.")
                 return
             } else {
                 matchCond.failReason = "AbstractVar ${pattern.prettyPrint()} failed unification because of a type error: ${concrete.prettyPrint()}"
@@ -77,6 +79,7 @@ fun match(concrete : Anything, pattern : Anything, matchCond : MatchCondition) {
             } else {
                 val next1 = field.get(concrete) as Anything
                 val next2 = field.get(pattern) as Anything
+                //output("\n$next1 \n$next2 \n")
                 if (next1 != concrete && next2 != concrete) {
                     inMatch(next1, next2, matchCond)
                     if (matchCond.failure) return
