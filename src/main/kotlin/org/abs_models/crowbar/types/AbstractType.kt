@@ -87,9 +87,6 @@ interface AbstractType : DeductType{
         return totallyEmptyNode()
     }
 
-    fun extractAbstractNode(): SymbolicNode{
-        return totallyEmptyNode()
-    }
 }
 
 object EmptyAbstractType : AbstractType{
@@ -107,7 +104,7 @@ data class AbstractPost(val post : Formula) : AbstractType{
 }
 
 class AESimpleAbstractAssign(repos: Repository) : Rule(Modality(
-    SeqStmt(AEStmt(AbstractName("P"), LocationAbstractVar("ASSIGN"), LocationAbstractVar("ACCESS"), PhiAbstractVar("RET")), StmtAbstractVar("CONT")),
+    SeqStmt(AEStmt(AbstractName("P"), LocationAbstractVar("ASSIGN"), LocationAbstractVar("ACCESS"), PhiAbstractVar("NORM"),PhiAbstractVar("RET")), StmtAbstractVar("CONT")),
     AbstractAbstractVar("TYPE"))){
 
     override fun transform(cond: MatchCondition, input: SymbolicState): List<SymbolicTree> {

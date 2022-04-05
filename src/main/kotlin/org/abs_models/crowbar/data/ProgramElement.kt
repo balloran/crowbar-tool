@@ -377,6 +377,7 @@ data class AEStmt(
     val name : ConcreteName,
     val accessible : Location,
     val assignable : Location,
+    val normBehavior: Phi,
     val retBehavior : Phi)
     : Stmt, AEProgramElement{
 
@@ -410,7 +411,7 @@ data class AEExpr(
  *  AELocSet is the type of location sets used in abstract program elements.
  */
 
-class AELocSet(val locs : List<Pair<Boolean, Location>>) : Location{
+class AELocSet(val locs : Set<Pair<Boolean, Location>>) : Location{
 
     override var absExp: org.abs_models.frontend.ast.Exp? = null
 
@@ -426,7 +427,7 @@ class AELocSet(val locs : List<Pair<Boolean, Location>>) : Location{
     }
 }
 
-class AELocation(val name: String) : Location{
+data class AELocation(val name: String) : Location{
     override var absExp: org.abs_models.frontend.ast.Exp? = null
 
     override fun prettyPrint(): String {
@@ -451,6 +452,11 @@ object PhiFalse : Phi{
 
     override fun toSMT(indent: String): String = "false"
 
+}
+
+object PhiTrue : Phi{
+
+    override fun toSMT(indent: String): String = "true"
 }
 
 

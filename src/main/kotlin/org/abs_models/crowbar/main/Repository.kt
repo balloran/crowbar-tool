@@ -401,6 +401,20 @@ data class Repository(val model : Model?,
     }
 
 	fun populateAbstractReqs(model: Model) {
-		extractGlobalSpec(model.mainBlock)
+		val mainSpec = extractGlobalSpec(model.mainBlock)
+		classFrames["main"] = mainSpec.first
+		// This to be changed once I have decided what I do with phis
+		MainReqs = True
+		model.mainBlock.annotationList = List()
+
+		for(moduleDecl in model.moduleDecls) {
+			if(moduleDecl.name.startsWith("ABS.")) continue
+			for (decl in moduleDecl.decls) {
+				if (decl is ClassDecl) {
+					val spec = extractGlobalSpec(decl)
+					classFrames["${moduleDecl.name}${decl.name}"] = spec.first
+				}
+			}
+		}
 	}
 }

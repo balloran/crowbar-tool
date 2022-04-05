@@ -96,16 +96,14 @@ fun extractInheritedSpec(mSig : MethodSig, expectedSpec : String, default:Formul
     return direct
 }
 
-fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>, default:Formula = True): Formula{
-    var ret: Formula =True
+fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>) : Pair<MutableMap<Location, AELocSet>, AEPhi>{
+    val ret = mutableMapOf<Location, AELocSet>()
 
-    //output("\n$mainblock\n")
-
-    //output("\n${mainblock.nodeAnnotations}\n")
+    val locations = mutableSetOf<Location>()
+    val disjoints = mutableSetOf<List<Location>>()
+    var postcond : AEPhi = AETrue
 
     var spec : AESpec
-
-    val currentGlobalSpec : MutableList<AEGlobal> = emptyList<AEGlobal>().toMutableList()
 
     for(annotation in mainblock.nodeAnnotations){
         if(annotation.type.isStringType){
@@ -113,28 +111,56 @@ fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>, defaul
                 spec = AbstractParser.parse((annotation.value as StringLiteral).content)
             }
             catch (e : Exception) {
-                output("Exception in string annotation parsing, continuing: ${e.message}")
+                output("Exception in string annotation parsing for main, continuing: ${e.message}")
                 continue
             }
-            if(!(spec is AEGlobal)){
-                throw Exception("Local constraint found in a global specification: $spec")
+
+            when(spec){
+                is AELocDec         -> {
+                    locations.addAll(spec.terms.map { term -> AELocation(term.getName()) })
+                }
+                is AEDis            ->{
+                    disjoints.add(spec.terms.map { term -> AELocation(term.getName()) })
+                }
+                is AEForDec         -> {
+                    // Formula declaration are ignored for now
+                    continue
+                }
+                is AEMut            -> {
+                    // Mutex declaration is ignored for now
+                    continue
+                }
+                is AENormBehavior   -> {
+                    postcond = spec.phi
+                }
             }
+        }
+    }
 
-            if(spec is AEDis){
-                //var aux = Predicate("disjoint", spec.terms.map { LocSet(it.getName()) })
-                //ret = And(ret, aux)
-                // TODO Many things to do there not even sure what now... :)
+    for(location in locations){
+        ret[location] = AELocSet(locations.map{ loc -> Pair(false, loc) }.filter { it.second != location }.toSet())
+    }
+
+    for(disjoint in disjoints){
+        for(location in disjoint){
+            if(ret.containsKey(location)){
+                var locset = ret[location]!!.locs.toMutableSet()
+                locset.removeAll(disjoint.map{ loc -> Pair(false, loc)}.toSet())
+                ret[location] = AELocSet(locset)
             }
-            else if(spec is AEMut){
-
+            else{
+                // Deal with non abstract lccation here.
             }
-
-
 
         }
     }
 
-    return ret
+    for(location in ret.keys){
+        output("${location.prettyPrint()} ${ret[location]!!.prettyPrint()}")
+    }
+
+    return Pair(ret, postcond)
+
 }
 
 fun<T : ASTNode<out ASTNode<*>>?> extractSpec(decl : ASTNode<T>, expectedSpec : String, returnType: Type, default:Formula = True, multipleAllowed:Boolean = true) : Formula {

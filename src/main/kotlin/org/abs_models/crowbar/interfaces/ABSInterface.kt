@@ -152,10 +152,11 @@ fun translateAnnotation(input : Stmt) : MutableList<AEProgramElement>{
 
     var spec : AESpec
 
-    var accessible : List<Pair<Boolean, String>> = emptyList()
-    var assignable : List<Pair<Boolean, String>> = emptyList()
+    var accessible : MutableSet<Pair<Boolean, String>> = mutableSetOf()
+    var assignable : MutableSet<Pair<Boolean, String>> = mutableSetOf()
     var retBehavior : Phi = PhiFalse
     var excBehavior : Phi = PhiFalse
+    var normBehavior : Phi = PhiTrue
 
     loop@ for(annotation in input.annotations){
         if(annotation.value is StringLiteral){
@@ -172,34 +173,37 @@ fun translateAnnotation(input : Stmt) : MutableList<AEProgramElement>{
                     abstractProg.add(
                         AEStmt(
                             ConcreteName(spec.name),
-                            AELocSet(accessible.map{pair -> Pair(pair.first, AELocation(pair.second))}),
-                            AELocSet(assignable.map{pair -> Pair(pair.first, AELocation(pair.second))}),
+                            AELocSet(accessible.map{pair -> Pair(pair.first, AELocation(pair.second))}.toSet()),
+                            AELocSet(assignable.map{pair -> Pair(pair.first, AELocation(pair.second))}.toSet()),
+                            normBehavior,
                             retBehavior
                         )
                     )
-                    accessible = emptyList()
-                    assignable = emptyList()
+                    accessible = mutableSetOf()
+                    assignable = mutableSetOf()
                     retBehavior = PhiFalse
+                    normBehavior = PhiTrue
                     excBehavior = PhiFalse
                 }
                 is AEExpression     -> {
                     abstractProg.add(
                         AEExpr(
                             ConcreteName(spec.name),
-                            AELocSet(accessible.map{pair -> Pair(pair.first, AELocation(pair.second))}),
-                            AELocSet(assignable.map{pair -> Pair(pair.first, AELocation(pair.second))}),
+                            AELocSet(accessible.map{pair -> Pair(pair.first, AELocation(pair.second))}.toSet()),
+                            AELocSet(assignable.map{pair -> Pair(pair.first, AELocation(pair.second))}.toSet()),
                             excBehavior
                         )
                     )
-                    accessible = emptyList()
-                    assignable = emptyList()
+                    accessible = mutableSetOf()
+                    assignable = mutableSetOf()
                     retBehavior = PhiFalse
                     excBehavior = PhiFalse
                 }
-                is AEAccessible     -> accessible += spec.id_locs.map { Pair(false,it.getName()) }
-                is AEAssignable     -> assignable += spec.id_locs.map { if(it is AEHasToLoc)Pair(true, it.getName()) else Pair(false, it.getName()) }
-                is AEBehavior    -> output("Behaviors not yet supported, ignored for now.")
-                else                -> continue@loop
+                is AEAccessible     -> accessible.addAll(spec.id_locs.map { Pair(false,it.getName()) })
+                is AEAssignable     -> assignable.addAll(spec.id_locs.map { if(it is AEHasToLoc)Pair(true, it.getName()) else Pair(false, it.getName()) })
+                is AERetBehavior    -> output("Return Behavior not yet supported, ignored for now.")
+                is AENormBehavior   -> output("Normal Behavior not yet supported, ignored for now.")
+                else                -> output("Unusual annotation, ignored ${spec.prettyPrint()}")
             }
         }
     }
