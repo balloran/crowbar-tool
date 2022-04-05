@@ -111,7 +111,6 @@ class AESimpleAbstractAssign(repos: Repository) : Rule(Modality(
     AbstractAbstractVar("TYPE"))){
 
     override fun transform(cond: MatchCondition, input: SymbolicState): List<SymbolicTree> {
-        output("abstract transformation happened.")
         return listOf(SymbolicNode(
             SymbolicState(
                 input.condition,
@@ -126,3 +125,33 @@ class AESimpleAbstractAssign(repos: Repository) : Rule(Modality(
             info = NoInfo()))
     }
 }
+
+object AESkip : Rule(Modality(
+    SkipStmt,
+    AbstractPost(FormulaAbstractVar("POST")))) {
+
+    override fun transform(cond: MatchCondition, input: SymbolicState): List<SymbolicTree> {
+        val target = cond.map[FormulaAbstractVar("POST")] as Formula
+        val res = LogicNode(
+            input.condition,
+            UpdateOnFormula(input.update, target),
+            info = InfoSkipEnd(target)
+        )
+        return listOf(res)
+    }
+}
+
+object AESkipSkip : Rule(
+    Modality(
+    SeqStmt(SkipStmt, StmtAbstractVar("CONT")),
+    AbstractAbstractVar("TYPE"))
+) {
+
+    override fun transform(cond: MatchCondition, input: SymbolicState): List<SymbolicTree> {
+        val cont = cond.map[StmtAbstractVar("CONT")] as Stmt
+        val type = cond.map[AbstractAbstractVar("TYPE")] as AbstractType
+        val res = SymbolicNode(SymbolicState(input.condition, input.update, Modality(cont, type), input.exceptionScopes), info = InfoSkip())
+        return listOf(res)
+    }
+}
+
