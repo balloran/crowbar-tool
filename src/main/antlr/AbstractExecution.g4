@@ -15,6 +15,7 @@ HAS : 'hasTo';
 VAL : 'value';
 REQ : 'requires';
 RETB : 'return_behavior';
+NORMB : 'normal_behavior';
 VAR :  'ae_specvars';
 CON : 'ae_constraint';
 FOR : 'formula';
@@ -45,9 +46,10 @@ entry : global                          # global_spec
       | local                           # local_spec
       ;
 
-// The global specification introduces variables and constraints
+// The global specification introduces variables and constraints and for the main can specify its behaviour
 global : VAR vars                       # vars_spec
        | CON phi                        # constraint_spec
+       | behavior                       # global_behavior
        ;
 
 // Variables introduced are either locations or fomula.
@@ -89,8 +91,13 @@ local : APS aps_name                    # statement_local
       | APE ape_name                    # expression_local
       | ASS ass_list                    # assignable_local
       | ACC ids_loc                     # accessible_local
-      | RETB REQ formula                # return_local
+      | behavior                        # behavior_local
       ;
+
+// Behavior is used to specify behaviour of abstract programs and entire programs.
+behavior : RETB REQ formula             # return_behavior
+         | NORMB REQ formula            # normal_behavior
+         ;
 
 // Name of an abstrat statement
 aps_name : STRING;

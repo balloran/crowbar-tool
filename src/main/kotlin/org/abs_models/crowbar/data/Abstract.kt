@@ -110,6 +110,13 @@ class AERetBehavior(val phi : AEPhi) : AEBehavior{
     }
 }
 
+class AENormBehavior(val phi : AEPhi) : AEBehavior{
+
+    override fun toString(): String {
+        return "normal_behavior requires $phi"
+    }
+}
+
 /**
  *  AETerm stores terms of abstract specifications which can be abstract locations or formulas (phi).
  */

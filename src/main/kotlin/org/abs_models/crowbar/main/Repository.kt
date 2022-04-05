@@ -348,7 +348,8 @@ data class Repository(val model : Model?,
 					  val methodEnss : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
 					  val syncMethodReqs : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
 					  val syncMethodEnss : MutableMap<String,Pair<Formula, MethodSig>> = mutableMapOf(),
-					  var globalAbstractReqs : Formula = True){
+					  var MainReqs : Formula = True,
+					  val classFrames : MutableMap<String, MutableMap<Location, AELocSet>> = mutableMapOf()){
 
     fun populateClassReqs(model: Model) {
         for(moduleDecl in model.moduleDecls) {
@@ -400,6 +401,6 @@ data class Repository(val model : Model?,
     }
 
 	fun populateAbstractReqs(model: Model) {
-		this.globalAbstractReqs = extractGlobalSpec(model.mainBlock)
+		extractGlobalSpec(model.mainBlock)
 	}
 }

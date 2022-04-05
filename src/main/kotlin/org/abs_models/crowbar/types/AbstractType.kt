@@ -116,6 +116,8 @@ class AESimpleAbstractAssign(repos: Repository) : Rule(Modality(
                 input.condition,
                 ChainUpdate(input.update, AbstractUpdate(
                     cond.map[AbstractName("P")] as ConcreteName,
+                    // Here you're gonna use repository to generalize the locset according to the irrelevance rules
+                    // A priori no need for partial updatify if I build the rule well
                     cond.map[LocationAbstractVar("ASSIGN")] as AELocSet,
                     cond.map[LocationAbstractVar("ACCESS")] as AELocSet)),
                 Modality(

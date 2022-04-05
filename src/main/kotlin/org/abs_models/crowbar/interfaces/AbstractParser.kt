@@ -65,8 +65,12 @@ object AbstractParser : AbstractExecutionBaseVisitor<AESpec>() {
         return AEAccessible(ctx?.ids_loc()!!.accept(termConverter) as List<AELoc>)
     }
 
-    override fun visitReturn_local(ctx: AbstractExecutionParser.Return_localContext?): AESpec {
+    override fun visitReturn_behavior(ctx: AbstractExecutionParser.Return_behaviorContext?): AESpec {
         return AERetBehavior(ctx?.formula()!!.accept(termConverter) as AEPhi)
+    }
+
+    override fun visitNormal_behavior(ctx: AbstractExecutionParser.Normal_behaviorContext?): AESpec {
+        return AENormBehavior(ctx?.formula()!!.accept(termConverter) as AEPhi)
     }
 }
 
