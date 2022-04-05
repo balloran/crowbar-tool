@@ -27,6 +27,6 @@ data class ElementaryUpdate(val lhs : ProgVar, val rhs : Term) : UpdateElement {
  *  Abstract Updates represent abstract updates needed for abstract executions.
  */
 
-data class AbstractUpdate(val name : String) : UpdateElement{
+data class AbstractUpdate(val name : ConcreteName, val accessible : AELocSet, val assignable : AELocSet) : UpdateElement{
     override fun assigns(v: ProgVar): Boolean = true
 }

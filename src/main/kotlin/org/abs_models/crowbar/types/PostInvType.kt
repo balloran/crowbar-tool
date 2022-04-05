@@ -231,7 +231,7 @@ class PITLocAssign(repos: Repository) : PITAssign(repos,Modality(
         val target = cond.map[PostInvAbstractVar("TYPE")] as DeductType
         val info = InfoLocAssign(lhs, rhsExpr)
         val zeros  = divByZeroNodes(listOf(rhsExpr), remainder, input, repos)
-        output("\n$lhs\n $rhsExpr\n $rhs\n $remainder\n $target\n $info\n $zeros\n")
+        //output("\n$lhs\n $rhsExpr\n $rhs\n $remainder\n $target\n $info\n $zeros\n")
         return listOf(symbolicNext(lhs, rhs, remainder, target, input.condition, input.update, info, input.exceptionScopes)) + zeros
     }
 }

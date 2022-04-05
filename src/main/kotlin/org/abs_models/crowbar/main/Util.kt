@@ -274,7 +274,7 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
     output("Crowbar-v: symbolic execution tree:",Verbosity.V)
     output(node.debugString(0),Verbosity.V)
 
-    output("$node")
+    //output("$node")
 
     if(!node.finishedExecution()){
         System.err.println("could not finish symbolic execution")

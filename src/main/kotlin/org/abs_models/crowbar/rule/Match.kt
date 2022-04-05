@@ -40,6 +40,8 @@ fun match(concrete : Anything, pattern : Anything, matchCond : MatchCondition) {
                 //output("match $concrete with $pattern.")
                 return
             } else {
+                //output("pattern $pattern \nconcrete $concrete \nconcreteclass ${concrete::class}")
+                //output("${pattern::class.superclasses}")
                 matchCond.failReason = "AbstractVar ${pattern.prettyPrint()} failed unification because of a type error: ${concrete.prettyPrint()}"
                 return
             }
@@ -74,7 +76,7 @@ fun match(concrete : Anything, pattern : Anything, matchCond : MatchCondition) {
                 //output("chat2 field: ${field}")
                 val f1 = field.get(concrete)
                 val f2 = field.get(pattern)
-                output("f1 ${f1::class} $f1 \nf2 ${f2::class} $f2")
+                //output("f1 ${f1::class} $f1 \nf2 ${f2::class} $f2")
                 if(f2 is AbstractVar && f1 is Anything){
                     matchCond.map[f2] = f1
                 } else if (f1 != f2) {

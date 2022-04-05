@@ -90,6 +90,14 @@ class InfoLocAssign(val lhs: Location, val expression: Expr) : NodeInfo(isAnon =
 	override fun <ReturnType> accept(visitor: NodeInfoVisitor<ReturnType>) = visitor.visit(this)
 }
 
+/**
+ * 	This is a stub for the node info of abstract statements, I don't consider it to be supported right now.
+ */
+
+class InfoAbstract(val name: ConcreteName, val accessible : AELocSet, val assignable : AELocSet) : NodeInfo(isAnon = false, isHeapAnon = false){
+	override fun <ReturnType> accept(visitor: NodeInfoVisitor<ReturnType>) = visitor.visit(this)
+}
+
 class InfoGetAssign(val lhs: Location, val expression: Expr, val futureExpr: Term) : NodeInfo(isAnon = false, isHeapAnon = false) {
 	override fun <ReturnType> accept(visitor: NodeInfoVisitor<ReturnType>) = visitor.visit(this)
 	override val smtExpressions = listOf(futureExpr)
@@ -149,4 +157,5 @@ interface NodeInfoVisitor<ReturnType> {
     fun visit(info: InfoSkipEnd): ReturnType
     fun visit(info: InfoSyncCallAssign): ReturnType
     fun visit(info: NoInfo): ReturnType
+	fun visit(info: InfoAbstract): ReturnType
 }

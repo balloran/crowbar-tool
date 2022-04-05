@@ -8,28 +8,7 @@ import org.abs_models.crowbar.data.Location
 import org.abs_models.crowbar.data.ProgVar
 import org.abs_models.crowbar.data.SExpr
 import org.abs_models.crowbar.main.ADTRepos
-import org.abs_models.crowbar.tree.InfoAwaitUse
-import org.abs_models.crowbar.tree.InfoBranch
-import org.abs_models.crowbar.tree.InfoCallAssign
-import org.abs_models.crowbar.tree.InfoClassPrecondition
-import org.abs_models.crowbar.tree.InfoGetAssign
-import org.abs_models.crowbar.tree.InfoIfElse
-import org.abs_models.crowbar.tree.InfoIfThen
-import org.abs_models.crowbar.tree.InfoInvariant
-import org.abs_models.crowbar.tree.InfoLocAssign
-import org.abs_models.crowbar.tree.InfoLoopInitial
-import org.abs_models.crowbar.tree.InfoLoopPreserves
-import org.abs_models.crowbar.tree.InfoLoopUse
-import org.abs_models.crowbar.tree.InfoMethodPrecondition
-import org.abs_models.crowbar.tree.InfoNullCheck
-import org.abs_models.crowbar.tree.InfoObjAlloc
-import org.abs_models.crowbar.tree.InfoReturn
-import org.abs_models.crowbar.tree.InfoScopeClose
-import org.abs_models.crowbar.tree.InfoSkip
-import org.abs_models.crowbar.tree.InfoSkipEnd
-import org.abs_models.crowbar.tree.InfoSyncCallAssign
-import org.abs_models.crowbar.tree.NoInfo
-import org.abs_models.crowbar.tree.NodeInfoVisitor
+import org.abs_models.crowbar.tree.*
 import org.abs_models.frontend.typechecker.Type
 
 object NodeInfoRenderer : NodeInfoVisitor<String> {
@@ -149,6 +128,10 @@ object NodeInfoRenderer : NodeInfoVisitor<String> {
         val location = renderDeclLocation(info.lhs, type2str = true)
 
         return indent("$location = ${renderExp(info.expression)};")
+    }
+
+    override fun visit(info: InfoAbstract): String {
+        return indent("abstract_statement ${info.name.name}{${info.assignable} := ${info.accessible}};")
     }
 
     override fun visit(info: InfoGetAssign): String {

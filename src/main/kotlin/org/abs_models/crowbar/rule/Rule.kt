@@ -45,8 +45,9 @@ abstract class Rule(
         val cond = MatchCondition()
 
         match(input.modality.remainder, conclusion.remainder, cond)
-
+        //output("${cond.failure} ${cond.failReason}")
         match(input.modality.target, conclusion.target, cond)
+        //output("${cond.failure} ${cond.failReason}")
 
         //caching
         lastState = input

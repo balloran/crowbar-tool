@@ -22,7 +22,7 @@ class DefaultStrategy(private val rules: List<Rule>) : Strategy{
         } else {
             //this is a depth first strategy: apply the matching rule and then recurse on the result
             for (rule in rules) {
-                output("$rule")
+                //output("$rule")
                 if (rule.isApplicable(symbolicNode.content)) {
                     output("$rule")
                     val next = rule.apply(symbolicNode.content)
@@ -37,6 +37,7 @@ class DefaultStrategy(private val rules: List<Rule>) : Strategy{
                         }
                         symbolicNode.children = next
                         for (node in next) {
+                            //output("$node\n")
                             if (node is SymbolicNode)
                                 this.execute(node)
                         }
