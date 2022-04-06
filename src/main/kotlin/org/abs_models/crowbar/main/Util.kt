@@ -5,6 +5,7 @@ import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.Stmt
 import org.abs_models.crowbar.interfaces.AbstractParser
 import org.abs_models.crowbar.interfaces.translateExpression
+import org.abs_models.crowbar.interfaces.translatePhi
 import org.abs_models.crowbar.investigator.CounterexampleGenerator
 import org.abs_models.crowbar.tree.LogicNode
 import org.abs_models.crowbar.tree.StaticNode
@@ -96,7 +97,7 @@ fun extractInheritedSpec(mSig : MethodSig, expectedSpec : String, default:Formul
     return direct
 }
 
-fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>) : Pair<MutableMap<Location, AELocSet>, AEPhi>{
+fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>) : Pair<MutableMap<Location, AELocSet>, Formula>{
     val ret = mutableMapOf<Location, AELocSet>()
 
     val locations = mutableSetOf<Location>()
@@ -155,11 +156,13 @@ fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>) : Pair
         }
     }
 
+    /*
     for(location in ret.keys){
         output("${location.prettyPrint()} ${ret[location]!!.prettyPrint()}")
     }
+    */
 
-    return Pair(ret, postcond)
+    return Pair(ret, exprToForm(translatePhi(postcond, emptyMap())))
 
 }
 

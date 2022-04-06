@@ -1,6 +1,7 @@
 module Simple;
 
 ["ae_specvars locset footprintQ, frameQ, relevantLocs"]
+["normal_behavior requires (true && true)"]
 
 {
     ["accessible footprintQ"]
