@@ -222,6 +222,9 @@ fun translatePhi(input: AEPhi, subst: Map<String, Expr>, aeSubst: MutableMap<Pro
         is AEOr                 -> SExpr("||", listOf(translatePhi(input.left, subst, aeSubst), translatePhi(input.right, subst, aeSubst)))
         is AETrue               -> Const("true")
         is AEFalse              -> Const("false")
+        is AEPred               -> SExpr(input.op, listOf(translatePhi(input.right, subst, aeSubst), translatePhi(input.left, subst, aeSubst)))
+        is AEVar                -> ProgVar(input.id)
+        is AEInt                -> Const("${input.value}")
         else                    -> throw Exception("Unforeseen AEPhi in translatePhi : $input")
     }
 }

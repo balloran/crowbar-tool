@@ -224,7 +224,7 @@ data class AEAnd(val left : AEPhi, val right : AEPhi) : AEPhi{
     }
 }
 
-data class AEOr(val left : AEPhi, val right : AEPhi) :AEPhi{
+data class AEOr(val left : AEPhi, val right : AEPhi) : AEPhi{
 
     override fun prettyPrint(): String {
         return "(${left.prettyPrint()} or ${right.prettyPrint()})"
@@ -232,6 +232,40 @@ data class AEOr(val left : AEPhi, val right : AEPhi) :AEPhi{
 
     override fun toString(): String {
         return "AEOr($left, $right)"
+    }
+}
+
+// THose AEPhi are temporary it is just ot make it work for now
+data class AEPred(val op : String, val left : AEPhi, val right : AEPhi) : AEPhi{
+
+    override fun prettyPrint(): String {
+        return "${left.prettyPrint()} $op ${right.prettyPrint()}"
+    }
+
+    override fun toString(): String {
+        return "AEPred($op, $left, $right)"
+    }
+}
+
+data class AEInt(val value : Int) : AEPhi{
+
+    override fun prettyPrint(): String {
+        return "$value"
+    }
+
+    override fun toString(): String {
+        return "AEInt($value)"
+    }
+}
+
+data class AEVar(val id : String) : AEPhi{
+
+    override fun prettyPrint(): String {
+        return id
+    }
+
+    override fun toString(): String {
+        return "AEVar($id)"
     }
 }
 

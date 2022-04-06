@@ -1,11 +1,12 @@
 module Simple;
 
 ["ae_specvars locset footprintQ, frameQ, relevantLocs"]
-["normal_behavior requires (true && true)"]
+["normal_behavior requires (x >= 0)"]
 
 {
     ["accessible footprintQ"]
     ["assignable frameQ"]
     ["abstract_statement Q"]
     skip;
+    Int x = 0;
 }

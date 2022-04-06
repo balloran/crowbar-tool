@@ -37,12 +37,20 @@ OR: '||';
 IMPL: '->';
 NOT: '!';
 
+EQ: '==';
+GEQ: '>=';
+LEQ: '<=';
+GT: '>';
+LT: '<';
 
 // Special symbols
 DDOT : ':';
 COMMA : ',';
 LPAR : '(';
 RPAR : ')';
+
+// Integer
+INT : [0-9]+ ;
 
 // Strings
 STRING : [a-zA-Z0-9]+ ;
@@ -96,9 +104,19 @@ formula : LPAR formula RPAR                 # par_phi
         | formula AND formula               # and_phi
         | formula OR formula                # or_phi
         | id_formula VAL LPAR id_loc RPAR   # ae_phi
+        | predicate                         # pred_phi
         | TRUE                              # true_phi
         | FALSE                             # false_phi
         ;
+
+// Predicates on concrete variables.
+predicate : value op value ;
+
+// Concrete variables and integers.
+value : INT | STRING;
+
+// Operands for predicates.
+op: EQ | GEQ | GT | LEQ | LT;
 
 // Local specification can declare statement, expression, assignable, accessible and behavioral specification
 local : APS aps_name                    # statement_local

@@ -244,9 +244,6 @@ data class Predicate(val name : String, val params : List<Term> = emptyList()) :
                 boundParam1 = boundGeneric(getReturnType(params[0]),params[1])
             }
         }
-        else if(name == "mutex" || name == "disjoint"){
-            throw Exception("Translation of disjoint and mutex predicate to SMT is not yet covered. Exception raised with arguments $params")
-        }
 
         val list = listOf(boundParam0, boundParam1).fold("") { acc, nx -> acc + " ${nx.toSMT()}" }
         return getSMT(name, list)

@@ -111,6 +111,19 @@ class AbstractPhiParser : AbstractExecutionBaseVisitor<AEPhi>(){
     override fun visitFalse_phi(ctx: AbstractExecutionParser.False_phiContext?): AEPhi {
         return AEFalse
     }
+
+    override fun visitPredicate(ctx: AbstractExecutionParser.PredicateContext?): AEPhi {
+        return AEPred(ctx?.op()!!.text, ctx.value(0).accept(this), ctx.value(1).accept(this))
+    }
+
+    override fun visitValue(ctx: AbstractExecutionParser.ValueContext?): AEPhi {
+        return if (ctx?.INT() != null) {
+            AEInt(ctx.INT().text.toInt())
+        } else{
+            AEVar(ctx?.STRING()!!.text)
+        }
+    }
+
 }
 
 class AbstractTermParser : AbstractExecutionBaseVisitor<List<AETerm>>(){
