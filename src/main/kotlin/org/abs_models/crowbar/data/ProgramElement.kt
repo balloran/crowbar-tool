@@ -1,6 +1,5 @@
 package org.abs_models.crowbar.data
 
-import org.abs_models.frontend.ast.Exp
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
 
@@ -377,8 +376,8 @@ data class AEStmt(
     val name : ConcreteName,
     val accessible : Location,
     val assignable : Location,
-    val normBehavior: Phi,
-    val retBehavior : Phi)
+    val normBehavior: Expr,
+    val retBehavior : Expr)
     : Stmt, AEProgramElement{
 
     override fun prettyPrint(): String {
@@ -394,7 +393,7 @@ data class AEExpr(
     val name : ConcreteName,
     val accessible : Location,
     val assignable : Location,
-    val excBehavior : Phi)
+    val excBehavior : Expr)
     : Expr, AEProgramElement {
 
     override var absExp: org.abs_models.frontend.ast.Exp? = null
@@ -420,7 +419,7 @@ class AELocSet(val locs : Set<Pair<Boolean, Location>>) : Location{
             if (pair.first) {
                 "hasTo(${pair.second.prettyPrint()}"
             } else {
-                "${pair.second.prettyPrint()}"
+                pair.second.prettyPrint()
             }
         }
         }"
@@ -436,29 +435,13 @@ data class AELocation(val name: String) : Location{
 }
 
 /**
- *  Phi is the term representing abstract formulas (phi) in formula, it might change in the future
+ *  PhiExpr represents formula phi in behaviour requirements
  */
 
-interface Phi : Term
+data class PhiExpr(val id_formula : String, val loc : Location) : Expr{
 
-data class PhiAbstractVar(val name :String) : Phi, AbstractVar{
-
-    override fun toSMT(indent: String): String {
-        TODO("Not yet implemented")
-    }
+    override var absExp: org.abs_models.frontend.ast.Exp? = null
 }
-
-object PhiFalse : Phi{
-
-    override fun toSMT(indent: String): String = "false"
-
-}
-
-object PhiTrue : Phi{
-
-    override fun toSMT(indent: String): String = "true"
-}
-
 
 fun appendStmt(stmt : Stmt, add : Stmt) : Stmt {
     return when(stmt){

@@ -154,9 +154,9 @@ fun translateAnnotation(input : Stmt) : MutableList<AEProgramElement>{
 
     var accessible : MutableSet<Pair<Boolean, String>> = mutableSetOf()
     var assignable : MutableSet<Pair<Boolean, String>> = mutableSetOf()
-    var retBehavior : Phi = PhiFalse
-    var excBehavior : Phi = PhiFalse
-    var normBehavior : Phi = PhiTrue
+    var retBehavior : Expr = Const("false")
+    var excBehavior : Expr = Const("false")
+    var normBehavior : Expr = Const("true")
 
     loop@ for(annotation in input.annotations){
         if(annotation.value is StringLiteral){
@@ -181,9 +181,9 @@ fun translateAnnotation(input : Stmt) : MutableList<AEProgramElement>{
                     )
                     accessible = mutableSetOf()
                     assignable = mutableSetOf()
-                    retBehavior = PhiFalse
-                    normBehavior = PhiTrue
-                    excBehavior = PhiFalse
+                    retBehavior = Const("false")
+                    normBehavior = Const("true")
+                    excBehavior = Const("false")
                 }
                 is AEExpression     -> {
                     abstractProg.add(
@@ -196,8 +196,8 @@ fun translateAnnotation(input : Stmt) : MutableList<AEProgramElement>{
                     )
                     accessible = mutableSetOf()
                     assignable = mutableSetOf()
-                    retBehavior = PhiFalse
-                    excBehavior = PhiFalse
+                    retBehavior = Const("false")
+                    excBehavior = Const("false")
                 }
                 is AEAccessible     -> accessible.addAll(spec.id_locs.map { Pair(false,it.getName()) })
                 is AEAssignable     -> assignable.addAll(spec.id_locs.map { if(it is AEHasToLoc)Pair(true, it.getName()) else Pair(false, it.getName()) })
@@ -410,7 +410,7 @@ fun extractResolves(stmt: Stmt): ConcreteStringSet{
     return ConcreteStringSet(inner.toSet())
 }
 
-/* We need to perform the rewritting on sync call ourselves as the version of the compiler we use still uses the old broken location types */
+/* We need to perform the rewriting on sync call ourselves as the version of the compiler we use still uses the old broken location types */
 fun desugar(loc: Location, type: Type, syncCall: SyncCall, returnType :Type, subst: Map<String, Expr>, AEsubst: MutableMap<ProgVar, AEExpr> = mutableMapOf()) : org.abs_models.crowbar.data.Stmt{
     val calleeExpr = translateExpression(syncCall.callee, returnType, subst, AEsubst)
     val callExpr = translateExpression(syncCall, returnType, subst, AEsubst)
