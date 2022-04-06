@@ -33,7 +33,7 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : Mutable
 
 
     if(input.hasAnnotation()){
-        val abstractElements = translateAnnotation(input)
+        val abstractElements = translateAnnotation(input, subst, AEsubst)
 
         //This deals with the case of a last abstract expression (not good by the way) it will be changed and generalised or not...
 
@@ -147,7 +147,7 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : Mutable
  *  Function to extract abstract program elements from a statement ,it returns a list of abstract program elements while cleaning the input of its annotations
  */
 
-fun translateAnnotation(input : Stmt) : MutableList<AEProgramElement>{
+fun translateAnnotation(input : Stmt, subst: Map<String, Expr>, AEsubst: MutableMap<ProgVar, AEExpr>) : MutableList<AEProgramElement>{
     val abstractProg : MutableList<AEProgramElement> = emptyList<AEProgramElement>().toMutableList()
 
     var spec : AESpec
@@ -202,7 +202,7 @@ fun translateAnnotation(input : Stmt) : MutableList<AEProgramElement>{
                 is AEAccessible     -> accessible.addAll(spec.id_locs.map { Pair(false,it.getName()) })
                 is AEAssignable     -> assignable.addAll(spec.id_locs.map { if(it is AEHasToLoc)Pair(true, it.getName()) else Pair(false, it.getName()) })
                 is AERetBehavior    -> output("Return Behavior not yet supported, ignored for now.")
-                is AENormBehavior   -> output("Normal Behavior not yet supported, ignored for now.")
+                is AENormBehavior   -> normBehavior = translatePhi(spec.phi, subst, AEsubst)
                 else                -> output("Unusual annotation, ignored ${spec.prettyPrint()}")
             }
         }
@@ -213,6 +213,18 @@ fun translateAnnotation(input : Stmt) : MutableList<AEProgramElement>{
     return abstractProg
 }
 
+fun translatePhi(input: AEPhi, subst: Map<String, Expr>, aeSubst: MutableMap<ProgVar, AEExpr> = mutableMapOf()) : Expr {
+    return when(input) {
+        is AEInstantiatedPhi    -> PhiExpr(input.id_formula, AELocation(input.id_formula))
+        is AENot                -> SExpr("!", listOf(translatePhi(input.phi, subst, aeSubst)))
+        is AEImpl               -> SExpr("->", listOf(translatePhi(input.ante, subst, aeSubst), translatePhi(input.succ, subst, aeSubst)))
+        is AEAnd                -> SExpr("&&", listOf(translatePhi(input.left, subst, aeSubst), translatePhi(input.right, subst, aeSubst)))
+        is AEOr                 -> SExpr("||", listOf(translatePhi(input.left, subst, aeSubst), translatePhi(input.right, subst, aeSubst)))
+        is AETrue               -> Const("true")
+        is AEFalse              -> Const("false")
+        else                    -> throw Exception("Unforeseen AEPhi in translatePhi : $input")
+    }
+}
 
 fun translateExpression(input: Exp, returnType: Type, subst : Map<String, Expr>, AEsubst : MutableMap<ProgVar, AEExpr> = mutableMapOf()) : Expr {
 
