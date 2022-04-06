@@ -17,6 +17,7 @@ import org.abs_models.frontend.ast.ReturnStmt
 import org.abs_models.frontend.ast.Stmt
 import org.abs_models.frontend.ast.ThrowStmt
 import org.abs_models.frontend.ast.WhileStmt
+import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
 
@@ -222,7 +223,7 @@ fun translatePhi(input: AEPhi, subst: Map<String, Expr>, aeSubst: MutableMap<Pro
         is AEOr                 -> SExpr("||", listOf(translatePhi(input.left, subst, aeSubst), translatePhi(input.right, subst, aeSubst)))
         is AETrue               -> Const("true")
         is AEFalse              -> Const("false")
-        is AEPred               -> SExpr(input.op, listOf(translatePhi(input.right, subst, aeSubst), translatePhi(input.left, subst, aeSubst)))
+        is AEPred               -> SExpr(input.op, listOf(translatePhi(input.left, subst, aeSubst), translatePhi(input.right, subst, aeSubst)))
         is AEVar                -> ProgVar(input.id)
         is AEInt                -> Const("${input.value}")
         else                    -> throw Exception("Unforeseen AEPhi in translatePhi : $input")

@@ -73,4 +73,4 @@ fun nextLTTStrategy(repos: Repository) : Strategy =
 
 //abstract execution
 fun nextAEStrategy(repos:Repository): Strategy =
-    DefaultStrategy(listOf(AESimpleAbstractAssign(repos), AESkipSkip, AESkip))
+    DefaultStrategy(listOf(AESimpleAbstractAssign(repos), AESkipSkip, AESkip, AELocAssign(repos)))

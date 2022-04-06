@@ -108,7 +108,7 @@ data class AbstractPost(val post : Formula) : AbstractType{
     override fun iterate(f: (Anything) -> Boolean): Set<Anything> = super.iterate(f) + post.iterate(f)
 }
 
-class AESimpleAbstractAssign(repos: Repository) : Rule(Modality(
+class AESimpleAbstractAssign(val repos: Repository) : Rule(Modality(
     SeqStmt(AEStmt(AbstractName("P"), LocationAbstractVar("ASSIGN"), LocationAbstractVar("ACCESS"), ExprAbstractVar("NORM"),ExprAbstractVar("RET")), StmtAbstractVar("CONT")),
     AbstractAbstractVar("TYPE"))){
 
@@ -127,6 +127,30 @@ class AESimpleAbstractAssign(repos: Repository) : Rule(Modality(
                     cond.map[AbstractAbstractVar("TYPE")] as AbstractType),
                 input.exceptionScopes),
             info = NoInfo()))
+    }
+}
+
+class AELocAssign(val repos: Repository) : Rule(
+    Modality(
+    SeqStmt(AssignStmt(LocationAbstractVar("LHS"), ExprAbstractVar("EXPR")), StmtAbstractVar("CONT")),
+    AbstractAbstractVar("TYPE"))
+){
+
+    override fun transform(cond: MatchCondition, input: SymbolicState): List<SymbolicTree> {
+        val lhs = cond.map[LocationAbstractVar("LHS")] as Location
+        val rhsExpr = cond.map[ExprAbstractVar("EXPR")] as Expr
+        val rhs = exprToTerm(rhsExpr)
+        val remainder = cond.map[StmtAbstractVar("CONT")] as Stmt
+        val target = cond.map[AbstractAbstractVar("TYPE")] as DeductType
+        val info = InfoLocAssign(lhs, rhsExpr)
+        val zeros  = divByZeroNodes(listOf(rhsExpr), remainder, input, repos)
+        //output("\n$lhs\n $rhsExpr\n $rhs\n $remainder\n $target\n $info\n $zeros\n")
+
+        //need assign for function
+        output("worked")
+        return listOf(SymbolicNode(SymbolicState(input.condition, ChainUpdate(input.update, ElementaryUpdate(lhs as ProgVar, rhs)), Modality(remainder, target), input.exceptionScopes), info = info)) + zeros
+
+    //return listOf(symbolicNext(lhs, rhs, remainder, target, input.condition, input.update, info, input.exceptionScopes)) + zeros
     }
 }
 
