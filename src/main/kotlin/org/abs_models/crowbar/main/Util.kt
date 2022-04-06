@@ -111,7 +111,7 @@ fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>) : Pair
                 spec = AbstractParser.parse((annotation.value as StringLiteral).content)
             }
             catch (e : Exception) {
-                output("Exception in string annotation parsing for main, continuing: ${e.message}")
+                output("Exception in string annotation parsing, continuing: ${e.message}")
                 continue
             }
 

@@ -4,6 +4,7 @@ module Test;
 ["ae_constraint disjoint(frameQ, frameG)"]
 ["ae_constraint disjoint(footprintG, frameQ)"]
 ["ae_constraint disjoint(footprintQ, frameG)"]
+["normal_behavior requires (true && false)"]
 
 {
     ["accessible footprintQ"]

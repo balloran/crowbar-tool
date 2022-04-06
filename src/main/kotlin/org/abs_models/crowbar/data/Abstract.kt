@@ -118,7 +118,7 @@ class AENormBehavior(val phi : AEPhi) : AEBehavior{
 }
 
 /**
- *  AETerm stores terms of abstract specifications which can be abstract locations or formulas (phi).
+ *  AETerm stores terms of abstract specifications which can be abstract locations or formulas (phi) declarations.
  */
 
 interface AETerm : Abstract
@@ -134,13 +134,38 @@ class AEPhiDec(val id_formula : String) : AETerm{
  *  AEPhi represents formula (phi) of abstract specifications.
  */
 
-interface AEPhi : AETerm
+interface AEPhi : Abstract
 
-class AEInstantiatedPhi(val id_formula : String, val id_loc: String) : AEPhi{
+data class AEInstantiatedPhi(val id_formula : String, val id_loc: String) : AEPhi{
 
     override fun toString(): String {
         return "$id_formula($id_loc)"
     }
+}
+
+data class AENot(val phi : AEPhi) : AEPhi{
+
+    override fun toString(): String {
+        return "not($phi)"
+    }
+}
+
+data class AEImpl(val ante : AEPhi, val succ : AEPhi) : AEPhi{
+
+    override fun toString(): String {
+        return "($ante -> $succ)"
+    }
+}
+
+data class AEAnd(val left : AEPhi, val right : AEPhi) : AEPhi{
+
+    override fun toString(): String {
+        return "($left and $right)"
+    }
+}
+
+data class AEOr(val left : AEPhi, val right : AEPhi) :AEPhi{
+
 }
 
 object AETrue : AEPhi{
@@ -170,7 +195,7 @@ class AEInstantiatedLoc(val id_loc : String) : AELoc{
     override fun getName(): String = id_loc
 
     override fun toString(): String {
-        return "$id_loc"
+        return id_loc
     }
 }
 

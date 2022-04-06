@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package org.abs_models.crowbar.interfaces
 
 import antlr.crowbar.gen.AbstractExecutionBaseVisitor
@@ -10,6 +12,8 @@ import org.antlr.v4.runtime.CommonTokenStream
 object AbstractParser : AbstractExecutionBaseVisitor<AESpec>() {
 
     private var termConverter: AbstractTermParser = AbstractTermParser()
+
+    private var phiConverter: AbstractPhiParser = AbstractPhiParser()
 
     fun parse(annotation:String) : AESpec{
 
@@ -66,15 +70,52 @@ object AbstractParser : AbstractExecutionBaseVisitor<AESpec>() {
     }
 
     override fun visitReturn_behavior(ctx: AbstractExecutionParser.Return_behaviorContext?): AESpec {
-        return AERetBehavior(ctx?.formula()!!.accept(termConverter) as AEPhi)
+        return AERetBehavior(ctx?.formula()!!.accept(phiConverter) as AEPhi)
     }
 
     override fun visitNormal_behavior(ctx: AbstractExecutionParser.Normal_behaviorContext?): AESpec {
-        return AENormBehavior(ctx?.formula()!!.accept(termConverter) as AEPhi)
+        return AENormBehavior(ctx?.formula()!!.accept(phiConverter) as AEPhi)
+    }
+}
+
+class AbstractPhiParser : AbstractExecutionBaseVisitor<AEPhi>(){
+
+    override fun visitPar_phi(ctx: AbstractExecutionParser.Par_phiContext?): AEPhi {
+        return ctx?.formula()!!.accept(this)
+    }
+
+    override fun visitNot_phi(ctx: AbstractExecutionParser.Not_phiContext?): AEPhi {
+        return AENot(ctx?.formula()!!.accept(this))
+    }
+
+    override fun visitImpl_phi(ctx: AbstractExecutionParser.Impl_phiContext?): AEPhi {
+        return AEImpl(ctx?.formula(0)!!.accept(this), ctx.formula(1)!!.accept(this))
+    }
+
+    override fun visitAnd_phi(ctx: AbstractExecutionParser.And_phiContext?): AEPhi {
+        return AEAnd(ctx?.formula(0)!!.accept(this), ctx.formula(1)!!.accept(this))
+    }
+
+    override fun visitOr_phi(ctx: AbstractExecutionParser.Or_phiContext?): AEPhi {
+        return AEOr(ctx?.formula(0)!!.accept(this), ctx.formula(1)!!.accept(this))
+    }
+
+    override fun visitAe_phi(ctx: AbstractExecutionParser.Ae_phiContext?): AEPhi {
+        return AEInstantiatedPhi(ctx?.id_formula()!!.text, ctx.id_loc()!!.text)
+    }
+
+    override fun visitTrue_phi(ctx: AbstractExecutionParser.True_phiContext?): AEPhi {
+        return AETrue
+    }
+
+    override fun visitFalse_phi(ctx: AbstractExecutionParser.False_phiContext?): AEPhi {
+        return AEFalse
     }
 }
 
 class AbstractTermParser : AbstractExecutionBaseVisitor<List<AETerm>>(){
+
+    private var phiConverter: AbstractPhiParser = AbstractPhiParser()
 
     override fun visitFormula_dec(ctx: AbstractExecutionParser.Formula_decContext?): List<AETerm> {
         return ctx?.simple_dec()!!.map { it.accept(this) }.flatten()
@@ -84,35 +125,23 @@ class AbstractTermParser : AbstractExecutionBaseVisitor<List<AETerm>>(){
         return listOf(AEPhiDec(ctx?.id_formula()!!.text))
     }
 
+
     override fun visitFormula_list(ctx: AbstractExecutionParser.Formula_listContext?): List<AETerm> {
-        return ctx?.formula()!!.map { it.accept(this) }.flatten()
+        return ctx?.formula()!!.map { it.accept(phiConverter) } as List<AETerm>
     }
 
-    override fun visitFormula(ctx: AbstractExecutionParser.FormulaContext?): List<AETerm> {
-        if(ctx?.TRUE() != null){
-            return listOf(AETrue)
-        }
-        else if(ctx?.FALSE() != null){
-            return listOf(AEFalse)
-        }
-        else{
-            return listOf(AEInstantiatedPhi(ctx?.id_formula()!!.text, ctx.id_loc().text))
-        }
-    }
 
     override fun visitIds_loc(ctx: AbstractExecutionParser.Ids_locContext?): List<AETerm> {
         return ctx?.id_loc()!!.map { it.accept(this) }.flatten()
     }
 
     override fun visitId_loc(ctx: AbstractExecutionParser.Id_locContext?): List<AETerm> {
-        if(ctx?.EVERYTHING() != null){
-            return listOf(AEEverything)
-        }
-        else if(ctx?.NOTHING() != null){
-            return listOf(AENothing)
-        }
-        else{
-            return listOf(AEInstantiatedLoc(ctx?.loc_name()!!.text))
+        return if(ctx?.EVERYTHING() != null){
+            listOf(AEEverything)
+        } else if(ctx?.NOTHING() != null){
+            listOf(AENothing)
+        } else{
+            listOf(AEInstantiatedLoc(ctx?.loc_name()!!.text))
         }
     }
 

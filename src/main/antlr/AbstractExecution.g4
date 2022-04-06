@@ -29,8 +29,14 @@ APS : 'abstract_statement';
 ANY : 'any';
 EVERYTHING : 'everything';
 NOTHING : 'nothing';
+
 TRUE: 'true';
 FALSE: 'false';
+AND: '&&';
+OR: '||';
+IMPL: '->';
+NOT: '!';
+
 
 // Special symbols
 DDOT : ':';
@@ -48,7 +54,7 @@ entry : global                          # global_spec
 
 // The global specification introduces variables and constraints and for the main can specify its behaviour
 global : VAR vars                       # vars_spec
-       | CON phi                        # constraint_spec
+       | CON con                        # constraint_spec
        | behavior                       # global_behavior
        ;
 
@@ -76,7 +82,7 @@ simple_dec : id_formula LPAR ANY RPAR;
 id_formula : STRING ;
 
 // A constraint can be locset being disjoint or a mutex between formula
-phi : DIS LPAR ids_loc RPAR             # disjoint_constraint
+con : DIS LPAR ids_loc RPAR             # disjoint_constraint
     | MUT LPAR formula_list RPAR        # mutex_constraint
     ;
 
@@ -84,7 +90,15 @@ phi : DIS LPAR ids_loc RPAR             # disjoint_constraint
 formula_list : formula (COMMA formula)* ;
 
 // Instatiated formula
-formula : id_formula VAL LPAR id_loc RPAR | TRUE | FALSE;
+formula : LPAR formula RPAR                 # par_phi
+        | NOT formula                       # not_phi
+        | formula IMPL formula              # impl_phi
+        | formula AND formula               # and_phi
+        | formula OR formula                # or_phi
+        | id_formula VAL LPAR id_loc RPAR   # ae_phi
+        | TRUE                              # true_phi
+        | FALSE                             # false_phi
+        ;
 
 // Local specification can declare statement, expression, assignable, accessible and behavioral specification
 local : APS aps_name                    # statement_local
