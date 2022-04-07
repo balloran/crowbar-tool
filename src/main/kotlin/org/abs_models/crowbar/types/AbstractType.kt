@@ -130,8 +130,32 @@ class AESimpleAbstractAssign(val repos: Repository) : Rule(Modality(
     }
 }
 
-class AELocAssign(val repos: Repository) : Rule(
-    Modality(
+
+abstract class AEAssign(protected val repos: Repository,
+                         conclusion : Modality) : Rule(conclusion){
+
+    protected fun assignFor(loc : Location, rhs : Term) : ElementaryUpdate{
+        return if(loc is Field)   ElementaryUpdate(Heap, store(loc, rhs)) else ElementaryUpdate(loc as ProgVar, rhs)
+    }
+
+    protected fun symbolicNext(loc : Location,
+                               rhs : Term,
+                               remainder : Stmt,
+                               target : DeductType,
+                               iForm : Formula,
+                               iUp : UpdateElement,
+                               infoObj: NodeInfo,
+                               scopes: List<ConcreteExceptionScope>) : SymbolicNode{
+        return SymbolicNode(SymbolicState(
+            iForm,
+            ChainUpdate(iUp, assignFor(loc,rhs)),
+            Modality(remainder, target),
+            scopes
+        ), info = infoObj)
+    }
+}
+
+class AELocAssign(repos: Repository, val classdecl : String) : PITAssign(repos, Modality(
     SeqStmt(AssignStmt(LocationAbstractVar("LHS"), ExprAbstractVar("EXPR")), StmtAbstractVar("CONT")),
     AbstractAbstractVar("TYPE"))
 ){
@@ -146,11 +170,13 @@ class AELocAssign(val repos: Repository) : Rule(
         val zeros  = divByZeroNodes(listOf(rhsExpr), remainder, input, repos)
         //output("\n$lhs\n $rhsExpr\n $rhs\n $remainder\n $target\n $info\n $zeros\n")
 
-        //need assign for function
-        output("worked")
-        return listOf(SymbolicNode(SymbolicState(input.condition, ChainUpdate(input.update, ElementaryUpdate(lhs as ProgVar, rhs)), Modality(remainder, target), input.exceptionScopes), info = info)) + zeros
+        if(!repos.classFrames[classdecl]!!.containsKey(lhs)){
+            // Extend framing informations with this new variable
+            repos.classFrames[classdecl]!![lhs] = AELocSet(repos.classFrames[classdecl]!!.keys.filterIsInstance<AELocation>()
+                .map { loc -> Pair(false, loc) }.toSet())
+        }
 
-    //return listOf(symbolicNext(lhs, rhs, remainder, target, input.condition, input.update, info, input.exceptionScopes)) + zeros
+        return listOf(symbolicNext(lhs, rhs, remainder, target, input.condition, input.update, info, input.exceptionScopes)) + zeros
     }
 }
 

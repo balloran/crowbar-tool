@@ -424,6 +424,10 @@ class AELocSet(val locs : Set<Pair<Boolean, Location>>) : Location{
         }
         }"
     }
+
+    override fun toString(): String {
+        return "AELocSet($locs)"
+    }
 }
 
 data class AELocation(val name: String) : Location{

@@ -161,6 +161,10 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     """.trimIndent()
 }
 
+fun generateAbstractSMT(ante : Formula, succ: Formula, repos : Repository, classDecl: String, modelCmd: String = "") : String {
+    return generateSMT(ante, succ, modelCmd)
+}
+
 /* https://stackoverflow.com/questions/35421699 */
 fun String.runCommand(
         workingDir: File = File("."),
@@ -189,9 +193,9 @@ fun evaluateSMT(smtRep : String) : Boolean {
     return res != null && res.trim() == "unsat"
 }
 
-fun evaluateSMT(ante: Formula, succ: Formula) : Boolean {
+fun evaluateSMT(ante: Formula, succ : Formula) : Boolean {
     val smtRep = generateSMT(ante, succ)
-    //output("$smtRep")
+    output("ante : $ante \nsucc $succ\n$smtRep\n\n\n")
     if(verbosity >= Verbosity.VV) println("crowbar-v: \n$smtRep")
     return evaluateSMT(smtRep)
 }

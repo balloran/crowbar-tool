@@ -11,6 +11,7 @@ import org.abs_models.crowbar.tree.LogicNode
 import org.abs_models.crowbar.tree.StaticNode
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.getStrategy
+import org.abs_models.crowbar.types.AbstractType
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.Type
 import java.io.File
@@ -143,16 +144,43 @@ fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>) : Pair
     }
 
     for(disjoint in disjoints){
-        for(location in disjoint){
-            if(ret.containsKey(location)){
-                var locset = ret[location]!!.locs.toMutableSet()
-                locset.removeAll(disjoint.map{ loc -> Pair(false, loc)}.toSet())
-                ret[location] = AELocSet(locset)
-            }
-            else{
-                // Deal with non abstract lccation here.
-            }
 
+        // Identify concrete locations in disjoint.
+        val newDisjoint = disjoint.map { loc ->
+            if (locations.contains(loc)) {
+                loc
+            } else {
+                ProgVar((loc as AELocation).name)
+            }
+        }
+
+        for(location in newDisjoint){
+            // The location has already been seen, just update its AELocSet
+            if(ret.containsKey(location)){
+                val locSet = ret[location]!!.locs.toMutableSet()
+                locSet.removeAll(disjoint.map{ loc -> Pair(false, loc)}.toSet())
+                ret[location] = AELocSet(locSet)
+            }
+            // The location has never been seen this has to be a concrete location.
+            else {
+                // Create the set of all Abstract locations, the filter is overkill.
+                val locSet = locations.filterIsInstance<AELocation>().map { loc -> Pair(false, loc) }.toMutableSet()
+
+                // Update the set of all Abstract locations, according to the disjoint.
+                locSet.removeAll(disjoint.map { loc -> Pair(false, loc) }.toSet())
+
+                // Add the concrete location ot the map.
+                ret[location] = AELocSet(locSet)
+
+                // Add the concrete location to every location that is not in disjoint
+                for (loc in locations) {
+                    if (!disjoint.contains(loc)) {
+                        val newLocSet = ret[loc]!!.locs.toMutableSet()
+                        newLocSet.add(Pair(false, location))
+                        ret[loc] = AELocSet((newLocSet))
+                    }
+                }
+            }
         }
     }
 
@@ -295,10 +323,12 @@ fun ClassDecl.extractMethodNode(usedType: KClass<out DeductType>, name : String,
 Utility to start the symbolic execution
  ****************************/
 var count = 0
-fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out DeductType>, identifier: String = "unknown") : Boolean{
+fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out DeductType>, identifier: String = "unknown", classdecl : String = "") : Boolean{
     output("Crowbar  : starting symbolic execution....")
-    val pit = getStrategy(usedType,repos)
+    val pit = getStrategy(usedType,repos, classdecl)
     pit.execute(node)
+
+    //output("\n${repos.classFrames}\n")
 
     output("Crowbar-v: symbolic execution tree:",Verbosity.V)
     output(node.debugString(0),Verbosity.V)
@@ -318,7 +348,11 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
             is LogicNode -> {
                 count++
                 output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
-                closed = closed && l.evaluate()
+                if(usedType !is AbstractType)
+                    closed = closed && l.evaluate()
+                else{
+                    closed = closed && l.evaluate()
+                }
             }
             is StaticNode -> {
                 output("Crowbar: open static leaf ${l.str}", Verbosity.SILENT)

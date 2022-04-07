@@ -4,6 +4,7 @@ import org.abs_models.crowbar.data.Formula
 import org.abs_models.crowbar.data.Impl
 import org.abs_models.crowbar.data.SymbolicState
 import org.abs_models.crowbar.interfaces.evaluateSMT
+import org.abs_models.crowbar.main.Repository
 import org.abs_models.crowbar.rule.containsAbstractVar
 
 /* general interface for all kinds of nodes */

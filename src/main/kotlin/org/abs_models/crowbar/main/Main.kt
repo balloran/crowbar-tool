@@ -97,7 +97,7 @@ class Main : CliktCommand() {
         if(deductType == AbstractType::class){
             output("Crowbar : Start of Abstract Execution.")
             val node = model.extractMainNode(deductType)
-            val closed = executeNode(node, repos, deductType)
+            val closed = executeNode(node, repos, deductType, classdecl = "main")
             output("Crowbar, abstract execution result: $closed")
         }
 

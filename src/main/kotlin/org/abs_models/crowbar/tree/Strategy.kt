@@ -50,11 +50,11 @@ class DefaultStrategy(private val rules: List<Rule>) : Strategy{
 }
 
 /* This associates types with strategies */
-fun getStrategy(clazz: KClass<out DeductType>, repos: Repository) : Strategy =
+fun getStrategy(clazz: KClass<out DeductType>, repos: Repository, classdecl : String = "") : Strategy =
     when(clazz){
         PostInvType::class   -> nextPITStrategy(repos)
         LocalTypeType::class -> nextLTTStrategy(repos)
-        AbstractType::class -> nextAEStrategy(repos)
+        AbstractType::class -> nextAEStrategy(repos, classdecl)
         else                 -> throw Exception("unsupported type $clazz")
     }
 
@@ -72,5 +72,5 @@ fun nextLTTStrategy(repos: Repository) : Strategy =
                            LTTScopeSkip))
 
 //abstract execution
-fun nextAEStrategy(repos:Repository): Strategy =
-    DefaultStrategy(listOf(AESimpleAbstractAssign(repos), AESkipSkip, AESkip, AELocAssign(repos)))
+fun nextAEStrategy(repos:Repository, classdecl: String): Strategy =
+    DefaultStrategy(listOf(AESimpleAbstractAssign(repos), AESkipSkip, AESkip, AELocAssign(repos, classdecl)))
