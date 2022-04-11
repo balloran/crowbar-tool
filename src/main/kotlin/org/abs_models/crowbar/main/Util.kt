@@ -362,7 +362,7 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
 
                 }
                 count++
-                output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
+                //output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
                 closed = closed && l.evaluate()
 
                 maps.add(substMap)
@@ -373,7 +373,7 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
         }
     }
 
-    output("$maps")
+    output(maps.joinToString("\n\n"){ carte -> carte.toList().joinToString("\n"){ pair -> "${pair.first.prettyPrint()}\t\t${pair.second.prettyPrint()}"} })
 
     if(!closed && investigate) {
         output("Crowbar  : failed to close node, starting investigator....")

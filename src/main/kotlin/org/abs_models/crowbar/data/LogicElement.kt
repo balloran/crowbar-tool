@@ -190,18 +190,18 @@ interface AbstractTerm : Term
 
 class FullAbstractTerm(val name : ConcreteName, val arity : Int, val maxArity : Int, val accessiblesValues : List<Term>, val concrType: Type = UnknownType.INSTANCE) : AbstractTerm{
     override fun toSMT(indent: String): String {
-        return "${indent}U_${name.name}_${arity}_${maxArity}${accessiblesValues.map { value -> value.toSMT() }.joinToString("_")}"
+        return "${indent}U_${name.name}_${arity}_${maxArity}${accessiblesValues.joinToString("_") { value -> value.toSMT() }}"
     }
 
     override fun prettyPrint(): String {
-        return "U_${name.prettyPrint()}($arity/$maxArity := $accessiblesValues)"
+        return "U_${name.prettyPrint()}($arity/$maxArity := ${accessiblesValues.joinToString(",") { term -> term.prettyPrint() }})"
     }
 }
 
 class ConcreteOnAbstractTerm(val target : ProgVar, val value: Term, val abstract : AbstractTerm) : AbstractTerm{
 
     override fun toSMT(indent: String): String {
-        TODO("Not yet implemented")
+        return "UC_${target.name}_${value.toSMT()}_${abstract.toSMT()}"
     }
 
     override fun prettyPrint(): String {
@@ -455,13 +455,31 @@ var framing : Map<Location, AELocSet> = emptyMap()
 fun apply(update: UpdateElement, input: LogicElement) : LogicElement {
     return when(update) {
         is EmptyUpdate -> input
-        is ElementaryUpdate -> subst(input, update.lhs, update.rhs)
+        is ElementaryUpdate -> {
+            output("${update.prettyPrint()}")
+            preConcreteSubst(input, update.lhs, update.rhs)
+            subst(input, update.lhs, update.rhs)
+        }
         is ChainUpdate -> apply(update.left, apply(update.right, input))
         is AbstractUpdate -> abstractSubst(input, update.name, update.accessible, update.assignable)
         else -> input
     }
 }
 
+fun preConcreteSubst(input : LogicElement, elem: ProgVar, term : Term){
+    // Expand the concrete update to the abstract location concerned
+    for(pair in framing[elem]!!.locs){
+        val loc = pair.second
+        assert(loc is AELocation)
+        substMap[loc] = ConcreteOnAbstractTerm(elem, term, substMap[loc] as AbstractTerm)
+    }
+
+    // Update type this si really stange due to the equals of progVar
+    val aux = substMap[elem]!!
+    substMap.remove(elem)
+    substMap[elem] = aux
+
+}
 
 fun abstractSubst(input: LogicElement, name: ConcreteName, accessible : AELocSet, assignable : AELocSet) : LogicElement{
     //output("$substMap\n")
@@ -483,7 +501,6 @@ fun abstractSubst(input: LogicElement, name: ConcreteName, accessible : AELocSet
         var type : Type = UnknownType.INSTANCE
         if(loc is ProgVar){
             type = loc.concrType
-            output("$type")
         }
 
         val updateValue = FullAbstractTerm(name, listDirectAssignable.indexOf(loc), maxArity, listAccessibleValue, type)
@@ -495,13 +512,17 @@ fun abstractSubst(input: LogicElement, name: ConcreteName, accessible : AELocSet
 
     //output("$listIndirectAssignable\n")
 
+    var extraArity = maxArity
+
     for (loc in listIndirectAssignable){
         var type : Type = UnknownType.INSTANCE
         if(loc is ProgVar){
             type = loc.concrType
-            output("$type")
         }
-        val updateValue = FullAbstractTerm(name, maxArity, maxArity, listAccessibleValue, type)
+
+        val updateValue = FullAbstractTerm(name, extraArity, maxArity, listAccessibleValue, type)
+        extraArity += 1
+
         substMap[loc] = updateValue
         if(loc is ProgVar){
             localMap[loc] = updateValue
@@ -514,7 +535,9 @@ fun abstractSubst(input: LogicElement, name: ConcreteName, accessible : AELocSet
 }
 
 fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicElement {
-    if(map.containsKey(input)) return map.getValue(input)
+    if(map.containsKey(input)) {
+        return map.getValue(input)
+    }
     when(input){
         is EmptyUpdate -> return EmptyUpdate
         is ElementaryUpdate -> return ElementaryUpdate(input.lhs, subst(input.rhs, map) as Term)

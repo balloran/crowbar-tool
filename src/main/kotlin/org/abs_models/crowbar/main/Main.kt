@@ -24,6 +24,7 @@ import kotlin.system.exitProcess
 enum class Verbosity { SILENT, NORMAL, V, VV, VVV }
 
 var tmpPath = "/tmp/"
+//var tmpPath = System.getProperty("java.io.tmpdir")
 var smtPath  = "z3"
 //var timeoutS  = 100
 var verbosity = Verbosity.NORMAL
