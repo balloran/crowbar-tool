@@ -302,7 +302,8 @@ data class BranchExpr(val matchTerm : Expr, val branch : Expr) {
     }
 }
 
-interface Location : Expr
+interface Location : Expr{
+}
 data class LocationAbstractVar(val name : String) : Location, AbstractVar{
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
@@ -410,7 +411,7 @@ data class AEExpr(
  *  AELocSet is the type of location sets used in abstract program elements.
  */
 
-class AELocSet(val locs : Set<Pair<Boolean, Location>>) : Location{
+class AELocSet(val locs: List<Pair<Boolean, Location>>) : Location{
 
     override var absExp: org.abs_models.frontend.ast.Exp? = null
 
@@ -423,6 +424,10 @@ class AELocSet(val locs : Set<Pair<Boolean, Location>>) : Location{
             }
         }
         }"
+    }
+
+    fun toSmt(): String{
+        return "AELocSet_${locs.map { pair -> pair.second.toString() }}"
     }
 
     override fun toString(): String {

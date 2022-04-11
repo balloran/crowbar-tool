@@ -140,7 +140,7 @@ fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>) : Pair
     }
 
     for(location in locations){
-        ret[location] = AELocSet(locations.map{ loc -> Pair(false, loc) }.filter { it.second != location }.toSet())
+        ret[location] = AELocSet(locations.map{ loc -> Pair(false, loc) }.filter { it.second != location })
     }
 
     for(disjoint in disjoints){
@@ -157,14 +157,14 @@ fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>) : Pair
         for(location in newDisjoint){
             // The location has already been seen, just update its AELocSet
             if(ret.containsKey(location)){
-                val locSet = ret[location]!!.locs.toMutableSet()
-                locSet.removeAll(disjoint.map{ loc -> Pair(false, loc)}.toSet())
+                val locSet = ret[location]!!.locs.toMutableList()
+                locSet.removeAll(disjoint.map{ loc -> Pair(false, loc)})
                 ret[location] = AELocSet(locSet)
             }
             // The location has never been seen this has to be a concrete location.
             else {
                 // Create the set of all Abstract locations, the filter is overkill.
-                val locSet = locations.filterIsInstance<AELocation>().map { loc -> Pair(false, loc) }.toMutableSet()
+                val locSet = locations.filterIsInstance<AELocation>().map { loc -> Pair(false, loc) }.toMutableList()
 
                 // Update the set of all Abstract locations, according to the disjoint.
                 locSet.removeAll(disjoint.map { loc -> Pair(false, loc) }.toSet())
@@ -175,7 +175,7 @@ fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>) : Pair
                 // Add the concrete location to every location that is not in disjoint
                 for (loc in locations) {
                     if (!disjoint.contains(loc)) {
-                        val newLocSet = ret[loc]!!.locs.toMutableSet()
+                        val newLocSet = ret[loc]!!.locs.toMutableList()
                         newLocSet.add(Pair(false, location))
                         ret[loc] = AELocSet((newLocSet))
                     }
@@ -248,7 +248,7 @@ fun extractRoleSpec(classDecl: ClassDecl): Formula {
         val roleString = (roleAnnotation.getParam(0) as StringLiteral).content
         val fieldUse = (roleAnnotation.getParam(1) as FieldUse)
         val field = Field(fieldUse.name + "_f", fieldUse.type)
-        Predicate("hasRole", listOf(exprToTerm(field), Function("\"$roleString\""))) as Formula
+        Predicate("hasRole", listOf(exprToTerm(field), Function("\"$roleString\"")))
     }.fold(True as Formula) { acc, elem -> And(acc, elem) }
 }
 
@@ -342,23 +342,38 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
     }
 
     output("Crowbar  : closing open branches....")
+
+    val maps = mutableListOf<Map<Location, Term>>()
+
     var closed = true
     for(l in node.collectLeaves()){
         when (l) {
             is LogicNode -> {
+                if(usedType.isInstance(AbstractType)) {
+                    val currentFraming = repos.classFrames[classdecl]
+                    if (currentFraming != null) {
+                        framing = currentFraming
+                    }
+                    substMap.clear()
+
+                    for(location in currentFraming!!.keys){
+                        substMap[location] = UnknownTerm(location)
+                    }
+
+                }
                 count++
                 output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
-                if(usedType !is AbstractType)
-                    closed = closed && l.evaluate()
-                else{
-                    closed = closed && l.evaluate()
-                }
+                closed = closed && l.evaluate()
+
+                maps.add(substMap)
             }
             is StaticNode -> {
                 output("Crowbar: open static leaf ${l.str}", Verbosity.SILENT)
             }
         }
     }
+
+    output("$maps")
 
     if(!closed && investigate) {
         output("Crowbar  : failed to close node, starting investigator....")

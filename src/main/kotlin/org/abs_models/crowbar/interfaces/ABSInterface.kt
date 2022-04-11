@@ -17,7 +17,6 @@ import org.abs_models.frontend.ast.ReturnStmt
 import org.abs_models.frontend.ast.Stmt
 import org.abs_models.frontend.ast.ThrowStmt
 import org.abs_models.frontend.ast.WhileStmt
-import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
 
@@ -174,8 +173,8 @@ fun translateAnnotation(input : Stmt, subst: Map<String, Expr>, AEsubst: Mutable
                     abstractProg.add(
                         AEStmt(
                             ConcreteName(spec.name),
-                            AELocSet(accessible.map{pair -> Pair(pair.first, AELocation(pair.second))}.toSet()),
-                            AELocSet(assignable.map{pair -> Pair(pair.first, AELocation(pair.second))}.toSet()),
+                            AELocSet(accessible.map{pair -> Pair(pair.first, AELocation(pair.second))}),
+                            AELocSet(assignable.map{pair -> Pair(pair.first, AELocation(pair.second))}),
                             normBehavior,
                             retBehavior
                         )
@@ -190,8 +189,8 @@ fun translateAnnotation(input : Stmt, subst: Map<String, Expr>, AEsubst: Mutable
                     abstractProg.add(
                         AEExpr(
                             ConcreteName(spec.name),
-                            AELocSet(accessible.map{pair -> Pair(pair.first, AELocation(pair.second))}.toSet()),
-                            AELocSet(assignable.map{pair -> Pair(pair.first, AELocation(pair.second))}.toSet()),
+                            AELocSet(accessible.map{pair -> Pair(pair.first, AELocation(pair.second))}),
+                            AELocSet(assignable.map{pair -> Pair(pair.first, AELocation(pair.second))}),
                             excBehavior
                         )
                     )

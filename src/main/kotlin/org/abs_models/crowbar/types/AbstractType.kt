@@ -172,8 +172,21 @@ class AELocAssign(repos: Repository, val classdecl : String) : PITAssign(repos, 
 
         if(!repos.classFrames[classdecl]!!.containsKey(lhs)){
             // Extend framing informations with this new variable
+            for(loc in repos.classFrames[classdecl]!!.keys){
+                if(loc is AELocation) {
+                    repos.classFrames[classdecl]?.set(
+                        loc,
+                        AELocSet(
+                            (repos.classFrames[classdecl]?.get(loc)?.locs?.plus(Pair(false, lhs))!!)
+                        )
+                    )
+                }
+            }
+
             repos.classFrames[classdecl]!![lhs] = AELocSet(repos.classFrames[classdecl]!!.keys.filterIsInstance<AELocation>()
-                .map { loc -> Pair(false, loc) }.toSet())
+                .map { loc -> Pair(false, loc) })
+
+
         }
 
         return listOf(symbolicNext(lhs, rhs, remainder, target, input.condition, input.update, info, input.exceptionScopes)) + zeros

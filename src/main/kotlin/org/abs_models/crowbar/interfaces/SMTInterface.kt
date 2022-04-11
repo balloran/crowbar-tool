@@ -40,6 +40,8 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     val pre = deupdatify(ante)
 
     val post = deupdatify(Not(succ))
+
+    //output("$succ.\n\n$post")
     val fields =  (pre.iterate { it is Field } + post.iterate { it is Field }) as Set<Field>
 
     setUsedHeaps(fields.map{libPrefix(it.concrType.qualifiedName)}.toSet())
@@ -50,6 +52,7 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     val vars =  ((pre.iterate { it is ProgVar} + post.iterate { it is ProgVar   }) as Set<ProgVar>).filter {it.name != "heap" && it.name !in specialHeapKeywords}
     val heaps =  ((pre.iterate { it is Function } + post.iterate{ it is Function }) as Set<Function>).filter { it.name.startsWith("NEW") }
     val funcs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("f_") }
+    val fullAbs = (pre.iterate { it is FullAbstractTerm } + post.iterate { it is FullAbstractTerm }) as Set<FullAbstractTerm>
     val preSMT = pre.toSMT()
     val postSMT = post.toSMT()
 
@@ -73,6 +76,20 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
                 "(assert (implements ${it.name} ${it.concrType.qualifiedName}))\n\t"
             else ""
     }
+
+    val fullAbsDecl = fullAbs.joinToString("\n\t") { "(declare-const ${it.toSMT()} ${
+        if(it.concrType.isUnknownType) 
+            throw Exception("Var with unknown type: ${it.name}")
+        else if (isConcreteGeneric(it.concrType) && !it.concrType.isFutureType) {
+            ADTRepos.addGeneric(it.concrType as DataTypeType)
+            genericTypeSMTName(it.concrType)
+        }
+        else
+            libPrefix(it.concrType.qualifiedName)})\n" +
+        if(it.concrType.isInterfaceType)
+            "(assert (implements ${it.name} ${it.concrType.qualifiedName}))\n\t"
+        else ""}
+
     val objectImpl = heaps.joinToString("\n"){
         x:Function ->
         if(x.name in objects)
@@ -142,6 +159,8 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     $fieldsDecl
 ;variables declaration
     $varsDecl
+;abstract constants declaration
+    $fullAbsDecl
 ;objects declaration
     $objectsDecl
     
@@ -159,10 +178,6 @@ fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
     $modelCmd
     (exit)
     """.trimIndent()
-}
-
-fun generateAbstractSMT(ante : Formula, succ: Formula, repos : Repository, classDecl: String, modelCmd: String = "") : String {
-    return generateSMT(ante, succ, modelCmd)
 }
 
 /* https://stackoverflow.com/questions/35421699 */
@@ -195,7 +210,8 @@ fun evaluateSMT(smtRep : String) : Boolean {
 
 fun evaluateSMT(ante: Formula, succ : Formula) : Boolean {
     val smtRep = generateSMT(ante, succ)
-    output("ante : $ante \nsucc $succ\n$smtRep\n\n\n")
+    output(smtRep)
+    //output("ante : $ante \nsucc $succ\n$smtRep\n\n\n")
     if(verbosity >= Verbosity.VV) println("crowbar-v: \n$smtRep")
     return evaluateSMT(smtRep)
 }

@@ -1,7 +1,7 @@
 module Simple;
 
 ["ae_specvars locset footprintQ, frameQ, relevantLocs"]
-["ae_constraint disjoint(footprintQ, x, frameQ)"]
+["ae_constraint disjoint(footprintQ, frameQ)"]
 ["normal_behavior requires (x >= 1)"]
 
 {

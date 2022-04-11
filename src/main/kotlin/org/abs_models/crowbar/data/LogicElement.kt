@@ -3,9 +3,11 @@ package org.abs_models.crowbar.data
 import org.abs_models.crowbar.interfaces.*
 import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.FunctionRepos
+import org.abs_models.crowbar.main.output
 import org.abs_models.crowbar.types.getReturnType
 import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
+import org.abs_models.frontend.typechecker.UnknownType
 
 
 /**
@@ -177,6 +179,47 @@ data class UpdateOnTerm(val update : UpdateElement, val target : Term) : Term {
     override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = super.iterate(f) + update.iterate(f) + target.iterate(f)
     override fun toSMT(indent:String) : String = throw Exception("Updates are not translatable to Z3")
 }
+
+/**
+ *  This interface regroups the two terms used to represent abstract values
+ */
+
+interface AbstractTerm : Term
+
+// Have to define a non trivial equality on these structures.
+
+class FullAbstractTerm(val name : ConcreteName, val arity : Int, val maxArity : Int, val accessiblesValues : List<Term>, val concrType: Type = UnknownType.INSTANCE) : AbstractTerm{
+    override fun toSMT(indent: String): String {
+        return "${indent}U_${name.name}_${arity}_${maxArity}${accessiblesValues.map { value -> value.toSMT() }.joinToString("_")}"
+    }
+
+    override fun prettyPrint(): String {
+        return "U_${name.prettyPrint()}($arity/$maxArity := $accessiblesValues)"
+    }
+}
+
+class ConcreteOnAbstractTerm(val target : ProgVar, val value: Term, val abstract : AbstractTerm) : AbstractTerm{
+
+    override fun toSMT(indent: String): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun prettyPrint(): String {
+        return "[${target.name} := ${value.prettyPrint()}]${abstract.prettyPrint()}"
+    }
+}
+
+data class UnknownTerm(val target : Location) : AbstractTerm{
+
+    override fun toSMT(indent: String): String {
+        return "UnknownTerm_${target.hashCode()}"
+    }
+
+    override fun prettyPrint(): String {
+        return "${target.prettyPrint()}_init_value"
+    }
+}
+
 data class Impl(val left : Formula, val right : Formula) : Formula {
     override fun prettyPrint(): String {
         return "(${left.prettyPrint()}) -> (${right.prettyPrint()})"
@@ -403,16 +446,72 @@ fun deupdatify(input: LogicElement) : LogicElement {
     }
 }
 
+// map of values
+val substMap : MutableMap<Location, Term> = mutableMapOf()
+
+// framing used
+var framing : Map<Location, AELocSet> = emptyMap()
+
 fun apply(update: UpdateElement, input: LogicElement) : LogicElement {
     return when(update) {
         is EmptyUpdate -> input
         is ElementaryUpdate -> subst(input, update.lhs, update.rhs)
         is ChainUpdate -> apply(update.left, apply(update.right, input))
-        is AbstractUpdate -> input
+        is AbstractUpdate -> abstractSubst(input, update.name, update.accessible, update.assignable)
         else -> input
     }
 }
 
+
+fun abstractSubst(input: LogicElement, name: ConcreteName, accessible : AELocSet, assignable : AELocSet) : LogicElement{
+    //output("$substMap\n")
+    //output("$framing\n")
+
+    val maxArity = assignable.locs.size
+    val listAccessibleValue = accessible.locs.map { pair ->
+        //output("${pair.second}")
+        substMap[pair.second]!!
+    }
+
+    // This list will have to be split according to hasTo most likely...
+    val listDirectAssignable = assignable.locs.map { pair -> pair.second }
+    val listIndirectAssignable = listDirectAssignable.map { loc -> framing[loc] }.map { locSet -> locSet?.locs!!.map{pair -> pair.second } }.flatten()
+
+    val localMap = mutableMapOf<LogicElement, LogicElement>()
+
+    for(loc in listDirectAssignable){
+        var type : Type = UnknownType.INSTANCE
+        if(loc is ProgVar){
+            type = loc.concrType
+            output("$type")
+        }
+
+        val updateValue = FullAbstractTerm(name, listDirectAssignable.indexOf(loc), maxArity, listAccessibleValue, type)
+        substMap[loc] = updateValue
+        if(loc is ProgVar){
+            localMap[loc] = updateValue
+        }
+    }
+
+    //output("$listIndirectAssignable\n")
+
+    for (loc in listIndirectAssignable){
+        var type : Type = UnknownType.INSTANCE
+        if(loc is ProgVar){
+            type = loc.concrType
+            output("$type")
+        }
+        val updateValue = FullAbstractTerm(name, maxArity, maxArity, listAccessibleValue, type)
+        substMap[loc] = updateValue
+        if(loc is ProgVar){
+            localMap[loc] = updateValue
+        }
+    }
+
+    //output("$localMap")
+
+    return subst(input, localMap)
+}
 
 fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicElement {
     if(map.containsKey(input)) return map.getValue(input)
@@ -443,7 +542,10 @@ fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicEleme
         else -> return input
     }
 }
-fun subst(input: LogicElement, elem : ProgVar, term : Term) : LogicElement = subst(input, mapOf(Pair(elem,term)))
+fun subst(input: LogicElement, elem : ProgVar, term : Term) : LogicElement{
+    substMap[elem] = term
+    return subst(input, mapOf(Pair(elem,term)))
+}
 
 
 fun valueOfFunc(t : Term) = Function("valueOf", listOf(t))
