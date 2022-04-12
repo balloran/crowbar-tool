@@ -5,6 +5,7 @@ import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.interfaces.filterHeapTypes
 import org.abs_models.crowbar.interfaces.generateSMT
 import org.abs_models.crowbar.interfaces.plainSMTCommand
+import org.abs_models.crowbar.interfaces.preGenerateSMT
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.tree.*
 import org.abs_models.frontend.typechecker.Type
@@ -163,7 +164,7 @@ object CounterexampleGenerator {
 
         // Get evaluations of all collected expressions (heap states after anon, new objects, future values, etc)
         // Side effect: This (partially?) kills usedTypes in ADTRepos, so we'll only use our saved copy
-        val smtRep = generateSMT(leaf.ante, leaf.succ, modelCmd = baseModel)
+        val smtRep = preGenerateSMT(leaf.ante, leaf.succ, modelCmd = baseModel)
         val solverResponse = plainSMTCommand(smtRep)!!
 
         // Can't parse model if solver timed out

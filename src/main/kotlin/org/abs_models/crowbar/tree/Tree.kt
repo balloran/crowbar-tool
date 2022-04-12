@@ -43,8 +43,8 @@ data class LogicNode(
     val succ : Formula,
     override var info: NodeInfo = NoInfo()
 ) : InfoNode, SymbolicLeaf{
-    private var isEvaluated = false
-    private var isValid = false
+    var isEvaluated = false
+    var isValid = false
     override fun evaluate() : Boolean{
         if(isEvaluated) return isValid
         isValid = evaluateSMT(ante,succ)

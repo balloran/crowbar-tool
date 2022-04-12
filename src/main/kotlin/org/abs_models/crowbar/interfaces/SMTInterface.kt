@@ -33,13 +33,18 @@ val smtHeader = """
     ; end static header
     """.trimIndent()
 
-@Suppress("UNCHECKED_CAST")
-fun generateSMT(ante : Formula, succ: Formula, modelCmd: String = "") : String {
-
-    resetWildCards()
+fun preGenerateSMT(ante: Formula, succ: Formula, modelCmd: String = "") : String{
     val pre = deupdatify(ante)
 
     val post = deupdatify(Not(succ))
+
+    return generateSMT(pre, post, modelCmd)
+}
+
+@Suppress("UNCHECKED_CAST")
+fun generateSMT(pre : LogicElement, post : LogicElement, modelCmd: String = "") : String {
+
+    resetWildCards()
 
     //output("$succ.\n\n$post")
     val fields =  (pre.iterate { it is Field } + post.iterate { it is Field }) as Set<Field>
@@ -209,7 +214,7 @@ fun evaluateSMT(smtRep : String) : Boolean {
 }
 
 fun evaluateSMT(ante: Formula, succ : Formula) : Boolean {
-    val smtRep = generateSMT(ante, succ)
+    val smtRep = preGenerateSMT(ante, succ)
     //output(smtRep)
     //output("ante : $ante \nsucc $succ\n$smtRep\n\n\n")
     if(verbosity >= Verbosity.VV) println("crowbar-v: \n$smtRep")

@@ -456,7 +456,6 @@ fun apply(update: UpdateElement, input: LogicElement) : LogicElement {
     return when(update) {
         is EmptyUpdate -> input
         is ElementaryUpdate -> {
-            output("${update.prettyPrint()}")
             preConcreteSubst(input, update.lhs, update.rhs)
             subst(input, update.lhs, update.rhs)
         }
@@ -474,7 +473,7 @@ fun preConcreteSubst(input : LogicElement, elem: ProgVar, term : Term){
         substMap[loc] = ConcreteOnAbstractTerm(elem, term, substMap[loc] as AbstractTerm)
     }
 
-    // Update type this si really stange due to the equals of progVar
+    // Update type of elem, this seems really strange due to the equals of progVar
     val aux = substMap[elem]!!
     substMap.remove(elem)
     substMap[elem] = aux
@@ -529,7 +528,7 @@ fun abstractSubst(input: LogicElement, name: ConcreteName, accessible : AELocSet
         }
     }
 
-    //output("$localMap")
+    //output("\n$localMap\n")
 
     return subst(input, localMap)
 }

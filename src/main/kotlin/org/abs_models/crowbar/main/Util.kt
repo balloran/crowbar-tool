@@ -11,6 +11,7 @@ import org.abs_models.crowbar.tree.LogicNode
 import org.abs_models.crowbar.tree.StaticNode
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.getStrategy
+import org.abs_models.crowbar.types.AbstractExecution
 import org.abs_models.crowbar.types.AbstractType
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.Type
@@ -349,23 +350,33 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
     for(l in node.collectLeaves()){
         when (l) {
             is LogicNode -> {
-                if(usedType.isInstance(AbstractType)) {
-                    val currentFraming = repos.classFrames[classdecl]
-                    if (currentFraming != null) {
-                        framing = currentFraming
-                    }
-                    substMap.clear()
+                if (false) {
 
-                    for(location in currentFraming!!.keys){
-                        substMap[location] = UnknownTerm(location)
-                    }
 
+                    if (usedType.isInstance(AbstractType)) {
+                        val currentFraming = repos.classFrames[classdecl]
+                        if (currentFraming != null) {
+                            framing = currentFraming
+                        }
+                        substMap.clear()
+
+                        for (location in currentFraming!!.keys) {
+                            substMap[location] = UnknownTerm(location)
+                        }
+
+                    }
+                    count++
+                    //output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
+                    //output("${l.succ.prettyPrint()}")
+                    closed = closed && l.evaluate()
+
+                    maps.add(substMap)
                 }
-                count++
-                //output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
-                closed = closed && l.evaluate()
-
-                maps.add(substMap)
+                else{
+                    val exec = AbstractExecution(repos.classFrames[classdecl]!!)
+                    closed = closed && exec.evaluate(l)
+                    maps.add(exec.substMap)
+                }
             }
             is StaticNode -> {
                 output("Crowbar: open static leaf ${l.str}", Verbosity.SILENT)
