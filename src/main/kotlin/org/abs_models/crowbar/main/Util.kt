@@ -350,32 +350,19 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
     for(l in node.collectLeaves()){
         when (l) {
             is LogicNode -> {
-                if (false) {
-
-
-                    if (usedType.isInstance(AbstractType)) {
-                        val currentFraming = repos.classFrames[classdecl]
-                        if (currentFraming != null) {
-                            framing = currentFraming
-                        }
-                        substMap.clear()
-
-                        for (location in currentFraming!!.keys) {
-                            substMap[location] = UnknownTerm(location)
-                        }
-
+                if(usedType.isInstance(AbstractType)){
+                    if(false){
+                        count++
+                        val exec = AbstractExecution(repos.classFrames[classdecl]!!)
+                        closed = closed && exec.evaluate(l)
+                        maps.add(exec.substMap)
                     }
-                    count++
-                    //output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
-                    //output("${l.succ.prettyPrint()}")
-                    closed = closed && l.evaluate()
-
-                    maps.add(substMap)
-                }
-                else{
-                    val exec = AbstractExecution(repos.classFrames[classdecl]!!)
-                    closed = closed && exec.evaluate(l)
-                    maps.add(exec.substMap)
+                    else{
+                        framing = repos.classFrames[classdecl]!!
+                        count++
+                        output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
+                        closed = closed && l.evaluate()
+                    }
                 }
             }
             is StaticNode -> {

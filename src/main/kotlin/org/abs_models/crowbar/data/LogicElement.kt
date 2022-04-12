@@ -3,7 +3,6 @@ package org.abs_models.crowbar.data
 import org.abs_models.crowbar.interfaces.*
 import org.abs_models.crowbar.main.ADTRepos
 import org.abs_models.crowbar.main.FunctionRepos
-import org.abs_models.crowbar.main.output
 import org.abs_models.crowbar.types.getReturnType
 import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
@@ -187,6 +186,18 @@ data class UpdateOnTerm(val update : UpdateElement, val target : Term) : Term {
 interface AbstractTerm : Term
 
 // Have to define a non trivial equality on these structures.
+
+object BasicAbstractTerm : AbstractTerm{
+
+    override fun toSMT(indent: String): String {
+        return "Abstract_${this.hashCode()}"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return false
+    }
+
+}
 
 class FullAbstractTerm(val name : ConcreteName, val arity : Int, val maxArity : Int, val accessiblesValues : List<Term>, val concrType: Type = UnknownType.INSTANCE) : AbstractTerm{
     override fun toSMT(indent: String): String {
@@ -446,9 +457,6 @@ fun deupdatify(input: LogicElement) : LogicElement {
     }
 }
 
-// map of values
-val substMap : MutableMap<Location, Term> = mutableMapOf()
-
 // framing used
 var framing : Map<Location, AELocSet> = emptyMap()
 
@@ -456,75 +464,29 @@ fun apply(update: UpdateElement, input: LogicElement) : LogicElement {
     return when(update) {
         is EmptyUpdate -> input
         is ElementaryUpdate -> {
-            preConcreteSubst(input, update.lhs, update.rhs)
             subst(input, update.lhs, update.rhs)
         }
         is ChainUpdate -> apply(update.left, apply(update.right, input))
-        is AbstractUpdate -> abstractSubst(input, update.name, update.accessible, update.assignable)
+        is AbstractUpdate -> abstractSubst(input, update.assignable)
         else -> input
     }
 }
 
-fun preConcreteSubst(input : LogicElement, elem: ProgVar, term : Term){
-    // Expand the concrete update to the abstract location concerned
-    for(pair in framing[elem]!!.locs){
-        val loc = pair.second
-        assert(loc is AELocation)
-        substMap[loc] = ConcreteOnAbstractTerm(elem, term, substMap[loc] as AbstractTerm)
-    }
-
-    // Update type of elem, this seems really strange due to the equals of progVar
-    val aux = substMap[elem]!!
-    substMap.remove(elem)
-    substMap[elem] = aux
-
-}
-
-fun abstractSubst(input: LogicElement, name: ConcreteName, accessible : AELocSet, assignable : AELocSet) : LogicElement{
-    //output("$substMap\n")
-    //output("$framing\n")
-
-    val maxArity = assignable.locs.size
-    val listAccessibleValue = accessible.locs.map { pair ->
-        //output("${pair.second}")
-        substMap[pair.second]!!
-    }
-
-    // This list will have to be split according to hasTo most likely...
+fun abstractSubst(input: LogicElement, assignable : AELocSet) : LogicElement{
     val listDirectAssignable = assignable.locs.map { pair -> pair.second }
     val listIndirectAssignable = listDirectAssignable.map { loc -> framing[loc] }.map { locSet -> locSet?.locs!!.map{pair -> pair.second } }.flatten()
 
     val localMap = mutableMapOf<LogicElement, LogicElement>()
 
     for(loc in listDirectAssignable){
-        var type : Type = UnknownType.INSTANCE
         if(loc is ProgVar){
-            type = loc.concrType
-        }
-
-        val updateValue = FullAbstractTerm(name, listDirectAssignable.indexOf(loc), maxArity, listAccessibleValue, type)
-        substMap[loc] = updateValue
-        if(loc is ProgVar){
-            localMap[loc] = updateValue
+            localMap[loc] = BasicAbstractTerm
         }
     }
 
-    //output("$listIndirectAssignable\n")
-
-    var extraArity = maxArity
-
     for (loc in listIndirectAssignable){
-        var type : Type = UnknownType.INSTANCE
         if(loc is ProgVar){
-            type = loc.concrType
-        }
-
-        val updateValue = FullAbstractTerm(name, extraArity, maxArity, listAccessibleValue, type)
-        extraArity += 1
-
-        substMap[loc] = updateValue
-        if(loc is ProgVar){
-            localMap[loc] = updateValue
+            localMap[loc] = BasicAbstractTerm
         }
     }
 
@@ -565,7 +527,6 @@ fun subst(input: LogicElement, map: Map<LogicElement,LogicElement>) : LogicEleme
     }
 }
 fun subst(input: LogicElement, elem : ProgVar, term : Term) : LogicElement{
-    substMap[elem] = term
     return subst(input, mapOf(Pair(elem,term)))
 }
 
