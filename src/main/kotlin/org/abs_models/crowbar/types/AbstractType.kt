@@ -2,6 +2,7 @@ package org.abs_models.crowbar.types
 
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.AssignStmt
+import org.abs_models.crowbar.data.IfStmt
 import org.abs_models.crowbar.data.SkipStmt
 import org.abs_models.crowbar.data.Stmt
 import org.abs_models.crowbar.interfaces.translateExpression
@@ -84,7 +85,7 @@ interface AbstractType : DeductType{
 
         val v = appendStmt(translateStatement(model.mainBlock, emptyMap()), SkipStmt)
         //output("\n$v")
-        //output("\n${v.prettyPrint()}")
+        output("\n${v.prettyPrint()}")
         return SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(v, AbstractPost(mainSpec.second)), listOf()), emptyList())
     }
 
@@ -193,6 +194,48 @@ class AELocAssign(repos: Repository, val classdecl : String) : PITAssign(repos, 
     }
 }
 
+class AEIf(val repos : Repository): Rule(Modality(
+    SeqStmt(IfStmt(ExprAbstractVar("LHS"), StmtAbstractVar("THEN"), StmtAbstractVar("ELSE")),
+        StmtAbstractVar("CONT")),
+    AbstractAbstractVar("TYPE"))){
+
+    override fun transform(cond: MatchCondition, input: SymbolicState): List<SymbolicTree> {
+        val contBody = SeqStmt(ScopeMarker, cond.map[StmtAbstractVar("CONT")] as Stmt) // Add a ScopeMarker statement to detect scope closure
+        val guardExpr = cond.map[ExprAbstractVar("LHS")] as Expr
+
+        //then
+        val guardYes = exprToForm(guardExpr)
+        val guardYesUpdate = extractUpdateFromForm(guardYes)
+        val bodyYes = SeqStmt(cond.map[StmtAbstractVar("THEN")] as Stmt, contBody)
+        val updateYes = ChainUpdate(input.update, guardYesUpdate)
+        val typeYes = cond.map[AbstractAbstractVar("TYPE")] as AbstractType
+        val resThen = SymbolicState(And(input.condition, UpdateOnFormula(updateYes, guardYes)), updateYes, Modality(bodyYes, typeYes), input.exceptionScopes)
+
+        //else
+        val guardNo = Not(exprToForm(guardExpr))
+        val guardNoUpdate = extractUpdateFromForm(guardNo)
+        val bodyNo = SeqStmt(cond.map[StmtAbstractVar("ELSE")] as Stmt, contBody)
+        val updateNo = ChainUpdate(input.update, guardNoUpdate)
+        val typeNo = cond.map[AbstractAbstractVar("TYPE")] as AbstractType
+        val resElse = SymbolicState(And(input.condition, UpdateOnFormula(updateNo, guardNo)), updateNo, Modality(bodyNo, typeNo), input.exceptionScopes)
+
+        val zeros  = divByZeroNodes(listOf(guardExpr), contBody, input, repos)
+        return listOf<SymbolicTree>(SymbolicNode(resThen, info = InfoIfThen(guardExpr)), SymbolicNode(resElse, info = InfoIfElse(guardExpr))) + zeros
+    }
+}
+
+object AEScopeSkip : Rule(Modality(
+    SeqStmt(ScopeMarker, StmtAbstractVar("CONT")),
+    AbstractAbstractVar("TYPE"))) {
+
+    override fun transform(cond: MatchCondition, input : SymbolicState): List<SymbolicTree> {
+        val cont = cond.map[StmtAbstractVar("CONT")] as Stmt
+        val pitype = cond.map[AbstractAbstractVar("TYPE")] as AbstractType
+        val res = SymbolicNode(SymbolicState(input.condition, input.update, Modality(cont, pitype), input.exceptionScopes), info = InfoScopeClose())
+        return listOf(res)
+    }
+}
+
 object AESkip : Rule(Modality(
     SkipStmt,
     AbstractPost(FormulaAbstractVar("POST")))) {
@@ -219,6 +262,18 @@ object AESkipSkip : Rule(
         val type = cond.map[AbstractAbstractVar("TYPE")] as AbstractType
         val res = SymbolicNode(SymbolicState(input.condition, input.update, Modality(cont, type), input.exceptionScopes), info = InfoSkip())
         return listOf(res)
+    }
+}
+
+fun extractUpdateFromForm(input : Formula) : UpdateElement{
+    return when(input){
+        is And-> ChainUpdate(extractUpdateFromForm(input.left), extractUpdateFromForm(input.right))
+        is Or -> ChainUpdate(extractUpdateFromForm(input.left), extractUpdateFromForm(input.right))
+        is Impl -> ChainUpdate(extractUpdateFromForm(input.left), extractUpdateFromForm(input.right))
+        is Not -> extractUpdateFromForm(input.left)
+        is UpdateOnFormula -> ChainUpdate(input.update, extractUpdateFromForm(input.target))
+        is Predicate, is ImplementsForm, is Eq, is True, is False, is AbstractFormula -> EmptyUpdate
+        else -> throw Exception("Unusual formula to extract updates from : $input")
     }
 }
 

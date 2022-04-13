@@ -180,7 +180,7 @@ data class UpdateOnTerm(val update : UpdateElement, val target : Term) : Term {
 }
 
 /**
- *  This interface regroups the two terms used to represent abstract values
+ *  This interface regroups the terms used to represent abstract values
  */
 
 interface AbstractTerm : Term
@@ -197,15 +197,48 @@ object BasicAbstractTerm : AbstractTerm{
         return false
     }
 
+    override fun prettyPrint(): String {
+        return "BasicAbstractTerm_${this.hashCode()}"
+    }
 }
 
-class FullAbstractTerm(val name : ConcreteName, val arity : Int, val maxArity : Int, val accessiblesValues : List<Term>, val concrType: Type = UnknownType.INSTANCE) : AbstractTerm{
+data class FullAbstractTerm(
+    val name : ConcreteName,
+    val arity : Int,
+    val maxArity : Int,
+    val accessiblesValues : List<Term>,
+    val concrType: Type = UnknownType.INSTANCE) : AbstractTerm{
     override fun toSMT(indent: String): String {
         return "${indent}U_${name.name}_${arity}_${maxArity}${accessiblesValues.joinToString("_") { value -> value.toSMT() }}"
     }
 
     override fun prettyPrint(): String {
         return "U_${name.prettyPrint()}($arity/$maxArity := ${accessiblesValues.joinToString(",") { term -> term.prettyPrint() }})"
+    }
+
+    override fun toString(): String {
+        return "FullAbstractTerm($name, $arity, $maxArity, $accessiblesValues, $concrType)"
+    }
+}
+
+data class PartialAbstractTerm(
+    val name: ConcreteName,
+    val arity: Int,
+    val maxArity: Int,
+    val accessiblesValues: List<Term>,
+    val initialValue : Term,
+    val concrType: Type = UnknownType.INSTANCE) : AbstractTerm{
+
+    override fun toSMT(indent: String): String {
+        return "${indent}U_${name.name}_${arity}_${maxArity}_${accessiblesValues.joinToString("_") { value -> value.toSMT() }}_${initialValue.toSMT()}"
+    }
+
+    override fun prettyPrint(): String {
+        return "[${name.prettyPrint()}($arity/$maxArity := ${accessiblesValues.joinToString(",") { term -> term.prettyPrint() }})]${initialValue.prettyPrint()}"
+    }
+
+    override fun toString(): String {
+        return "PartialAbstractTerm($name, $arity, $maxArity, $accessiblesValues, $initialValue, $concrType)"
     }
 }
 
@@ -217,6 +250,31 @@ class ConcreteOnAbstractTerm(val target : ProgVar, val value: Term, val abstract
 
     override fun prettyPrint(): String {
         return "[${target.name} := ${value.prettyPrint()}]${abstract.prettyPrint()}"
+    }
+
+    override fun toString(): String {
+        return "ConcreteOnAbstractTerm($target, $value, $abstract)"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if(other !is ConcreteOnAbstractTerm){
+            return false
+        }
+        if(other.target == this.target && other.value == this.value){
+            return this.abstract == other.abstract
+        }
+
+        TODO("oh shit no simulation yet")
+
+        return false
+
+    }
+
+    override fun hashCode(): Int {
+        var result = target.hashCode()
+        result = 31 * result + value.hashCode()
+        result = 31 * result + abstract.hashCode()
+        return result
     }
 }
 
@@ -346,6 +404,12 @@ object False : Formula {
     override fun toSMT(indent:String) : String = "false"
 }
 
+data class AbstractFormula(val name : String, val concrType: Type) : Formula{
+    override fun toSMT(indent: String): String = name
+
+    override fun prettyPrint(): String = name
+}
+
 val specialHeapKeywords = mapOf(OldHeap.name to OldHeap, LastHeap.name to LastHeap)
 
 data class HeapType(val name: String) : Type() {
@@ -439,6 +503,8 @@ fun exprToForm(input : Expr, specialKeyword : String="NONE") : Formula {
     }
     if(input is Field || input is ProgVar || input is Const)
         return exprToForm(SExpr("=",listOf(input, Const("true"))), specialKeyword)
+    if(input is AEExpr)
+        return UpdateOnFormula(AbstractUpdate(input.name, input.accessible as AELocSet, input.assignable as AELocSet), AbstractFormula(input.name.name, input.concrType))
     throw Exception("Expression cannot be converted to formula: $input")
 }
 

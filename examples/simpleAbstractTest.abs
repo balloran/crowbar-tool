@@ -11,5 +11,4 @@ module Simple;
     ["assignable frameQ"]
     ["abstract_statement Q"]
     skip;
-    Int y = 3;
 }

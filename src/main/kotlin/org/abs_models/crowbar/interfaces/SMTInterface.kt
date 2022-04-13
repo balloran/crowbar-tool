@@ -58,6 +58,8 @@ fun generateSMT(pre : LogicElement, post : LogicElement, modelCmd: String = "") 
     val heaps =  ((pre.iterate { it is Function } + post.iterate{ it is Function }) as Set<Function>).filter { it.name.startsWith("NEW") }
     val funcs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("f_") }
     val fullAbs = (pre.iterate { it is FullAbstractTerm } + post.iterate { it is FullAbstractTerm }) as Set<FullAbstractTerm>
+    val partAbs = (pre.iterate { it is PartialAbstractTerm } + post.iterate { it is PartialAbstractTerm }) as Set<PartialAbstractTerm>
+    val absExp = (pre.iterate { it is AbstractFormula } + post.iterate { it is AbstractFormula }) as Set<AbstractFormula>
     val preSMT = pre.toSMT()
     val postSMT = post.toSMT()
 
@@ -82,8 +84,38 @@ fun generateSMT(pre : LogicElement, post : LogicElement, modelCmd: String = "") 
             else ""
     }
 
-    val fullAbsDecl = fullAbs.joinToString("\n\t") { "(declare-const ${it.toSMT()} ${
-        if(it.concrType.isUnknownType) 
+    val fullAbsDecl = fullAbs.joinToString("\n\t") {
+        "(declare-const ${it.toSMT()} ${
+            if (it.concrType.isUnknownType)
+                throw Exception("Var with unknown type: ${it.name}")
+            else if (isConcreteGeneric(it.concrType) && !it.concrType.isFutureType) {
+                ADTRepos.addGeneric(it.concrType as DataTypeType)
+                genericTypeSMTName(it.concrType)
+            } else
+                libPrefix(it.concrType.qualifiedName)
+        })\n" +
+                if (it.concrType.isInterfaceType)
+                    "(assert (implements ${it.name} ${it.concrType.qualifiedName}))\n\t"
+                else ""
+    }
+
+    val partAbsDecl = partAbs.joinToString("\n\t") {
+        "(declare-const ${it.toSMT()} ${
+            if (it.concrType.isUnknownType)
+                throw Exception("Var with unknown type: ${it.name}")
+            else if (isConcreteGeneric(it.concrType) && !it.concrType.isFutureType) {
+                ADTRepos.addGeneric(it.concrType as DataTypeType)
+                genericTypeSMTName(it.concrType)
+            } else
+                libPrefix(it.concrType.qualifiedName)
+        })\n" +
+                if (it.concrType.isInterfaceType)
+                    "(assert (implements ${it.name} ${it.concrType.qualifiedName}))\n\t"
+                else ""
+    }
+
+    val absExpDecl = absExp.joinToString("\n\t") { "(declare-const ${it.toSMT() } ${
+        if(it.concrType.isUnknownType)
             throw Exception("Var with unknown type: ${it.name}")
         else if (isConcreteGeneric(it.concrType) && !it.concrType.isFutureType) {
             ADTRepos.addGeneric(it.concrType as DataTypeType)
@@ -91,9 +123,9 @@ fun generateSMT(pre : LogicElement, post : LogicElement, modelCmd: String = "") 
         }
         else
             libPrefix(it.concrType.qualifiedName)})\n" +
-        if(it.concrType.isInterfaceType)
-            "(assert (implements ${it.name} ${it.concrType.qualifiedName}))\n\t"
-        else ""}
+    if(it.concrType.isInterfaceType)
+        "(assert (implements ${it.name} ${it.concrType.qualifiedName}))\n\t"
+    else ""}
 
     val objectImpl = heaps.joinToString("\n"){
         x:Function ->
@@ -166,6 +198,9 @@ fun generateSMT(pre : LogicElement, post : LogicElement, modelCmd: String = "") 
     $varsDecl
 ;abstract constants declaration
     $fullAbsDecl
+    $partAbsDecl
+; abstract expression declaration
+    $absExpDecl
 ;objects declaration
     $objectsDecl
     
@@ -210,6 +245,7 @@ fun plainSMTCommand(smtRep: String) : String? {
 
 fun evaluateSMT(smtRep : String) : Boolean {
     val res = plainSMTCommand(smtRep)
+    //output(res!!.trim())
     return res != null && res.trim() == "unsat"
 }
 

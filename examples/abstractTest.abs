@@ -4,7 +4,7 @@ module Test;
 ["ae_constraint disjoint(frameQ, frameG)"]
 ["ae_constraint disjoint(footprintG, frameQ)"]
 ["ae_constraint disjoint(footprintQ, frameG)"]
-["normal_behavior requires (true && false)"]
+["normal_behavior requires (true && x > 0)"]
 
 {
     ["accessible footprintQ"]
@@ -23,6 +23,8 @@ module Test;
 
     Bool f = True;
 
+    Int x = 0;
+
 	if(g && f){
         ["accessible everything"]
         ["assignable everything"]
@@ -34,5 +36,6 @@ module Test;
         ["assignable everything"]
         ["abstract_statement P2"]
         skip;
+        x = 1;
 	}
 }

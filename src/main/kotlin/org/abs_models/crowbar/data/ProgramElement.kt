@@ -1,5 +1,6 @@
 package org.abs_models.crowbar.data
 
+import org.abs_models.frontend.ast.Exp
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
 
@@ -394,7 +395,8 @@ data class AEExpr(
     val name : ConcreteName,
     val accessible : Location,
     val assignable : Location,
-    val excBehavior : Expr)
+    val excBehavior : Expr,
+    var concrType: Type = UnknownType.INSTANCE)
     : Expr, AEProgramElement {
 
     override var absExp: org.abs_models.frontend.ast.Exp? = null
@@ -440,6 +442,10 @@ data class AELocation(val name: String) : Location{
 
     override fun prettyPrint(): String {
         return name
+    }
+
+    override fun toString(): String {
+        return "AELocation($name)"
     }
 }
 

@@ -139,6 +139,7 @@ fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>) : Pair
             }
         }
     }
+    locations.add(AELocation("everything"))
 
     for(location in locations){
         ret[location] = AELocSet(locations.map{ loc -> Pair(false, loc) }.filter { it.second != location })
@@ -329,6 +330,11 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
     val pit = getStrategy(usedType,repos, classdecl)
     pit.execute(node)
 
+
+    for(key in repos.classFrames.keys){
+        repos.classFrames[key]?.set(AELocation("nothing"), AELocSet(emptyList()))
+    }
+
     //output("\n${repos.classFrames}\n")
 
     output("Crowbar-v: symbolic execution tree:",Verbosity.V)
@@ -351,18 +357,23 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
         when (l) {
             is LogicNode -> {
                 if(usedType.isInstance(AbstractType)){
-                    if(false){
-                        count++
+                    if(true){
                         val exec = AbstractExecution(repos.classFrames[classdecl]!!)
-                        closed = closed && exec.evaluate(l)
+                        closed = exec.evaluate(l) && closed
                         maps.add(exec.substMap)
+                        //exec.printSubstMap()
                     }
-                    else{
+                    else if(false){
                         framing = repos.classFrames[classdecl]!!
-                        count++
                         output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
                         closed = closed && l.evaluate()
                     }
+                    count++
+                }
+                else{
+                    output("Crowbar-v: "+ deupdatify(l.ante).prettyPrint()+"->"+deupdatify(l.succ).prettyPrint(), Verbosity.V)
+                    closed = closed && l.evaluate()
+                    count++
                 }
             }
             is StaticNode -> {
@@ -370,8 +381,6 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
             }
         }
     }
-
-    output(maps.joinToString("\n\n"){ carte -> carte.toList().joinToString("\n"){ pair -> "${pair.first.prettyPrint()}\t\t${pair.second.prettyPrint()}"} })
 
     if(!closed && investigate) {
         output("Crowbar  : failed to close node, starting investigator....")

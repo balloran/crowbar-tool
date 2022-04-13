@@ -42,7 +42,9 @@ fun translateStatement(input: Stmt?, subst: Map<String, Expr>, AEsubst : Mutable
         var next = input
 
         if (abstractElements.lastOrNull() is AEExpr && input is VarDeclStmt){
-            AEsubst[ProgVar(input.varDecl.name, input.varDecl.type)] = abstractElements.removeLast() as AEExpr
+            var abstractExp = abstractElements.removeLast() as AEExpr
+            abstractExp.concrType = input.varDecl.type
+            AEsubst[ProgVar(input.varDecl.name, input.varDecl.type)] = abstractExp
             next = org.abs_models.frontend.ast.SkipStmt()
         }
 

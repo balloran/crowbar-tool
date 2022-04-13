@@ -13,13 +13,27 @@ import org.abs_models.frontend.typechecker.UnknownType
 import java.text.Normalizer.Form
 import kotlin.reflect.jvm.internal.impl.descriptors.Visibilities.Unknown
 
-class AbstractExecution (val framing: Map<Location, AELocSet>){
-    val substMap: MutableMap<Location, Term> = mutableMapOf()
+class AbstractExecution (val framing: Map<Location, AELocSet>,
+                         val substMap: MutableMap<Location, Term> = mutableMapOf()
+){
 
     init{
+        initSubstMap()
+        //printFraming()
+    }
+
+    private fun initSubstMap(){
         for(location in this.framing.keys){
             this.substMap[location] = UnknownTerm(location)
         }
+    }
+
+    private fun printFraming(){
+        output(this.framing.toList().joinToString("\n") { pair -> "${pair.first.prettyPrint()}\t\t${pair.second.prettyPrint()}" })
+    }
+
+    fun printSubstMap(){
+        output(this.substMap.toList().joinToString("\n") { pair -> "${pair.first.prettyPrint()}\t\t${pair.second.prettyPrint()}" })
     }
 
     fun evaluate(l : SymbolicLeaf) : Boolean {
@@ -32,11 +46,13 @@ class AbstractExecution (val framing: Map<Location, AELocSet>){
         }
 
         val pre = this.eval(this.deupdatify(l.ante))
+        //output("${l.ante.prettyPrint()}")
+        initSubstMap()
         val post = this.eval(this.deupdatify(Not(l.succ)))
 
-        output("${pre.prettyPrint()}\n\n${post.prettyPrint()}")
-
         val smtRep = generateSMT(pre, post)
+
+        output(smtRep)
 
         return evaluateSMT(smtRep)
     }
@@ -80,33 +96,91 @@ class AbstractExecution (val framing: Map<Location, AELocSet>){
 
     // Apply the abstract update to the current substMap
     private fun abstractApply(name: ConcreteName, accessible : AELocSet, assignable :AELocSet){
+        //output("${name.name}")
         val maxArity = assignable.locs.size
         val listAccessibleValue = accessible.locs.map { pair ->  this.substMap[pair.second]!!}
 
-        // This list will have to be split according to hasTo most likely...
+        // This list is used for the arity
         val listDirectAssignable = assignable.locs.map { pair -> pair.second }
-        val listIndirectAssignable = listDirectAssignable.map { loc -> this.framing[loc] }.map { locSet -> locSet?.locs!!.map { pair -> pair.second } }.flatten()
+        //val listIndirectAssignable = listDirectAssignable.map { loc -> this.framing[loc] }.map { locSet -> locSet?.locs!!.map { pair -> pair.second } }.flatten()
 
-        // Update the value of the specified assignables
-        for(loc in listDirectAssignable){
+        // Split according to hasTo
+        val listHasToDirectAssignable = assignable.locs.filter { it.first }.map { pair -> pair.second}
+        val listOtherDirectAssignable = assignable.locs.filter{!it.first}.map { pair -> pair.second }
+
+
+
+        // Find the concrete locations that are included in the hasTo abstract locations
+        val listConcreteHasToIndirectAssignable = listHasToDirectAssignable.map { loc ->
+            this.framing[loc]
+        }.map { locSet ->
+            locSet?.locs!!.filter {
+                it.second is ProgVar
+            }.map { pair ->
+                pair.second
+            }
+        }.flatten()
+
+        val listOtherIndirectAssignable = listHasToDirectAssignable.map { loc ->
+            this.framing[loc]
+        }.map { locSet ->
+            locSet?.locs!!.filter {
+                it.second !is ProgVar
+            }.map { pair ->
+                pair.second
+            }
+        }.flatten() +
+                listOtherDirectAssignable.map { loc ->
+                    this.framing[loc]
+                }.map { locSet ->
+                    locSet?.locs!!.map { pair ->
+                        pair.second
+                    }
+                }.flatten()
+
+
+
+        var extraArity = maxArity
+
+        // Update the values of the hasTo locations
+        for(loc in listHasToDirectAssignable + listConcreteHasToIndirectAssignable){
             var type : Type = UnknownType.INSTANCE
             if(loc is ProgVar){
                 type = loc.concrType
             }
 
-            val updateValue = FullAbstractTerm(name, listDirectAssignable.indexOf(loc), maxArity, listAccessibleValue, type)
+            var arity : Int
+            if(listDirectAssignable.contains(loc)){
+                arity = listDirectAssignable.indexOf(loc)
+            }
+            else{
+                arity = extraArity
+                extraArity++
+            }
+
+            val updateValue = FullAbstractTerm(name, arity, maxArity, listAccessibleValue, type)
             this.substMap[loc] = updateValue
         }
 
-        // Update the values of locs that are not disjoint with the specified assignables
-        var extraArity = maxArity
-        for(loc in listIndirectAssignable){
+        //Update the values of the direct hasTo locations
+        for(loc in listOtherDirectAssignable){
             var type : Type = UnknownType.INSTANCE
             if(loc is ProgVar){
                 type = loc.concrType
             }
 
-            val updateValue = FullAbstractTerm(name, extraArity, maxArity, listAccessibleValue, type)
+            val updateValue = PartialAbstractTerm(name, listDirectAssignable.indexOf(loc), maxArity, listAccessibleValue, this.substMap[loc]!!,type)
+            this.substMap[loc] = updateValue
+        }
+
+        // Update the values of the indirect non hasTo locations
+        for(loc in listOtherIndirectAssignable){
+            var type : Type = UnknownType.INSTANCE
+            if(loc is ProgVar){
+                type = loc.concrType
+            }
+
+            val updateValue = PartialAbstractTerm(name, extraArity, maxArity, listAccessibleValue, this.substMap[loc]!!,type)
             extraArity += 1
             this.substMap[loc] = updateValue
         }
