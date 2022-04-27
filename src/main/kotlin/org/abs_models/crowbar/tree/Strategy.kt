@@ -24,7 +24,7 @@ class DefaultStrategy(private val rules: List<Rule>) : Strategy{
             for (rule in rules) {
                 //output("$rule")
                 if (rule.isApplicable(symbolicNode.content)) {
-                    output("$rule")
+                    //output("$rule")
                     val next = rule.apply(symbolicNode.content)
                     if (next != null) {
                         if(symbolicNode.info is LeafInfo) {
@@ -73,4 +73,5 @@ fun nextLTTStrategy(repos: Repository) : Strategy =
 
 //abstract execution
 fun nextAEStrategy(repos:Repository, classdecl: String): Strategy =
-    DefaultStrategy(listOf(AESimpleAbstractAssign(repos), AESkipSkip, AESkip, AELocAssign(repos, classdecl), AEIf(repos), AEScopeSkip))
+    DefaultStrategy(listOf(AESimpleAbstractAssign(repos), AESkipSkip, AESkip, AELocAssign(repos, classdecl), AEIf(repos),
+        AEScopeSkip))

@@ -25,7 +25,7 @@ module Test;
 
     Int x = 0;
 
-	if(g && f){
+	if(g && f ){
         ["accessible everything"]
         ["assignable everything"]
         ["abstract_statement P1"]

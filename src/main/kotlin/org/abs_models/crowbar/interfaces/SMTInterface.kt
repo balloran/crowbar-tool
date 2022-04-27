@@ -99,6 +99,8 @@ fun generateSMT(pre : LogicElement, post : LogicElement, modelCmd: String = "") 
                 else ""
     }
 
+    //output("$fullAbs")
+    //output("$partAbs")
     val partAbsDecl = partAbs.joinToString("\n\t") {
         "(declare-const ${it.toSMT()} ${
             if (it.concrType.isUnknownType)

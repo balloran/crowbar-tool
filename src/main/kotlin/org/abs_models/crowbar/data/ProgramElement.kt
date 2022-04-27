@@ -303,16 +303,25 @@ data class BranchExpr(val matchTerm : Expr, val branch : Expr) {
     }
 }
 
-interface Location : Expr{
+abstract class Location(val name: String) : Expr{
+    override fun equals(other: Any?): Boolean {
+        if(other is Location)
+            return this.name == other.name
+        return false
+    }
+
+    override fun hashCode(): Int {
+        return name.hashCode()
+    }
 }
-data class LocationAbstractVar(val name : String) : Location, AbstractVar{
+class LocationAbstractVar(name : String) : Location(name), AbstractVar{
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
         return name
     }
 }
 //name must end with _f when using automatic translation
-open class Field(val name : String, val concrType :Type = UnknownType.INSTANCE) : Location, Term {
+open class Field(name : String, val concrType :Type = UnknownType.INSTANCE) : Location(name), Term {
 
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
@@ -335,7 +344,7 @@ open class Field(val name : String, val concrType :Type = UnknownType.INSTANCE) 
     override fun toSMT(indent:String) : String = name
 }
 
-open class ProgVar(open val name: String, open val concrType: Type = UnknownType.INSTANCE) : Location, Term {
+open class ProgVar(name: String, open val concrType: Type = UnknownType.INSTANCE) : Location(name), Term {
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
         return "$name:${concrType.qualifiedName}"
@@ -413,7 +422,7 @@ data class AEExpr(
  *  AELocSet is the type of location sets used in abstract program elements.
  */
 
-class AELocSet(val locs: List<Pair<Boolean, Location>>) : Location{
+class AELocSet(val locs: List<Pair<Boolean, Location>>) : Location(""){
 
     override var absExp: org.abs_models.frontend.ast.Exp? = null
 
@@ -435,9 +444,15 @@ class AELocSet(val locs: List<Pair<Boolean, Location>>) : Location{
     override fun toString(): String {
         return "AELocSet($locs)"
     }
+
+    override fun equals(other: Any?): Boolean {
+        if(other is AELocSet)
+            return this.locs == other.locs
+        return false
+    }
 }
 
-data class AELocation(val name: String) : Location{
+class AELocation(name: String) : Location(name){
     override var absExp: org.abs_models.frontend.ast.Exp? = null
 
     override fun prettyPrint(): String {

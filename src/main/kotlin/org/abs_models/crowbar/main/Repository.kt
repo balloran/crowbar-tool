@@ -400,8 +400,8 @@ data class Repository(val model : Model?,
     }
 
 	fun populateAbstractReqs(model: Model) {
-		val mainSpec = extractGlobalSpec(model.mainBlock)
-		classFrames["main"] = mainSpec.first
+		val betterMainSpec = extractMainTotalSpec(model.mainBlock as MainBlock)
+		classFrames["main"] = betterMainSpec
 
 		for(moduleDecl in model.moduleDecls) {
 			if(moduleDecl.name.startsWith("ABS.")) continue

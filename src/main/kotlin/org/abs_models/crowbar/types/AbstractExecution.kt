@@ -19,7 +19,7 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
 
     init{
         initSubstMap()
-        //printFraming()
+        printFraming()
     }
 
     private fun initSubstMap(){
@@ -50,9 +50,12 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
         initSubstMap()
         val post = this.eval(this.deupdatify(Not(l.succ)))
 
+        //output("${l.succ}")
+        //output("${post.toSMT()}")
+
         val smtRep = generateSMT(pre, post)
 
-        output(smtRep)
+        //output(smtRep)
 
         return evaluateSMT(smtRep)
     }
@@ -73,6 +76,7 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
 
     // Apply the update to the substMap
     fun apply(update : UpdateElement){
+        //printSubstMap()
         when(update){
             is ChainUpdate -> {this.apply(update.left); this.apply(update.right)}
             is ElementaryUpdate -> concreteApply(update.lhs, update.rhs)
@@ -96,6 +100,7 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
 
     // Apply the abstract update to the current substMap
     private fun abstractApply(name: ConcreteName, accessible : AELocSet, assignable :AELocSet){
+        //printSubstMap()
         //output("${name.name}")
         val maxArity = assignable.locs.size
         val listAccessibleValue = accessible.locs.map { pair ->  this.substMap[pair.second]!!}
@@ -114,29 +119,35 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
         val listConcreteHasToIndirectAssignable = listHasToDirectAssignable.map { loc ->
             this.framing[loc]
         }.map { locSet ->
-            locSet?.locs!!.filter {
+            locSet?.locs!!.map { it.second }.filterIsInstance<ProgVar>()
+ /*
+                .filter {
                 it.second is ProgVar
             }.map { pair ->
                 pair.second
             }
+            */
         }.flatten()
+
+        //output("$assignable")
+        //output("${listOtherDirectAssignable}")
 
         val listOtherIndirectAssignable = listHasToDirectAssignable.map { loc ->
             this.framing[loc]
-        }.map { locSet ->
+        }.flatMap { locSet ->
             locSet?.locs!!.filter {
                 it.second !is ProgVar
             }.map { pair ->
                 pair.second
             }
-        }.flatten() +
+        } +
                 listOtherDirectAssignable.map { loc ->
                     this.framing[loc]
-                }.map { locSet ->
+                }.flatMap { locSet ->
                     locSet?.locs!!.map { pair ->
                         pair.second
                     }
-                }.flatten()
+                }
 
 
 
@@ -184,6 +195,8 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
             extraArity += 1
             this.substMap[loc] = updateValue
         }
+
+        //printSubstMap()
     }
 
     // Evaluate the input according to the current substMap

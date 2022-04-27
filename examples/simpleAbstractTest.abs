@@ -7,8 +7,10 @@ module Simple;
 {
 
     Int x = 2;
+    x = x + 1;
     ["accessible footprintQ"]
-    ["assignable frameQ"]
+    ["assignable hasTo(frameQ)"]
     ["abstract_statement Q"]
+    Int y = 0;
     skip;
 }

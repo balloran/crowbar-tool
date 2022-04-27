@@ -440,3 +440,119 @@ fun desugar(loc: Location, type: Type, syncCall: SyncCall, returnType :Type, sub
     val syncStmt = SyncStmt(loc, readFut(fut), ConcreteStringSet(setOf(syncCall.methodSig.name)), FreshGenerator.getFreshPP())
     return SeqStmt(callStmt, syncStmt)
 }
+
+
+// Extract implicit disjoints relations
+
+fun extractDisjoint(input : Stmt?, locations : Set<Location>, scope : List<Set<Location>>) : Set<Set<Location>> {
+    if(input == null){
+        return emptySet()
+    }
+
+    val disjoint : MutableSet<Set<Location>> = mutableSetOf()
+
+    var spec:AESpec
+    for(annotation in input.annotationList){
+        if(annotation.value is StringLiteral) {
+            try {
+                spec = AbstractParser.parse((annotation.value as StringLiteral).content)
+            } catch (e: Exception) {
+                output("Exception in string annotation parsing, continuing: ${e.message}")
+                continue
+            }
+
+            val usedLocation : MutableList<Location> = mutableListOf()
+
+            when(spec){
+                is AEAccessible -> {
+                    usedLocation += spec.id_locs.map { loc ->
+                        loc.getName()
+                    }.map { name ->
+                        locFromName(name, locations)
+                    }
+                }
+                is AEAssignable -> {
+                    usedLocation += spec.id_locs.map { loc ->
+                        loc.getName()
+                    }.map { name ->
+                        locFromName(name, locations)
+                    }
+                }
+                else -> continue
+            }
+
+            val absentLoc = locations.minus(scope.fold(emptySet(), Set<Location>::plus))
+            for(aloc in absentLoc){
+                for(uloc in usedLocation){
+                    disjoint += setOf(aloc, uloc)
+                }
+            }
+        }
+    }
+
+    when(input){
+        is VarDeclStmt -> return disjoint
+        is Block -> {
+            val localScope = mutableSetOf<Location>()
+            for (stmt in input.stmts) {
+                val testscope = scope.toMutableList()
+                testscope.add(localScope.toSet())
+                disjoint += extractDisjoint(stmt, locations, testscope)
+                if (stmt is VarDeclStmt)
+                    localScope += extractLocation(stmt)
+            }
+            return disjoint
+        }
+        is IfStmt -> return disjoint + extractDisjoint(input.then, locations, scope) + extractDisjoint(input.`else`,locations, scope)
+        is WhileStmt -> throw Exception("While scope computation not yet supported.")
+        else -> return disjoint
+    }
+}
+
+fun locFromName(name: String, locations : Set<Location>): Location {
+    return if (locations.contains(Field(name))) {
+        Field(name)
+    } else if (locations.contains(ProgVar(name))) {
+        ProgVar(name)
+    } else {
+        AELocation(name)
+    }
+}
+
+// Extract the locations
+
+fun extractLocation(input: Stmt?): Set<Location>{
+    return when(input){
+        is org.abs_models.frontend.ast.SkipStmt -> emptySet()
+        is ExpressionStmt -> emptySet()
+        is VarDeclStmt -> setOf(ProgVar(input.varDecl.name, input.varDecl.type))
+        is AssignStmt -> emptySet()
+        is Block -> input.stmts.map { extractLocation(it) }.flatten().toSet()
+        is WhileStmt -> extractLocation(input.bodyNoTransform)
+        is AwaitStmt -> emptySet()
+        is SuspendStmt -> emptySet()
+        is ReturnStmt -> emptySet()
+        is IfStmt -> extractLocation(input.then) + extractLocation(input.`else`)
+        is AssertStmt -> emptySet()
+        is CaseStmt -> {
+            var res : Set<Location> = emptySet()
+            for (br in input.branchList) {
+                res += extractLocation(br.right)
+            }
+            res
+        }
+        is DieStmt -> emptySet()
+        is MoveCogToStmt -> throw Exception("Statements ${input::class} are not coreABS" )
+        is DurationStmt -> throw Exception("Statements ${input::class} are not coreABS" )
+        is ThrowStmt -> emptySet()
+        is TryCatchFinallyStmt -> {
+            var res = extractLocation(input.body)
+            for (br in input.catchList) {
+                res += extractLocation(br.right)
+            }
+            res += extractLocation(input.finally)
+            res
+        }
+        else        -> emptySet()
+    }
+}

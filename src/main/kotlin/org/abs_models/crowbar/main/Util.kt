@@ -3,9 +3,7 @@ package org.abs_models.crowbar.main
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.data.Stmt
-import org.abs_models.crowbar.interfaces.AbstractParser
-import org.abs_models.crowbar.interfaces.translateExpression
-import org.abs_models.crowbar.interfaces.translatePhi
+import org.abs_models.crowbar.interfaces.*
 import org.abs_models.crowbar.investigator.CounterexampleGenerator
 import org.abs_models.crowbar.tree.LogicNode
 import org.abs_models.crowbar.tree.StaticNode
@@ -97,6 +95,91 @@ fun extractInheritedSpec(mSig : MethodSig, expectedSpec : String, default:Formul
         }
     }
     return direct
+}
+
+fun extractMainTotalSpec(mainblock: MainBlock) : MutableMap<Location, AELocSet>{
+    val abstractLocations = mutableSetOf<Location>()
+    val disjoints = mutableSetOf<Set<Location>>()
+    var postcond : AEPhi = AETrue
+
+    var spec : AESpec
+
+    for(annotation in mainblock.nodeAnnotations){
+        if(annotation.type.isStringType){
+            try {
+                spec = AbstractParser.parse((annotation.value as StringLiteral).content)
+            }
+            catch (e : Exception) {
+                output("Exception in string annotation parsing, continuing: ${e.message}")
+                continue
+            }
+
+            when(spec){
+                is AELocDec         -> {
+                    abstractLocations.addAll(spec.terms.map { term -> AELocation(term.getName()) })
+                }
+                is AEDis            ->{
+                    disjoints.add(spec.terms.map { term -> AELocation(term.getName()) }.toSet())
+                }
+                is AEForDec         -> {
+                    // Formula declaration are ignored for now
+                    continue
+                }
+                is AEMut            -> {
+                    // Mutex declaration is ignored for now
+                    continue
+                }
+                is AENormBehavior   -> {
+                    postcond = spec.phi
+                }
+            }
+        }
+    }
+    abstractLocations.add(AELocation("everything"))
+
+    val concreteLocations = extractLocation(mainblock)
+
+    // On long term the empty list would contain the fields...
+    val fullLocations = abstractLocations + concreteLocations
+    val fullDisjoints = disjoints + extractDisjoint(mainblock, concreteLocations, emptyList())
+
+
+    val ret: MutableMap<Location, AELocSet> = mutableMapOf()
+    for(location in abstractLocations){
+        ret[location] = AELocSet(fullLocations.map { loc -> Pair(false, loc) })
+    }
+    for(location in concreteLocations){
+        ret[location] = AELocSet(abstractLocations.map { loc -> Pair(false, loc) })
+    }
+
+    val typeMap : Map<Location, Type> = (concreteLocations.map { loc ->
+        if (loc is ProgVar) {
+            Pair(loc, loc.concrType)
+        } else if (loc is Field) Pair(loc, loc.concrType)
+        else throw Exception("abstract location in concrete location list")
+    }).toMap()
+
+    output("$typeMap")
+
+    for(disjoint in fullDisjoints){
+        output("$disjoint")
+        val newDisjoint = disjoint.map { loc ->
+            if (abstractLocations.contains(loc)) {
+                loc
+            } else {
+                ProgVar(loc.name, typeMap[ProgVar(loc.name)]!!)
+            }
+        }
+
+        for(location in newDisjoint){
+            val locSet = ret[location]!!.locs.toMutableList()
+            locSet.removeAll(newDisjoint.map{ loc -> Pair(false, loc)})
+            ret[location] = AELocSet(locSet)
+        }
+
+    }
+
+    return ret
 }
 
 fun<T: ASTNode<out ASTNode<*>>?> extractGlobalSpec(mainblock: ASTNode<T>) : Pair<MutableMap<Location, AELocSet>, Formula>{

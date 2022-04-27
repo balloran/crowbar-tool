@@ -79,13 +79,14 @@ interface AbstractType : DeductType{
 
         // A bit dirty as already called in, going to have to find a better solution
         val mainSpec = extractGlobalSpec(model.mainBlock)
-        model.mainBlock.annotationList = List()
+        //val betterMainSpec = extractMainTotalSpec(model.mainBlock as MainBlock)
 
+        model.mainBlock.annotationList = List()
         //output("${model.mainBlock}")
 
         val v = appendStmt(translateStatement(model.mainBlock, emptyMap()), SkipStmt)
         //output("\n$v")
-        output("\n${v.prettyPrint()}")
+        //output("\n${v.prettyPrint()}")
         return SymbolicNode(SymbolicState(True, EmptyUpdate, Modality(v, AbstractPost(mainSpec.second)), listOf()), emptyList())
     }
 

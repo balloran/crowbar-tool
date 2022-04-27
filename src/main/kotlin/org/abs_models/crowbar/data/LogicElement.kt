@@ -234,7 +234,7 @@ data class PartialAbstractTerm(
     }
 
     override fun prettyPrint(): String {
-        return "[${name.prettyPrint()}($arity/$maxArity := ${accessiblesValues.joinToString(",") { term -> term.prettyPrint() }})]${initialValue.prettyPrint()}"
+        return "{${name.prettyPrint()}($arity/$maxArity := ${accessiblesValues.joinToString(",") { term -> term.prettyPrint() }})}${initialValue.prettyPrint()}"
     }
 
     override fun toString(): String {
@@ -249,7 +249,7 @@ class ConcreteOnAbstractTerm(val target : ProgVar, val value: Term, val abstract
     }
 
     override fun prettyPrint(): String {
-        return "[${target.name} := ${value.prettyPrint()}]${abstract.prettyPrint()}"
+        return "{${target.name} := ${value.prettyPrint()}}${abstract.prettyPrint()}"
     }
 
     override fun toString(): String {
