@@ -159,10 +159,10 @@ fun extractMainTotalSpec(mainblock: MainBlock) : MutableMap<Location, AELocSet>{
         else throw Exception("abstract location in concrete location list")
     }).toMap()
 
-    output("$typeMap")
+    //output("$typeMap")
 
     for(disjoint in fullDisjoints){
-        output("$disjoint")
+        //output("$disjoint")
         val newDisjoint = disjoint.map { loc ->
             if (abstractLocations.contains(loc)) {
                 loc
@@ -444,7 +444,7 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
                         val exec = AbstractExecution(repos.classFrames[classdecl]!!)
                         closed = exec.evaluate(l) && closed
                         maps.add(exec.substMap)
-                        //exec.printSubstMap()
+                        exec.printSubstMap()
                     }
                     else if(false){
                         framing = repos.classFrames[classdecl]!!

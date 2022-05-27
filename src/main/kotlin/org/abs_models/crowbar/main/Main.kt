@@ -14,9 +14,7 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import com.github.ajalt.clikt.parameters.types.restrictTo
 import org.abs_models.crowbar.interfaces.filterAtomic
-import org.abs_models.crowbar.types.AbstractType
-import org.abs_models.crowbar.types.LocalTypeType
-import org.abs_models.crowbar.types.PostInvType
+import org.abs_models.crowbar.types.*
 import org.abs_models.frontend.ast.*
 import java.nio.file.Paths
 import kotlin.system.exitProcess
@@ -69,7 +67,19 @@ class Main : CliktCommand() {
     private val tmp        by   option("--tmp", "-t", help="Path to a directory used to store .smt and counterexample files").path().default(Paths.get(tmpPath))
     private val smtCmd     by   option("--smt", "-s", help="Command to start SMT solver").default(smtPath)
     private val verbose    by   option("--verbose", "-v", help="Verbosity output level").int().restrictTo(Verbosity.values().indices).default(Verbosity.NORMAL.ordinal)
-    private val deductType by   option("--deduct", "-d", help="Used deductive system").choice("PostInv","LocalType", "Abstract").convert { when(it){"PostInv" -> PostInvType::class; "LocalType" -> LocalTypeType::class; "Abstract" -> AbstractType::class; else -> throw Exception(); } }.default(PostInvType::class)
+    private val deductType by   option("--deduct",
+        "-d",
+        help="Used deductive system").choice(
+        "PostInv",
+        "LocalType",
+        "Abstract").convert {
+        when (it) {
+            "PostInv" -> PostInvType::class;
+            "LocalType" -> LocalTypeType::class;
+            "Abstract" -> AbstractType::class;
+            else -> throw Exception();
+        }
+    }.default(PostInvType::class)
     private val freedom    by   option("--freedom", "-fr", help="Performs a simple check for potentially deadlocking methods").flag()
     private val invFlag    by   option("--investigate", "-inv", help="Generate counterexamples for uncloseable branches").flag()
     private val conciseProofsFlag    by  option("--concise_proofs", "-cp", help="Generate concise proofs omitting unused declarations").flag()
@@ -86,93 +96,98 @@ class Main : CliktCommand() {
         if(investigate && deductType != PostInvType::class)
             output("Crowbar  : Counterexamples for types other than PostInv are not supported and may produce unexpected output", Verbosity.SILENT)
 
-        val (model, repos) = load(filePath)
-        //todo: check all VarDecls and Field Decls here
-        //      no 'result', no 'heap', no '_f' suffix
-
-        if(freedom) {
-            val freedom = runFreeAnalysis(model)
-            output("Crowbar  : Result of freedom analysis: $freedom", Verbosity.SILENT)
+        if(deductType == AbstractType::class && filePath.size > 1){
+            val handler = RelationExecution(filePath)
+            handler.simpleExecute()
         }
-
-        if(deductType == AbstractType::class){
-            output("Crowbar : Start of Abstract Execution.")
-            val node = model.extractMainNode(deductType)
-            val closed = executeNode(node, repos, deductType, classdecl = "main")
-            output("Crowbar, abstract execution result: $closed")
-        }
-
         else {
+            val (model, repos) = load(filePath)
+            //todo: check all VarDecls and Field Decls here
+            //      no 'result', no 'heap', no '_f' suffix
+
+            if (freedom) {
+                val freedom = runFreeAnalysis(model)
+                output("Crowbar  : Result of freedom analysis: $freedom", Verbosity.SILENT)
+            }
 
 
-            when (target) {
-                is CrowOption.AllFunctionOption -> {
-                    System.err.println("option non implemented yet")
-                    exitProcess(-1)
+            if (deductType == AbstractType::class) {
+                if (filePath.size == 1) {
+                    output("Crowbar : Start of Abstract Execution.")
+                    val node = model.extractMainNode(deductType)
+                    val closed = executeNode(node, repos, deductType, classdecl = "main")
+                    output("Crowbar, abstract execution result: $closed")
                 }
-                is CrowOption.FunctionOption -> {
-                    output("Crowbar  : This is an experimental feature and under development", Verbosity.SILENT)
-                    val tt = target as CrowOption.FunctionOption
-                    val targetPath = tt.path.split(".")
-                    val funcDecl: FunctionDecl = model.extractFunctionDecl(targetPath[0], targetPath[1])
-                    val functionNode = funcDecl.extractFunctionNode(deductType)
-                    val closed = executeNode(functionNode, repos, deductType)
-                    output("Crowbar  : Verification result: $closed", Verbosity.SILENT)
-                }
-                is CrowOption.FullOption -> {
-                    var finalClose = true
-                    for (classDecl in model.extractAllClasses()) {
-                        val totalClosed = classDecl.executeAll(repos, deductType)
-                        output(
-                            "Crowbar  : Verification result ${classDecl.qualifiedName}: $totalClosed\n",
-                            Verbosity.SILENT
-                        )
-                        finalClose = finalClose && totalClosed
+            } else {
+                when (target) {
+                    is CrowOption.AllFunctionOption -> {
+                        System.err.println("option non implemented yet")
+                        exitProcess(-1)
                     }
-                    for (sNode in FunctionRepos.extractAll(deductType)) {
-                        val closed = executeNode(sNode.second, repos, deductType)
-                        output("Crowbar  : Verification result ${sNode.first}: $closed\n", Verbosity.SILENT)
+                    is CrowOption.FunctionOption -> {
+                        output("Crowbar  : This is an experimental feature and under development", Verbosity.SILENT)
+                        val tt = target as CrowOption.FunctionOption
+                        val targetPath = tt.path.split(".")
+                        val funcDecl: FunctionDecl = model.extractFunctionDecl(targetPath[0], targetPath[1])
+                        val functionNode = funcDecl.extractFunctionNode(deductType)
+                        val closed = executeNode(functionNode, repos, deductType)
+                        output("Crowbar  : Verification result: $closed", Verbosity.SILENT)
+                    }
+                    is CrowOption.FullOption -> {
+                        var finalClose = true
+                        for (classDecl in model.extractAllClasses()) {
+                            val totalClosed = classDecl.executeAll(repos, deductType)
+                            output(
+                                "Crowbar  : Verification result ${classDecl.qualifiedName}: $totalClosed\n",
+                                Verbosity.SILENT
+                            )
+                            finalClose = finalClose && totalClosed
+                        }
+                        for (sNode in FunctionRepos.extractAll(deductType)) {
+                            val closed = executeNode(sNode.second, repos, deductType)
+                            output("Crowbar  : Verification result ${sNode.first}: $closed\n", Verbosity.SILENT)
+                            finalClose = finalClose && closed
+                        }
+                        val node = model.extractMainNode(deductType)
+                        val closed = executeNode(node, repos, deductType)
                         finalClose = finalClose && closed
+                        output("Crowbar  : Verification of main: $closed\n", Verbosity.SILENT)
+                        output("Crowbar  : Final verification result: $finalClose", Verbosity.SILENT)
+                        if (FunctionRepos.hasContracts()) {
+                            output(
+                                "Crowbar  : Verification relies on functional contracts. This feature is experimental. To remove this warning, remove all specifications of function definitions.",
+                                Verbosity.SILENT
+                            )
+                        }
                     }
-                    val node = model.extractMainNode(deductType)
-                    val closed = executeNode(node, repos, deductType)
-                    finalClose = finalClose && closed
-                    output("Crowbar  : Verification of main: $closed\n", Verbosity.SILENT)
-                    output("Crowbar  : Final verification result: $finalClose", Verbosity.SILENT)
-                    if (FunctionRepos.hasContracts()) {
-                        output(
-                            "Crowbar  : Verification relies on functional contracts. This feature is experimental. To remove this warning, remove all specifications of function definitions.",
-                            Verbosity.SILENT
-                        )
+                    is CrowOption.MainBlockOption -> {
+                        val node = model.extractMainNode(deductType)
+                        val closed = executeNode(node, repos, deductType)
+                        output("Crowbar  : Verification result: $closed", Verbosity.SILENT)
                     }
-                }
-                is CrowOption.MainBlockOption -> {
-                    val node = model.extractMainNode(deductType)
-                    val closed = executeNode(node, repos, deductType)
-                    output("Crowbar  : Verification result: $closed", Verbosity.SILENT)
-                }
-                is CrowOption.AllClassOption -> {
-                    val tt = target as CrowOption.AllClassOption
-                    val targetPath = tt.path.split(".")
-                    val classDecl = model.extractClassDecl(targetPath[0], targetPath[1])
-                    val totalClosed = classDecl.executeAll(repos, deductType)
-                    output("Crowbar  : Final verification result: $totalClosed", Verbosity.SILENT)
-                }
-                is CrowOption.MethodOption -> {
-                    val tt = target as CrowOption.MethodOption
-                    val targetPath = tt.path.split(".")
-                    val classDecl = model.extractClassDecl(targetPath[0], targetPath[1])
-                    val node = classDecl.extractMethodNode(deductType, targetPath[2], repos)
-                    val closed = executeNode(node, repos, deductType)
-                    output("Crowbar  : Verification result: $closed", Verbosity.SILENT)
-                }
-                is CrowOption.InitOption -> {
-                    val tt = target as CrowOption.InitOption
-                    val targetPath = tt.path.split(".")
-                    val classDecl = model.extractClassDecl(targetPath[0], targetPath[1])
-                    val node = classDecl.extractInitialNode(deductType)
-                    val closed = executeNode(node, repos, deductType)
-                    output("Crowbar  : Verification result: $closed", Verbosity.SILENT)
+                    is CrowOption.AllClassOption -> {
+                        val tt = target as CrowOption.AllClassOption
+                        val targetPath = tt.path.split(".")
+                        val classDecl = model.extractClassDecl(targetPath[0], targetPath[1])
+                        val totalClosed = classDecl.executeAll(repos, deductType)
+                        output("Crowbar  : Final verification result: $totalClosed", Verbosity.SILENT)
+                    }
+                    is CrowOption.MethodOption -> {
+                        val tt = target as CrowOption.MethodOption
+                        val targetPath = tt.path.split(".")
+                        val classDecl = model.extractClassDecl(targetPath[0], targetPath[1])
+                        val node = classDecl.extractMethodNode(deductType, targetPath[2], repos)
+                        val closed = executeNode(node, repos, deductType)
+                        output("Crowbar  : Verification result: $closed", Verbosity.SILENT)
+                    }
+                    is CrowOption.InitOption -> {
+                        val tt = target as CrowOption.InitOption
+                        val targetPath = tt.path.split(".")
+                        val classDecl = model.extractClassDecl(targetPath[0], targetPath[1])
+                        val node = classDecl.extractInitialNode(deductType)
+                        val closed = executeNode(node, repos, deductType)
+                        output("Crowbar  : Verification result: $closed", Verbosity.SILENT)
+                    }
                 }
             }
         }

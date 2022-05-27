@@ -19,7 +19,7 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
 
     init{
         initSubstMap()
-        printFraming()
+        //printFraming()
     }
 
     private fun initSubstMap(){
@@ -36,7 +36,12 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
         output(this.substMap.toList().joinToString("\n") { pair -> "${pair.first.prettyPrint()}\t\t${pair.second.prettyPrint()}" })
     }
 
+    fun printRawSubstMap() {
+        output(this.substMap.toList().joinToString("\n") { pair -> "${pair.first.prettyPrint()}\t\t${pair.second}" })
+    }
+
     fun evaluate(l : SymbolicLeaf) : Boolean {
+        //output("$l")
         if (l is StaticNode){
             return false
         }
@@ -77,6 +82,7 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
     // Apply the update to the substMap
     fun apply(update : UpdateElement){
         //printSubstMap()
+        //output("$update")
         when(update){
             is ChainUpdate -> {this.apply(update.left); this.apply(update.right)}
             is ElementaryUpdate -> concreteApply(update.lhs, update.rhs)
@@ -108,6 +114,8 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
         // This list is used for the arity
         val listDirectAssignable = assignable.locs.map { pair -> pair.second }
         //val listIndirectAssignable = listDirectAssignable.map { loc -> this.framing[loc] }.map { locSet -> locSet?.locs!!.map { pair -> pair.second } }.flatten()
+
+        output("$listDirectAssignable")
 
         // Split according to hasTo
         val listHasToDirectAssignable = assignable.locs.filter { it.first }.map { pair -> pair.second}

@@ -255,27 +255,6 @@ class ConcreteOnAbstractTerm(val target : ProgVar, val value: Term, val abstract
     override fun toString(): String {
         return "ConcreteOnAbstractTerm($target, $value, $abstract)"
     }
-
-    override fun equals(other: Any?): Boolean {
-        if(other !is ConcreteOnAbstractTerm){
-            return false
-        }
-        if(other.target == this.target && other.value == this.value){
-            return this.abstract == other.abstract
-        }
-
-        TODO("oh shit no simulation yet")
-
-        return false
-
-    }
-
-    override fun hashCode(): Int {
-        var result = target.hashCode()
-        result = 31 * result + value.hashCode()
-        result = 31 * result + abstract.hashCode()
-        return result
-    }
 }
 
 data class UnknownTerm(val target : Location) : AbstractTerm{

@@ -38,6 +38,7 @@ fun preGenerateSMT(ante: Formula, succ: Formula, modelCmd: String = "") : String
 
     val post = deupdatify(Not(succ))
 
+    //output(generateSMT(pre, post, modelCmd))
     return generateSMT(pre, post, modelCmd)
 }
 
@@ -247,7 +248,7 @@ fun plainSMTCommand(smtRep: String) : String? {
 
 fun evaluateSMT(smtRep : String) : Boolean {
     val res = plainSMTCommand(smtRep)
-    //output(res!!.trim())
+    output(res!!.trim())
     return res != null && res.trim() == "unsat"
 }
 
