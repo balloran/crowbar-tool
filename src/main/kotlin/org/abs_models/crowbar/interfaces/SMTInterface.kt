@@ -61,6 +61,7 @@ fun generateSMT(pre : LogicElement, post : LogicElement, modelCmd: String = "") 
     val fullAbs = (pre.iterate { it is FullAbstractTerm } + post.iterate { it is FullAbstractTerm }) as Set<FullAbstractTerm>
     val partAbs = (pre.iterate { it is PartialAbstractTerm } + post.iterate { it is PartialAbstractTerm }) as Set<PartialAbstractTerm>
     val concAbs = (pre.iterate {it is ConcreteOnAbstractTerm} + post.iterate {it is ConcreteOnAbstractTerm}) as Set<ConcreteOnAbstractTerm>
+    val poatAbs = (pre.iterate { it is PreciseOnAbstractTerm } + post.iterate { it is PreciseOnAbstractTerm }) as Set<PreciseOnAbstractTerm>
     val unknowns = (pre.iterate { it is UnknownTerm } + post.iterate { it is UnknownTerm }) as Set<UnknownTerm>
     val absExp = (pre.iterate { it is AbstractFormula } + post.iterate { it is AbstractFormula }) as Set<AbstractFormula>
     val preSMT = pre.toSMT()
@@ -122,6 +123,20 @@ fun generateSMT(pre : LogicElement, post : LogicElement, modelCmd: String = "") 
 
     val concAbsDecl = concAbs.map {
         "(declare-fun UC_${it.target.name} (${typeOfConcreteTermToSMT(it.value)} Int) Int)"
+    }.toSet().joinToString ("\n\t"){ it }
+
+
+    val poatAbsDecl = poatAbs.map{ precise ->
+        val orderedKeys = precise.updates.keys.sortedBy { it.hashCode() }
+        "(declare-fun POAT_${
+            orderedKeys.joinToString("_") { it.name }
+        } ( ${
+            orderedKeys.joinToString(" ") { typeOfConcreteTermToSMT(precise.updates[it]!!) }
+        } ${
+            typeOfConcreteTermToSMT(precise.abstract)
+        }) ${
+            typeOfConcreteTermToSMT(precise.abstract)
+        })"
     }.toSet().joinToString ("\n\t"){ it }
 
     val unknownsDecl = unknowns.map {
@@ -213,7 +228,7 @@ fun generateSMT(pre : LogicElement, post : LogicElement, modelCmd: String = "") 
 ;abstract constants declaration
     $fullAbsDecl
     $partAbsDecl
-    $concAbsDecl
+    $poatAbsDecl
 ;abstract expression declaration
     $absExpDecl
 ;unknowns constants declaration
@@ -262,7 +277,7 @@ fun plainSMTCommand(smtRep: String) : String? {
 
 fun evaluateSMT(smtRep : String) : Boolean {
     val res = plainSMTCommand(smtRep)
-    output("$res")
+    //output("$res")
     return res != null && res.trim() == "unsat"
 }
 

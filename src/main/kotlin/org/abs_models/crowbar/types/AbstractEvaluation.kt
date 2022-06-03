@@ -59,7 +59,7 @@ class AbstractEvaluation (val framing: Map<Location, AELocSet>,
 
         val smtRep = generateSMT(pre, post)
 
-        //output(smtRep)
+        output(smtRep)
 
         return evaluateSMT(smtRep)
     }
@@ -115,14 +115,28 @@ class AbstractEvaluation (val framing: Map<Location, AELocSet>,
         }
     }
 
-    private fun concreteApply(elem : ProgVar, term : Term){
+    private fun concreteApply(elem : ConcreteLocation, term : Term){
         val value = this.eval(term)
 
         // Expand the concrete update to the abstract location concerned
         for(pair in this.framing[elem]!!.locs){
             val loc = pair.second
             assert(loc is AELocation)
-            this.substMap[loc] = ConcreteOnAbstractTerm(elem, value as Term, this.substMap[loc] as AbstractTerm)
+
+            when(val aux = this.substMap[loc]!!){
+                is PreciseOnAbstractTerm -> {
+                    aux.updates[elem] = value as Term
+                    this.substMap[loc] = aux
+                }
+                is AbstractTerm -> {
+                    this.substMap[loc] = PreciseOnAbstractTerm(mutableMapOf(Pair(elem, value as Term)), aux)
+                }
+                else -> {
+                    throw Exception("Unforeseen value for abstract location $loc: $aux")
+                }
+            }
+
+            //this.substMap[loc] = ConcreteOnAbstractTerm(elem, value as Term, this.substMap[loc] as AbstractTerm)
         }
 
         this.substMap.remove(elem)

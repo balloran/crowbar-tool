@@ -274,6 +274,26 @@ data class ConcreteOnAbstractTerm(val target : ConcreteLocation, val value: Term
     override fun iterate(f: (Anything) -> Boolean): Set<Anything> = super.iterate(f) + value.iterate(f) + abstract.iterate(f)
 }
 
+data class PreciseOnAbstractTerm(val updates : MutableMap<ConcreteLocation, Term>, val abstract : AbstractTerm) : AbstractTerm{
+
+    override fun toSMT(indent: String): String {
+        val orderedKeys = updates.keys.sortedBy { it.hashCode() }
+        return "(POAT_${orderedKeys.joinToString("_") { it.name }} ${orderedKeys.joinToString(" "){ updates[it]!!.toSMT() }} ${abstract.toSMT()})"
+    }
+
+    override fun prettyPrint(): String {
+        return "{${updates.toList().joinToString (" || "){ pair -> "${pair.first.prettyPrint()} := ${pair.second.prettyPrint()}" }}}${abstract.prettyPrint()}"
+    }
+
+    override fun toString(): String {
+        return "PreciseOnAbstractTerm($updates, $abstract)"
+    }
+
+    override fun iterate(f: (Anything) -> Boolean): Set<Anything> {
+        return super.iterate(f) + updates.values.map { it.iterate(f) }.flatten() + abstract.iterate(f)
+    }
+}
+
 data class UnknownTerm(val target : Location) : AbstractTerm{
 
     override fun toSMT(indent: String): String {

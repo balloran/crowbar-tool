@@ -109,9 +109,10 @@ class RelationExecution (private val filePaths: List<Path>){
         }
 
         val aux = generateSMT( dataMaps.map { it.filterKeys { key -> key in sharedKeys } }, dataPreconds)
-        output("$aux")
+        //output("$aux")
 
-        evaluateSMT(aux)
+        val res = evaluateSMT(aux)
+        output("Crowbar: Result of map comparisons: $res")
     }
 
     private fun generateSMT(dataMaps : List<Map<Location, Term>>, dataPres : List<LogicElement>) : String{
@@ -132,7 +133,7 @@ class RelationExecution (private val filePaths: List<Path>){
         val funcs = allTerms.filterIsInstance<org.abs_models.crowbar.data.Function>().filter { it.name.startsWith("f_") }
         val fullAbs = allTerms.filterIsInstance<FullAbstractTerm>()
         val partAbs = allTerms.filterIsInstance<PartialAbstractTerm>()
-        val concAbs = allTerms.filterIsInstance<ConcreteOnAbstractTerm>()
+        val poatAbs = allTerms.filterIsInstance<PreciseOnAbstractTerm>()
         val unknowns = allTerms.filterIsInstance<UnknownTerm>()
         val absExp = allTerms.filterIsInstance<AbstractFormula>()
 
@@ -195,8 +196,17 @@ class RelationExecution (private val filePaths: List<Path>){
                     else ""
                 }.toSet().filter { it != "" }).joinToString("\n\t") { it }
 
-        val concAbsDecl = concAbs.map {
-            "(declare-fun UC_${it.target.name} (${typeOfConcreteTermToSMT(it.value)} Int) Int)"
+        val poatAbsDecl = poatAbs.map{ precise ->
+            val orderedKeys = precise.updates.keys.sortedBy { it.hashCode() }
+            "(declare-fun POAT_${
+                orderedKeys.joinToString("_") { it.name }
+            } (${
+                orderedKeys.joinToString(" ") { typeOfConcreteTermToSMT(precise.updates[it]!!) }
+            } ${
+                typeOfConcreteTermToSMT(precise.abstract)
+            }) ${
+                typeOfConcreteTermToSMT(precise.abstract)
+            })"
         }.toSet().joinToString ("\n\t"){ it }
 
         val unknownsDecl = unknowns.map {
@@ -292,7 +302,7 @@ class RelationExecution (private val filePaths: List<Path>){
 ;abstract constants declaration
     $fullAbsDecl
     $partAbsDecl
-    $concAbsDecl
+    $poatAbsDecl
 ;abstract expression declaration
     $absExpDecl
 ;unknowns constants declaration
