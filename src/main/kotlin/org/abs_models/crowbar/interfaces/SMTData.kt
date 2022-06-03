@@ -3,11 +3,15 @@ package org.abs_models.crowbar.interfaces
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.main.ADTRepos
+import org.abs_models.crowbar.main.ADTRepos.libPrefix
+import org.abs_models.crowbar.types.booleanFunction
 import org.abs_models.frontend.ast.DataTypeDecl
 import org.abs_models.frontend.ast.ExceptionDecl
 import org.abs_models.frontend.ast.InterfaceDecl
 import org.abs_models.frontend.typechecker.DataTypeType
 import org.abs_models.frontend.typechecker.Type
+import org.abs_models.frontend.typechecker.UnknownType
+import javax.xml.crypto.Data
 
 interface ProofElement: Anything {
     fun toSMT(indent:String="") : String //isInForm is set when a predicate is expected, this is required for the interpretation of Bool Terms as Int Terms
@@ -304,4 +308,50 @@ fun getSMT(name: String, params: String): String{
             else -> "$name $params"
         }
     return "($ret)"
+}
+
+fun typeOfAbstractToSMT(type : Type = UnknownType.INSTANCE, name: String = "UnprecisedAbtractName") : String {
+    if(type.isUnknownType)
+        return "Int"
+    else if (isConcreteGeneric(type) && !type.isFutureType){
+        ADTRepos.addGeneric(type as DataTypeType)
+        return genericTypeSMTName(type)
+    }
+    else{
+        return libPrefix(type.qualifiedName)
+    }
+}
+
+fun typeOfConcreteTermToSMT(term : Term) : String{
+    if(term is DataTypeConst){
+        ADTRepos.addGeneric(term.concrType!! as DataTypeType)
+        return genericTypeSMTName(term.concrType)
+    }
+    else if(term is Function && term.name in booleanFunction) return "Bool"
+    else return "Int"
+}
+
+fun typeOfLocation(loc : Location) : String{
+    return when(loc){
+        is ProgVar -> {
+            if(loc.concrType.isDataType){
+                genericTypeSMTName(loc.concrType)
+            }
+            else if(loc.concrType.isBoolType){
+                "Bool"
+            }
+            else "Int"
+        }
+        is AELocation -> "Int"
+        is Field -> {
+            if(loc.concrType.isDataType){
+                genericTypeSMTName(loc.concrType)
+            }
+            else if(loc.concrType.isBoolType){
+                "Bool"
+            }
+            else "Int"
+        }
+        else -> throw Exception("Unexpected location nature in typeOfLocation : $loc")
+    }
 }

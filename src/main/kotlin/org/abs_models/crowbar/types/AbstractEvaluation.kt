@@ -10,11 +10,9 @@ import org.abs_models.crowbar.tree.StaticNode
 import org.abs_models.crowbar.tree.SymbolicLeaf
 import org.abs_models.frontend.typechecker.Type
 import org.abs_models.frontend.typechecker.UnknownType
-import java.text.Normalizer.Form
-import kotlin.reflect.jvm.internal.impl.descriptors.Visibilities.Unknown
 
-class AbstractExecution (val framing: Map<Location, AELocSet>,
-                         val substMap: MutableMap<Location, Term> = mutableMapOf()
+class AbstractEvaluation (val framing: Map<Location, AELocSet>,
+                          val substMap: MutableMap<Location, Term> = mutableMapOf()
 ){
 
     init{
@@ -33,7 +31,7 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
     }
 
     fun printSubstMap(){
-        output(this.substMap.toList().joinToString("\n") { pair -> "${pair.first.prettyPrint()}\t\t${pair.second.prettyPrint()}" })
+        output(this.substMap.toList().joinToString("\n") { pair -> "${pair.first.prettyPrint()}\t\t${pair.second.prettyPrint()}" } + "\n")
     }
 
     fun printRawSubstMap() {
@@ -52,6 +50,7 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
 
         val pre = this.eval(this.deupdatify(l.ante))
         //output("${l.ante.prettyPrint()}")
+        output("$pre")
         initSubstMap()
         val post = this.eval(this.deupdatify(Not(l.succ)))
 
@@ -63,6 +62,32 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
         //output(smtRep)
 
         return evaluateSMT(smtRep)
+    }
+
+    fun evaluateAndPrecond(l : SymbolicLeaf) : Pair<Boolean, LogicElement>{
+        //output("$l")
+        if (l is StaticNode){
+            return Pair(false, True)
+        }
+        l as LogicNode
+        if(l.isEvaluated){
+            return Pair(l.isValid, True)
+        }
+
+        val pre = this.eval(this.deupdatify(l.ante))
+        //output("${l.ante.prettyPrint()}")
+        //output("$pre")
+        initSubstMap()
+        val post = this.eval(this.deupdatify(Not(l.succ)))
+
+        //output("${l.succ}")
+        //output("${post.toSMT()}")
+
+        val smtRep = generateSMT(pre, post)
+
+        //output(smtRep)
+
+        return Pair(evaluateSMT(smtRep), pre)
     }
 
     fun deupdatify(input : LogicElement) : LogicElement{
@@ -115,7 +140,7 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
         val listDirectAssignable = assignable.locs.map { pair -> pair.second }
         //val listIndirectAssignable = listDirectAssignable.map { loc -> this.framing[loc] }.map { locSet -> locSet?.locs!!.map { pair -> pair.second } }.flatten()
 
-        output("$listDirectAssignable")
+        //output("$listDirectAssignable")
 
         // Split according to hasTo
         val listHasToDirectAssignable = assignable.locs.filter { it.first }.map { pair -> pair.second}
@@ -187,6 +212,9 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
             if(loc is ProgVar){
                 type = loc.concrType
             }
+            if(loc is Field){
+                type = loc.concrType
+            }
 
             val updateValue = PartialAbstractTerm(name, listDirectAssignable.indexOf(loc), maxArity, listAccessibleValue, this.substMap[loc]!!,type)
             this.substMap[loc] = updateValue
@@ -196,6 +224,9 @@ class AbstractExecution (val framing: Map<Location, AELocSet>,
         for(loc in listOtherIndirectAssignable){
             var type : Type = UnknownType.INSTANCE
             if(loc is ProgVar){
+                type = loc.concrType
+            }
+            if(loc is Field){
                 type = loc.concrType
             }
 

@@ -60,9 +60,13 @@ fun generateSMT(pre : LogicElement, post : LogicElement, modelCmd: String = "") 
     val funcs =  ((pre.iterate { it is Function } + post.iterate { it is Function }) as Set<Function>).filter { it.name.startsWith("f_") }
     val fullAbs = (pre.iterate { it is FullAbstractTerm } + post.iterate { it is FullAbstractTerm }) as Set<FullAbstractTerm>
     val partAbs = (pre.iterate { it is PartialAbstractTerm } + post.iterate { it is PartialAbstractTerm }) as Set<PartialAbstractTerm>
+    val concAbs = (pre.iterate {it is ConcreteOnAbstractTerm} + post.iterate {it is ConcreteOnAbstractTerm}) as Set<ConcreteOnAbstractTerm>
+    val unknowns = (pre.iterate { it is UnknownTerm } + post.iterate { it is UnknownTerm }) as Set<UnknownTerm>
     val absExp = (pre.iterate { it is AbstractFormula } + post.iterate { it is AbstractFormula }) as Set<AbstractFormula>
     val preSMT = pre.toSMT()
     val postSMT = post.toSMT()
+
+    //output("$concAbs")
 
     val functionDecl = FunctionRepos.toString()
     val primitiveTypesDecl = ADTRepos.primitiveDtypesDecl.filter{!it.type.isStringType}.joinToString("\n\t") { "(declare-sort ${it.qualifiedName} 0)" }
@@ -85,37 +89,44 @@ fun generateSMT(pre : LogicElement, post : LogicElement, modelCmd: String = "") 
             else ""
     }
 
-    val fullAbsDecl = fullAbs.joinToString("\n\t") {
-        "(declare-const ${it.toSMT()} ${
-            if (it.concrType.isUnknownType)
-                throw Exception("Var with unknown type: ${it.name}")
-            else if (isConcreteGeneric(it.concrType) && !it.concrType.isFutureType) {
-                ADTRepos.addGeneric(it.concrType as DataTypeType)
-                genericTypeSMTName(it.concrType)
-            } else
-                libPrefix(it.concrType.qualifiedName)
-        })\n" +
+    val fullAbsDecl = (fullAbs.map{ "(declare-fun AEFull_${it.name.name} (Int Int ${
+        it.accessibleValues.joinToString(" ") { term ->
+            typeOfConcreteTermToSMT(term)
+        }
+    }) ${
+        typeOfAbstractToSMT(it.concrType, it.name.name)
+    })\n" }.toSet() +
+            fullAbs.map {
                 if (it.concrType.isInterfaceType)
                     "(assert (implements ${it.name} ${it.concrType.qualifiedName}))\n\t"
                 else ""
-    }
+            }.toSet().filter { it != "" }).joinToString("\n\t") { it }
 
     //output("$fullAbs")
     //output("$partAbs")
-    val partAbsDecl = partAbs.joinToString("\n\t") {
-        "(declare-const ${it.toSMT()} ${
-            if (it.concrType.isUnknownType)
-                throw Exception("Var with unknown type: ${it.name}")
-            else if (isConcreteGeneric(it.concrType) && !it.concrType.isFutureType) {
-                ADTRepos.addGeneric(it.concrType as DataTypeType)
-                genericTypeSMTName(it.concrType)
-            } else
-                libPrefix(it.concrType.qualifiedName)
-        })\n" +
+
+    val partAbsDecl = (partAbs.map { "(declare-fun AEPartial_${it.name.name} (Int Int ${
+        it.accessibleValues.joinToString(" ") { term ->
+            typeOfConcreteTermToSMT(term)
+        }
+    } ${
+        typeOfAbstractToSMT(it.concrType, it.name.name)
+    }) ${
+        typeOfAbstractToSMT(it.concrType, it.name.name)
+    })\n" }.toSet() +
+            partAbs.map {
                 if (it.concrType.isInterfaceType)
                     "(assert (implements ${it.name} ${it.concrType.qualifiedName}))\n\t"
                 else ""
-    }
+            }.toSet().filter { it != "" }).joinToString("\n\t") { it }
+
+    val concAbsDecl = concAbs.map {
+        "(declare-fun UC_${it.target.name} (${typeOfConcreteTermToSMT(it.value)} Int) Int)"
+    }.toSet().joinToString ("\n\t"){ it }
+
+    val unknownsDecl = unknowns.map {
+        "(declare-const ${it.toSMT()} ${typeOfLocation(it.target)})"
+    }.toSet().joinToString("\n\t") { it }
 
     val absExpDecl = absExp.joinToString("\n\t") { "(declare-const ${it.toSMT() } ${
         if(it.concrType.isUnknownType)
@@ -202,8 +213,11 @@ fun generateSMT(pre : LogicElement, post : LogicElement, modelCmd: String = "") 
 ;abstract constants declaration
     $fullAbsDecl
     $partAbsDecl
-; abstract expression declaration
+    $concAbsDecl
+;abstract expression declaration
     $absExpDecl
+;unknowns constants declaration
+    $unknownsDecl
 ;objects declaration
     $objectsDecl
     
@@ -248,7 +262,7 @@ fun plainSMTCommand(smtRep: String) : String? {
 
 fun evaluateSMT(smtRep : String) : Boolean {
     val res = plainSMTCommand(smtRep)
-    output(res!!.trim())
+    output("$res")
     return res != null && res.trim() == "unsat"
 }
 
@@ -260,7 +274,7 @@ fun evaluateSMT(ante: Formula, succ : Formula) : Boolean {
     return evaluateSMT(smtRep)
 }
 
-private val wildCardsConst = mutableMapOf<String,String>()
+val wildCardsConst = mutableMapOf<String,String>()
 
 private var countWildCard = 0
 

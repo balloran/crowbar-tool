@@ -9,7 +9,7 @@ import org.abs_models.crowbar.tree.LogicNode
 import org.abs_models.crowbar.tree.StaticNode
 import org.abs_models.crowbar.tree.SymbolicNode
 import org.abs_models.crowbar.tree.getStrategy
-import org.abs_models.crowbar.types.AbstractExecution
+import org.abs_models.crowbar.types.AbstractEvaluation
 import org.abs_models.crowbar.types.AbstractType
 import org.abs_models.frontend.ast.*
 import org.abs_models.frontend.typechecker.Type
@@ -441,7 +441,7 @@ fun executeNode(node : SymbolicNode, repos: Repository, usedType: KClass<out Ded
             is LogicNode -> {
                 if(usedType.isInstance(AbstractType)){
                     if(true){
-                        val exec = AbstractExecution(repos.classFrames[classdecl]!!)
+                        val exec = AbstractEvaluation(repos.classFrames[classdecl]!!)
                         closed = exec.evaluate(l) && closed
                         maps.add(exec.substMap)
                         exec.printSubstMap()

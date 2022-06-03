@@ -206,18 +206,25 @@ data class FullAbstractTerm(
     val name : ConcreteName,
     val arity : Int,
     val maxArity : Int,
-    val accessiblesValues : List<Term>,
+    val accessibleValues : List<Term>,
     val concrType: Type = UnknownType.INSTANCE) : AbstractTerm{
     override fun toSMT(indent: String): String {
-        return "${indent}U_${name.name}_${arity}_${maxArity}${accessiblesValues.joinToString("_") { value -> value.toSMT() }}"
+        //gérer le cas arity > max arity plus tard
+        return "${indent}( AEFull_${name.name} ${arity} ${maxArity} ${accessibleValues.joinToString(" ") { value -> "(${value.toSMT()})" }}"
     }
 
     override fun prettyPrint(): String {
-        return "U_${name.prettyPrint()}($arity/$maxArity := ${accessiblesValues.joinToString(",") { term -> term.prettyPrint() }})"
+        return "U_${name.prettyPrint()}($arity/$maxArity := ${accessibleValues.joinToString(",") { term -> term.prettyPrint() }})"
     }
 
     override fun toString(): String {
-        return "FullAbstractTerm($name, $arity, $maxArity, $accessiblesValues, $concrType)"
+        return "FullAbstractTerm($name, $arity, $maxArity, $accessibleValues, $concrType)"
+    }
+
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = accessibleValues.fold(super.iterate(f)) { acc, nx ->
+        acc + nx.iterate(
+            f
+        )
     }
 }
 
@@ -225,27 +232,35 @@ data class PartialAbstractTerm(
     val name: ConcreteName,
     val arity: Int,
     val maxArity: Int,
-    val accessiblesValues: List<Term>,
+    val accessibleValues: List<Term>,
     val initialValue : Term,
     val concrType: Type = UnknownType.INSTANCE) : AbstractTerm{
 
     override fun toSMT(indent: String): String {
-        return "${indent}U_${name.name}_${arity}_${maxArity}_${accessiblesValues.joinToString("_") { value -> value.toSMT() }}_${initialValue.toSMT()}"
+        //gérer le cas arity > max arity plus tard
+        return "${indent}(AEPartial_${name.name} ${arity} ${maxArity} ${accessibleValues.joinToString(" ") { value -> value.toSMT() }} ${initialValue.toSMT()})"
     }
 
     override fun prettyPrint(): String {
-        return "{${name.prettyPrint()}($arity/$maxArity := ${accessiblesValues.joinToString(",") { term -> term.prettyPrint() }})}${initialValue.prettyPrint()}"
+        return "{${name.prettyPrint()}($arity/$maxArity := ${accessibleValues.joinToString(",") { term -> term.prettyPrint() }}, ${initialValue.prettyPrint()})}"
     }
 
     override fun toString(): String {
-        return "PartialAbstractTerm($name, $arity, $maxArity, $accessiblesValues, $initialValue, $concrType)"
+        return "PartialAbstractTerm($name, $arity, $maxArity, $accessibleValues, $initialValue, $concrType)"
+    }
+
+    override fun iterate(f: (Anything) -> Boolean) : Set<Anything> = accessibleValues.fold(super.iterate(f) + initialValue.iterate(f)) { acc, nx ->
+        acc + nx.iterate(
+            f
+        )
     }
 }
 
-class ConcreteOnAbstractTerm(val target : ProgVar, val value: Term, val abstract : AbstractTerm) : AbstractTerm{
+data class ConcreteOnAbstractTerm(val target : ConcreteLocation, val value: Term, val abstract : AbstractTerm) : AbstractTerm{
 
     override fun toSMT(indent: String): String {
-        return "UC_${target.name}_${value.toSMT()}_${abstract.toSMT()}"
+        //return "UC_${target.name}_${value.toSMT()}_${abstract.toSMT()}"
+        return "(UC_${target.name} ${value.toSMT()} ${abstract.toSMT()})"
     }
 
     override fun prettyPrint(): String {
@@ -255,6 +270,8 @@ class ConcreteOnAbstractTerm(val target : ProgVar, val value: Term, val abstract
     override fun toString(): String {
         return "ConcreteOnAbstractTerm($target, $value, $abstract)"
     }
+
+    override fun iterate(f: (Anything) -> Boolean): Set<Anything> = super.iterate(f) + value.iterate(f) + abstract.iterate(f)
 }
 
 data class UnknownTerm(val target : Location) : AbstractTerm{

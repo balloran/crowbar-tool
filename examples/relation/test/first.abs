@@ -1,7 +1,7 @@
 module Simple1;
 
 ["ae_specvars locset footprintQ, frameQ, relevantLocs"]
-["ae_constraint disjoint(footprintQ, frameQ)"]
+["ae_constraint disjoint(footprintQ, x, frameQ)"]
 ["normal_behavior requires (x >= 1)"]
 
 {
@@ -11,6 +11,7 @@ module Simple1;
     ["accessible footprintQ"]
     ["assignable frameQ"]
     ["abstract_statement Q"]
+    x = 4;
     Int y = 0;
     skip;
 }

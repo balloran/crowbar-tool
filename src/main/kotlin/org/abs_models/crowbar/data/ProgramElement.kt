@@ -321,7 +321,11 @@ class LocationAbstractVar(name : String) : Location(name), AbstractVar{
     }
 }
 //name must end with _f when using automatic translation
-open class Field(name : String, val concrType :Type = UnknownType.INSTANCE) : Location(name), Term {
+abstract class ConcreteLocation(name : String, open val concrType: Type = UnknownType.INSTANCE) : Location(name), Term{
+
+}
+
+open class Field(name : String, concrType :Type = UnknownType.INSTANCE) : ConcreteLocation(name, concrType), Term {
 
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
@@ -344,7 +348,7 @@ open class Field(name : String, val concrType :Type = UnknownType.INSTANCE) : Lo
     override fun toSMT(indent:String) : String = name
 }
 
-open class ProgVar(name: String, open val concrType: Type = UnknownType.INSTANCE) : Location(name), Term {
+open class ProgVar(name: String, concrType: Type = UnknownType.INSTANCE) : ConcreteLocation(name, concrType), Term {
     override var absExp: org.abs_models.frontend.ast.Exp? = null
     override fun prettyPrint(): String {
         return "$name:${concrType.qualifiedName}"

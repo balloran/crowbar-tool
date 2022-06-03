@@ -98,7 +98,7 @@ class Main : CliktCommand() {
 
         if(deductType == AbstractType::class && filePath.size > 1){
             val handler = RelationExecution(filePath)
-            handler.simpleExecute()
+            handler.execute()
         }
         else {
             val (model, repos) = load(filePath)
