@@ -1,4 +1,4 @@
-package org.abs_models.crowbar.types
+package org.abs_models.crowbar.executions
 
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
@@ -50,7 +50,7 @@ class AbstractEvaluation (val framing: Map<Location, AELocSet>,
 
         val pre = this.eval(this.deupdatify(l.ante))
         //output("${l.ante.prettyPrint()}")
-        output("$pre")
+        //output("$pre")
         initSubstMap()
         val post = this.eval(this.deupdatify(Not(l.succ)))
 
@@ -59,7 +59,7 @@ class AbstractEvaluation (val framing: Map<Location, AELocSet>,
 
         val smtRep = generateSMT(pre, post)
 
-        output(smtRep)
+        //output(smtRep)
 
         return evaluateSMT(smtRep)
     }
@@ -166,14 +166,7 @@ class AbstractEvaluation (val framing: Map<Location, AELocSet>,
         val listConcreteHasToIndirectAssignable = listHasToDirectAssignable.map { loc ->
             this.framing[loc]
         }.map { locSet ->
-            locSet?.locs!!.map { it.second }.filterIsInstance<ProgVar>()
- /*
-                .filter {
-                it.second is ProgVar
-            }.map { pair ->
-                pair.second
-            }
-            */
+            locSet?.locs!!.map { it.second }.filterIsInstance<ConcreteLocation>()
         }.flatten()
 
         //output("$assignable")
@@ -183,7 +176,7 @@ class AbstractEvaluation (val framing: Map<Location, AELocSet>,
             this.framing[loc]
         }.flatMap { locSet ->
             locSet?.locs!!.filter {
-                it.second !is ProgVar
+                it.second !is ConcreteLocation
             }.map { pair ->
                 pair.second
             }
@@ -196,6 +189,8 @@ class AbstractEvaluation (val framing: Map<Location, AELocSet>,
                     }
                 }
 
+
+        // Todo: Isolate abstract locations that are eligible to become preciseOnAbstractTerm and reconstruct the Term
 
 
         var extraArity = maxArity

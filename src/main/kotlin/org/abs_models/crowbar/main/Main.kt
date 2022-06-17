@@ -13,6 +13,8 @@ import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import com.github.ajalt.clikt.parameters.types.restrictTo
+import org.abs_models.crowbar.executions.FullRelationExecution
+import org.abs_models.crowbar.executions.RelationExecution
 import org.abs_models.crowbar.interfaces.filterAtomic
 import org.abs_models.crowbar.types.*
 import org.abs_models.frontend.ast.*
@@ -97,7 +99,7 @@ class Main : CliktCommand() {
             output("Crowbar  : Counterexamples for types other than PostInv are not supported and may produce unexpected output", Verbosity.SILENT)
 
         if(deductType == AbstractType::class && filePath.size > 1){
-            val handler = RelationExecution(filePath)
+            val handler = FullRelationExecution(filePath)
             handler.execute()
         }
         else {

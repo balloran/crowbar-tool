@@ -1,4 +1,4 @@
-module Simple2;
+module Simple3;
 
 ["ae_specvars locset footprintQ, frameQ, relevantLocs"]
 ["ae_constraint disjoint(footprintQ, frameQ)"]
@@ -10,7 +10,10 @@ module Simple2;
     ["accessible footprintQ"]
     ["assignable frameQ"]
     ["abstract_statement Q"]
-    if(x > 3){
+    if(x == 4){
+        x = 4;
+    }
+    else if (x > 4){
         x = 4;
     }
     else if(x <= 0){

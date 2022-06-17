@@ -1,10 +1,12 @@
-package org.abs_models.crowbar.types
+package org.abs_models.crowbar.executions
 
 import org.abs_models.crowbar.data.*
 import org.abs_models.crowbar.data.Function
 import org.abs_models.crowbar.interfaces.*
 import org.abs_models.crowbar.main.*
 import org.abs_models.crowbar.tree.*
+import org.abs_models.crowbar.types.AbstractType
+import org.abs_models.crowbar.types.booleanFunction
 import org.abs_models.frontend.ast.Model
 import org.abs_models.frontend.typechecker.DataTypeType
 import java.nio.file.Path
@@ -142,6 +144,8 @@ class RelationExecution (private val filePaths: List<Path>){
         val andEqualities = dataMaps[0].keys.joinToString ("\n\t"){ key -> "(and ( = " + dataMaps.joinToString ( " " ){ it[key]!!.toSMT() } + ")" }
         val closeEqualities = dataMaps[0].keys.joinToString ( "\n\t" ){")"}
         val equalities = "(assert (not $andEqualities $closeEqualities ) )"
+
+        output(equalities)
 
         val functionDecl = FunctionRepos.toString()
         val primitiveTypesDecl = ADTRepos.primitiveDtypesDecl.filter{!it.type.isStringType}.joinToString("\n\t") { "(declare-sort ${it.qualifiedName} 0)" }

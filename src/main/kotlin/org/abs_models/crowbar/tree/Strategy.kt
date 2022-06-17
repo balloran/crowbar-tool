@@ -14,7 +14,7 @@ interface Strategy{
 /*
 The default strategy just tries all rules in the given order
  */
-class DefaultStrategy(private val rules: List<Rule>) : Strategy{
+class DefaultStrategy(val rules: List<Rule>) : Strategy{
     override fun execute(symbolicNode: SymbolicNode){
         //output("${symbolicNode}\n")
         if(symbolicNode.children.isNotEmpty()) { //if we are not in a leaf, symbolically execute every branch
